@@ -106,7 +106,7 @@ local function load()
 			---@type Province[]
 			local targets = {}
 			for _, province in pairs(root.realm.capitol.neighbors) do
-				if province.realm then
+				if province.realm and (root:is_eligable_province(province) or root:is_eligable_character(province.realm.leader)) then
 					targets[province] = province
 				end
 			end
@@ -118,9 +118,18 @@ local function load()
 			end
 			-- TODO: ADD TRADE AGREEMENTS AND ADD CAPITOLS OF REALMS WITH TRADE AGREEMENTS SIGNED AS POTENTIAL TARGETS HERE
 
-			local _, prov = tabb.random_select_from_set(targets)
-			if prov then
-				return prov, true
+			local x, y = tabb.random_select_from_set(targets)
+			local acc = {key = y, val = -1}
+			tabb.accumulate(targets, acc, function(a, k, v)
+				local worth = 1
+				worth = worth * (1 - root:opinion_on_province(v)/100)
+				if acc.val < worth then
+					acc.val = worth
+					acc.key = v
+				end
+			end)
+			if acc and acc.key then
+				return acc.key, true
 			end
 
 			return nil, false
