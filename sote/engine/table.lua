@@ -159,25 +159,18 @@ function tab.filter(items, filter)
 	return r
 end
 
----Given a table and a function with (2) parameters of table value type that resolves to a boolean,
----compares all values using the in the table finding the best match. Returns key and value found.
----@generic K, V
+---Given an accumulator variable, a table, and a function with parameters of the accumulator type and table entry type,
+---pass through the table applying the function to all values in table. Returns accumulator at end.
+---@generic A, K, V
 ---@param items table<K, V>
----@param cmp fun(a: V, b: V):boolean
----@return K?, V?
-function tab.get_best(items, cmp)
-	if tab.size(items) <= 0 then
-		return nil, nil
-	end
-	local t_k, t_v = tab.nth(items, 1)
-	if t_v == nil then return nil, nil end
+---@param accumulator A
+---@param func fun(a: A, b: K, c:V)
+---@return A
+function tab.accumulate(items, accumulator, func)
 	for k,v in pairs(items) do
-		if cmp(t_v, v) then
-			t_k = k
-			t_v = v
-		end
+		func(accumulator, k, v)
 	end
-	return t_k, t_v
+	return accumulator
 end
 
 return tab

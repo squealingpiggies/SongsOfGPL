@@ -108,12 +108,15 @@ function cl.Culture:get_desc(seperator,initial)
 	elseif self.traditional_militarization > 0.125 then 
 		r = r .. seperator .. "Militarists"
 	end
-	local k,_ = require "engine.table".get_best(self.traditional_units, function(a,b)
-		return a<b
-	end)
-	if k then
-		r = r .. seperator .. "Prefers ".. k
-	end
+	local acc = {key = "", val = 0 }
+	acc = require "engine.table".accumulate(self.traditional_units, acc,
+		function(a, b, c)
+			if a.val < c then
+				a.key = b
+				a.val = c
+			end
+		end)
+	r = r .. seperator .. "Prefers ".. acc.key
 	if self.limit_interracial ~= nil then
 		r = r .. seperator .. "Racial "
 		if self.limit_interracial == true then
