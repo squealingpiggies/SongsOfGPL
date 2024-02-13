@@ -127,4 +127,70 @@ function rtab.POP:get_age_multiplier()
 	return age_multiplier
 end
 
+-- CULTURAL AND RELIGIOUS ADDITUDES
+-- is_eligable functions return true if acceptable to interact with,
+-- negation can be used for who it's acceptable to be mean to
+-- opinion_on functions used to get opinion modifier
+-- can be used as a multiplicative weight as well
+
+---@param target Character
+---@return boolean
+function rtab.POP:is_eligable_character(target)
+	if self.culture.limit_interracial == true and target.race ~= self.race then return false end
+	if self.culture.limit_interculture == true and target.culture ~= self.culture then return false end
+	if self.culture.limit_interculture == false and  target.culture.culture_group ~= self.culture.culture_group then return false end
+	if self.culture.limit_interfaith == true and target.faith ~= self.faith then return false end
+	return true
+end
+
+---@param target Character
+---@return number
+function rtab.POP:opinion_on_character(target)
+	local base_value = 0
+	if self.culture.limit_interracial ~= nil and target.race ~= self.race then
+		base_value = base_value - 10
+		if self.culture.limit_interracial == true then base_value = base_value - 20 end
+	end
+	if self.culture.limit_interculture ~nil and target.culture ~= self.culture then
+		base_value = base_value - 10
+		if self.culture.culture_group ~= target.culture.culture_group then base_value = base_value - 10 end
+		if self.culture.limit_interculture == true then base_value = base_value - 20 end
+	end
+	if self.culture.limit_interfaith ~nil and target.faith ~= self.faith then
+		base_value = base_value - 10
+		if self.culture.limit_interfaith == true then base_value = base_value - 20 end
+	end
+	return base_value
+end
+
+---@param target Province
+---@return boolean
+function rtab.POP:is_eligable_province(target)
+	if self.culture.limit_interracial == true and target:get_dominant_race() ~= self.race then return false end
+	if self.culture.limit_interculture == true and target:get_dominant_culture() ~= self.culture then return false end
+	if self.culture.limit_interculture == false and  target:get_dominant_culture().culture_group ~= self.culture.culture_group then return false end
+	if self.culture.limit_interfaith == true and target:get_dominant_faith() ~= self.faith then return false end
+	return true
+end
+
+---@param target Province
+---@return number
+function rtab.POP:opinion_on_province(target)
+	local base_value = 0
+	if self.culture.limit_interracial ~= nil and target:get_dominant_race() ~= self.race then
+		base_value = base_value - 10
+		if self.culture.limit_interracial == true then base_value = base_value - 20 end
+	end
+	if self.culture.limit_interculture ~nil and target:get_dominant_culture() ~= self.culture then
+		base_value = base_value - 10
+		if self.culture.culture_group ~= target:get_dominant_culture().culture_group then base_value = base_value - 10 end
+		if self.culture.limit_interculture == true then base_value = base_value - 20 end
+	end
+	if self.culture.limit_interfaith ~nil and target:get_dominant_faith() ~= self.faith then
+		base_value = base_value - 10
+		if self.culture.limit_interfaith == true then base_value = base_value - 20 end
+	end
+	return base_value
+end
+
 return rtab
