@@ -152,7 +152,7 @@ function window.draw(game)
     location_panel.y = location_panel.y - unit
     ui.left_text("Location: ", location_panel)
 
-    ut.data_entry("", character.culture.name, culture_panel, "Culture")
+    ut.data_entry("", character.culture.name, culture_panel, character.culture:get_desc("\n - ", character.culture.name .. ":"))
     culture_panel.y = culture_panel.y - unit
     ut.data_entry("", character.faith.name, culture_panel, "Faith")
 
