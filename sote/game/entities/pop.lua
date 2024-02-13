@@ -151,12 +151,12 @@ function rtab.POP:opinion_on_character(target)
 		base_value = base_value - 10
 		if self.culture.limit_interracial == true then base_value = base_value - 20 end
 	end
-	if self.culture.limit_interculture ~nil and target.culture ~= self.culture then
+	if self.culture.limit_interculture ~= nil and target.culture ~= self.culture then
 		base_value = base_value - 10
 		if self.culture.culture_group ~= target.culture.culture_group then base_value = base_value - 10 end
 		if self.culture.limit_interculture == true then base_value = base_value - 20 end
 	end
-	if self.culture.limit_interfaith ~nil and target.faith ~= self.faith then
+	if self.culture.limit_interfaith ~= nil and target.faith ~= self.faith then
 		base_value = base_value - 10
 		if self.culture.limit_interfaith == true then base_value = base_value - 20 end
 	end
@@ -181,12 +181,12 @@ function rtab.POP:opinion_on_province(target)
 		base_value = base_value - 10
 		if self.culture.limit_interracial == true then base_value = base_value - 20 end
 	end
-	if self.culture.limit_interculture ~nil and target:get_dominant_culture() ~= self.culture then
+	if self.culture.limit_interculture ~= nil and target:get_dominant_culture() ~= self.culture then
 		base_value = base_value - 10
 		if self.culture.culture_group ~= target:get_dominant_culture().culture_group then base_value = base_value - 10 end
 		if self.culture.limit_interculture == true then base_value = base_value - 20 end
 	end
-	if self.culture.limit_interfaith ~nil and target:get_dominant_faith() ~= self.faith then
+	if self.culture.limit_interfaith ~= nil and target:get_dominant_faith() ~= self.faith then
 		base_value = base_value - 10
 		if self.culture.limit_interfaith == true then base_value = base_value - 20 end
 	end

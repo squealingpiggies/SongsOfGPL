@@ -85,6 +85,7 @@ function cl.Culture:get_desc(seperator,initial)
 	if seperator == nil then
 		seperator = " "
 	end
+	-- r = r .. seperator .. self.language.name .. " Tounge" -- should have language but the data structure doesn't have a name!
 	if self.culture_group.view_on_treason < -15 then
 		r = r .. seperator .. "Honorable"
 	elseif self.culture_group.view_on_treason < -10 then
@@ -97,6 +98,21 @@ function cl.Culture:get_desc(seperator,initial)
 		r = r .. seperator .. "Unreliable"
 	elseif self.culture_group.view_on_treason > 15 then
 		r = r .. seperator .. "Deceptive"
+	end
+	if self.traditional_militarization < 0.075 then
+		r = r .. seperator .. "Pacifist"
+	elseif self.traditional_militarization > 0.125 then 
+		r = r .. seperator ..  "Nonvoilent"
+	elseif self.traditional_militarization >= 0.100 then 
+		r = r .. seperator .. "Aggressive"
+	elseif self.traditional_militarization > 0.125 then 
+		r = r .. seperator .. "Militarists"
+	end
+	local k,_ = require "engine.table".get_best(self.traditional_units, function(a,b)
+		return a<b
+	end)
+	if k then
+		r = r .. seperator .. "Prefers ".. k
 	end
 	if self.limit_interracial ~= nil then
 		r = r .. seperator .. "Racial "
