@@ -106,7 +106,7 @@ local function load()
 			---@type Province[]
 			local targets = {}
 			for _, province in pairs(root.realm.capitol.neighbors) do
-				if province.realm and (root:is_eligable_province(province) or root:is_eligable_character(province.realm.leader)) then
+				if province.realm and (root:is_eligable_province(province) or root:is_eligable_realm(province.realm) or root:is_eligable_character(province.realm.leader)) then
 					targets[province] = province
 				end
 			end
