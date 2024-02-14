@@ -9,6 +9,7 @@ local ev = require "game.raws.values.economical"
 local economic_effects = require "game.raws.effects.economic"
 
 local characters_list_widget = require "game.scenes.game.widgets.character-list"
+local warband_pop_list = require "game.scenes.game.widgets.warband-pop-list"
 
 local inspector = {}
 
@@ -294,8 +295,8 @@ function inspector.draw(gam)
 		"left",
 		"up"
 	)
-
-	local response = characters_list_widget(warband_pop_panel, warband.pops, "Warband POP", true)()
+	require "game.scenes.game.widgets.warband-pop-list" (warband_pop_panel, base_unit, warband)()
+	--local response = characters_list_widget(warband_pop_panel, warband.pops, "Warband POP", true)()
 end
 
 
