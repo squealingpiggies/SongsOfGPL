@@ -8,6 +8,8 @@ local ev = require "game.raws.values.economical"
 
 local economic_effects = require "game.raws.effects.economic"
 
+local characters_list_widget = require "game.scenes.game.widgets.character-list"
+
 local inspector = {}
 
 local units_scroll = 0
@@ -238,12 +240,12 @@ function inspector.draw(gam)
 
 	set_stance("work")
 	set_stance("forage")
-
+	local bottom_height = bottom.height - UI_STYLE.scrollable_list_item_height * 2
 	local warband_hires_panel = bottom:subrect(
 		0,
 		UI_STYLE.scrollable_list_item_height * 2,
 		bottom.width,
-		bottom.height - UI_STYLE.scrollable_list_item_height * 2,
+		bottom_height/2,
 		"left",
 		"up"
 	)
@@ -284,6 +286,16 @@ function inspector.draw(gam)
 		UI_STYLE.slider_width,
 		units_scroll
 	)
+	local warband_pop_panel = bottom:subrect(
+		0,
+		bottom_height/2 + UI_STYLE.scrollable_list_item_height * 2,
+		bottom.width,
+		bottom_height/2,
+		"left",
+		"up"
+	)
+
+	local response = characters_list_widget(warband_pop_panel, warband.pops, "Warband POP", true)()
 end
 
 
