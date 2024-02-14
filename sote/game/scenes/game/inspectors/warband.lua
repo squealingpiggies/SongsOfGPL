@@ -8,9 +8,6 @@ local ev = require "game.raws.values.economical"
 
 local economic_effects = require "game.raws.effects.economic"
 
-local characters_list_widget = require "game.scenes.game.widgets.character-list"
-local warband_pop_list = require "game.scenes.game.widgets.warband-pop-list"
-
 local inspector = {}
 
 local units_scroll = 0
@@ -295,8 +292,105 @@ function inspector.draw(gam)
 		"left",
 		"up"
 	)
-	require "game.scenes.game.widgets.warband-pop-list" (warband_pop_panel, base_unit, warband)()
-	--local response = characters_list_widget(warband_pop_panel, warband.pops, "Warband POP", true)()
+	local function pop_sex(pop)
+		local f = "m"
+		if pop.female then f = "f" end
+		return f
+	end
+	require "game.scenes.game.widgets.custom-pop-list" (warband_pop_panel, base_unit, warband.pops, {
+		{
+			header = ".",
+			render_closure = function(rect, k, v)
+				ui.image(ASSETS.get_icon(v.race.icon), rect)
+			end,
+			width = UI_STYLE.scrollable_list_item_height,
+			value = function(k, v)
+				---@type POP
+				v = v
+				return v.name
+			end
+		},
+		{
+			header = "name",
+			render_closure = function(rect, k, v)
+				ui.left_text(v.name, rect)
+			end,
+			width = base_unit * 3,
+			value = function(k, v)
+				---@type POP
+				v = v
+				return v.name
+			end
+		},
+		{
+			header = "unit",
+			render_closure = function(rect, k, v)
+				ui.centered_text(v.unit_of_warband.units[v].name, rect)
+			end,
+			width = base_unit * 3,
+			value = function(k, v)
+				---@type POP
+				v = v
+				return warband.units[v].name
+			end
+		},
+		{
+			header = "race",
+			render_closure = function (rect, k, v)
+				ui.centered_text(v.race.name, rect)
+			end,
+			width = base_unit * 3,
+			value = function(k, v)
+				---@type POP
+				v = v
+				return v.race.name
+			end
+		},
+		{
+			header = "culture",
+			render_closure = function (rect, k, v)
+				ui.centered_text(v.culture.name, rect)
+			end,
+			width = base_unit * 3,
+			value = function(k, v)
+				---@type POP
+				v = v
+				return v.culture.name
+			end
+		},
+		{
+			header = "faith",
+			render_closure = function (rect, k, v)
+				ui.centered_text(v.faith.name, rect)
+			end,
+			width = base_unit * 3,
+			value = function(k, v)
+				---@type POP
+				v = v
+				return v.faith.name
+			end
+		},
+		{
+			header = "age",
+			render_closure = function (rect, k, v)
+				ui.right_text(tostring(v.age), rect)
+			end,
+			width = base_unit * 1.9,
+			value = function(k, v)
+				return v.age
+			end
+		},
+		{
+			header = "sex",
+			render_closure = function (rect, k, v)
+				ui.centered_text(pop_sex(v), rect)
+			end,
+			width = base_unit * 1.5,
+			value = function(k, v)
+				return pop_sex(v)
+			end
+		}
+	})()
 end
 
 
