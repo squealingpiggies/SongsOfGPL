@@ -166,9 +166,10 @@ end
 ---@param target Province
 ---@return boolean
 function rtab.POP:is_eligable_province(target)
+	if target == nil then return false end
 	if self.culture.limit_interracial == true and target:get_dominant_race() ~= self.race then return false end
 	if self.culture.limit_interculture == true and target:get_dominant_culture() ~= self.culture then return false end
-	if self.culture.limit_interculture == false and  target:get_dominant_culture().culture_group ~= self.culture.culture_group then return false end
+	if self.culture.limit_interculture == false and target:get_dominant_culture().culture_group ~= self.culture.culture_group then return false end
 	if self.culture.limit_interfaith == true and target:get_dominant_faith() ~= self.faith then return false end
 	return true
 end
