@@ -77,7 +77,7 @@ function pg.growth(province)
 			pp.culture,
 			love.math.random() > pp.race.males_per_hundred_females / (100 + pp.race.males_per_hundred_females),
 			0,
-			province, province
+			pp.home_province, province
 		)
 		newborn.parent = pp
 	end

@@ -833,7 +833,7 @@ function pro.run(province)
 
 				-- community helps children as well
 				local siphon_to_child = math.min(food_price * 0.5, province.local_wealth * 1 / 512)
-				if siphon_to_child > 0 then
+				if siphon_to_child > 0 and pop.home_province == pop.province then
 					economic_effects.add_pop_savings(pop, siphon_to_child, economic_effects.reasons.Donation)
 					economic_effects.change_local_wealth(
 						province,

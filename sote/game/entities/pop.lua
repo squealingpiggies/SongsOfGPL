@@ -166,10 +166,12 @@ end
 ---@param target Province
 ---@return boolean
 function rtab.POP:is_eligable_province(target)
-	if target == nil then return false end
 	if self.culture.limit_interracial == true and target:get_dominant_race() ~= self.race then return false end
-	if self.culture.limit_interculture == true and target:get_dominant_culture() ~= self.culture then return false end
-	if self.culture.limit_interculture == false and target:get_dominant_culture().culture_group ~= self.culture.culture_group then return false end
+	local dominant_culture = target:get_dominant_culture()
+	if dominant_culture then
+		if self.culture.limit_interculture == true and dominant_culture ~= self.culture then return false end
+		if self.culture.limit_interculture == false and dominant_culture.culture_group ~= self.culture.culture_group then return false end
+	end
 	if self.culture.limit_interfaith == true and target:get_dominant_faith() ~= self.faith then return false end
 	return true
 end
@@ -182,10 +184,14 @@ function rtab.POP:opinion_on_province(target)
 		base_value = base_value - 10
 		if self.culture.limit_interracial == true then base_value = base_value - 20 end
 	end
-	if self.culture.limit_interculture ~= nil and target:get_dominant_culture() ~= self.culture then
-		base_value = base_value - 10
-		if self.culture.culture_group ~= target:get_dominant_culture().culture_group then base_value = base_value - 10 end
-		if self.culture.limit_interculture == true then base_value = base_value - 20 end
+	local dominant_culture = target:get_dominant_culture()
+	if dominant_culture then
+		if self.culture.limit_interculture ~= nil and dominant_culture ~= self.culture then
+		
+			base_value = base_value - 10
+			if self.culture.culture_group ~= dominant_culture.culture_group then base_value = base_value - 10 end
+			if self.culture.limit_interculture == true then base_value = base_value - 20 end
+		end
 	end
 	if self.culture.limit_interfaith ~= nil and target:get_dominant_faith() ~= self.faith then
 		base_value = base_value - 10
