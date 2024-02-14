@@ -39,21 +39,25 @@ function rec.run(province)
 			if love.math.random() < warband.morale then
 				-- print('attempt to hire')
 				for pop, _ in pairs(province.all_pops) do
-					local pop_salary = 0
+					if (warband.leader and warband.leader:is_eligable_character(pop) and pop:is_eligable_character(warband.leader))
+						or (warband.recruiter and warband.recruiter:is_eligable_character(pop) and pop:is_eligable_character(warband.recruiter)) then
 
-					if pop.employer then
-						pop_salary = pop.employer.income_mean
-					end
+						local pop_salary = 0
 
-					if (not pop.unit_of_warband) and (pop.age > pop.race.teen_age) and (pop.age < pop.race.elder_age) then
-						-- print("salary: ", pop_salary, per_pop_salary_warband)
-						-- print("savings per month: ", warband:monthly_budget())
-						-- print('required savings: ', total_salary + unit.upkeep)
-						if (total_salary + unit.upkeep < warband:monthly_budget()) and (pop_salary < per_pop_salary_warband) then
-							province:recruit(pop, unit, warband)
-							---@type number
-							total_salary = total_salary + unit.upkeep
-							break
+						if pop.employer then
+							pop_salary = pop.employer.income_mean
+						end
+
+						if (not pop.unit_of_warband) and (pop.age > pop.race.teen_age) and (pop.age < pop.race.elder_age) then
+							-- print("salary: ", pop_salary, per_pop_salary_warband)
+							-- print("savings per month: ", warband:monthly_budget())
+							-- print('required savings: ', total_salary + unit.upkeep)
+							if (total_salary + unit.upkeep < warband:monthly_budget()) and (pop_salary < per_pop_salary_warband) then
+								province:recruit(pop, unit, warband)
+								---@type number
+								total_salary = total_salary + unit.upkeep
+								break
+							end
 						end
 					end
 				end
