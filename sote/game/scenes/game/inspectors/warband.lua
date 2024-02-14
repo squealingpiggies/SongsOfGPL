@@ -297,7 +297,7 @@ function inspector.draw(gam)
 		if pop.female then f = "f" end
 		return f
 	end
-	require "game.scenes.game.widgets.custom-pop-list" (warband_pop_panel, base_unit, warband.pops, {
+	require "game.scenes.game.widgets.character-list-widget" (warband_pop_panel, warband.pops, {
 		{
 			header = ".",
 			render_closure = function(rect, k, v)
@@ -390,7 +390,7 @@ function inspector.draw(gam)
 				return pop_sex(v)
 			end
 		}
-	})()
+	}, "Warband Units")()
 end
 
 
