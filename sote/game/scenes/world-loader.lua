@@ -3,7 +3,7 @@ local wl = {}
 local world = require "game.entities.world"
 local plate = require "game.entities.plate"
 local color = require "game.color"
-local tabb = require "engine.table"
+local tabb = require "sote.engine.table-utility"
 
 WORLD_PROGRESS = {total = 0, max = 0, is_loading = false}
 
@@ -33,7 +33,7 @@ function wl.draw()
 		wl.message = "Initializing..."
 		if DEFINES.empty then
 			wl.coroutine = coroutine.create(wl.empty)
-		elseif DEFINES.default then --(require "engine.table").contains(ARGS, "--dev") then
+		elseif DEFINES.default then --(require "sote.engine.table-utility").contains(ARGS, "--dev") then
 			-- We're loading a world from default pngs for debugging purposes...
 			wl.coroutine = coroutine.create(wl.load_default)
 		elseif DEFINES.world_gen then

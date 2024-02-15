@@ -1,4 +1,4 @@
-local tabb = require "engine.table"
+local tabb = require "sote.engine.table-utility"
 
 local pathfinding = require "game.ai.pathfinding"
 local Decision = require "game.raws.decisions"

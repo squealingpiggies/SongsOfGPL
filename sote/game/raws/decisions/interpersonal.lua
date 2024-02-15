@@ -1,4 +1,4 @@
-local tabb = require "engine.table"
+local tabb = require "sote.engine.table-utility"
 
 local Decision = require "game.raws.decisions"
 local TRAIT = require "game.raws.traits.generic"

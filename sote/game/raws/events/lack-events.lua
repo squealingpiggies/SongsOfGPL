@@ -1,4 +1,4 @@
-local tabb = require "engine.table"
+local tabb = require "sote.engine.table-utility"
 local Event = require "game.raws.events"
 local gift_cost_per_pop = require "game.gifting".gift_cost_per_pop
 local tg = require "game.raws.raws-utils".trade_good

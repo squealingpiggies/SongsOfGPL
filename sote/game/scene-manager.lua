@@ -1,6 +1,6 @@
 local scene_manager = {}
 
-local tab = require "engine.table"
+local tab = require "sote.engine.table-utility"
 local asl = require "game.scenes.asset-loader"
 local mm = require "game.scenes.main-menu"
 local wl = require "game.scenes.world-loader"

@@ -1,5 +1,5 @@
 
-local tabb = require "engine.table"
+local tabb = require "sote.engine.table-utility"
 local ll = {}
 local military_effects = require "game.raws.effects.military"
 local utils = require "game.raws.raws-utils"

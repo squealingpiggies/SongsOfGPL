@@ -106,7 +106,7 @@ end
 ---Total size of warband
 ---@return integer
 function warband:size()
-	local tabb = require "engine.table"
+	local tabb = require "sote.engine.table-utility"
 
 	local size = tabb.size(self.pops)
 	if self.commander ~= nil then
@@ -118,7 +118,7 @@ end
 ---comment
 ---@return integer
 function warband:pop_size()
-	local tabb = require "engine.table"
+	local tabb = require "sote.engine.table-utility"
 	local size = tabb.size(self.pops)
 	return size
 end

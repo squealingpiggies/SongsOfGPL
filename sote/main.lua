@@ -1,6 +1,11 @@
 print("Initial random number:")
 print(love.math.random(100))
-local tab = require "engine.table"
+
+-- initiate tl loding
+local tl = require("sote.engine.tl")
+tl.loader()
+
+local tab = require("sote.engine.table-utility")
 local ui = require "engine.ui"
 
 -- Reloads the font used for rendering

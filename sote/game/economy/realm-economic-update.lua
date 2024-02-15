@@ -1,4 +1,4 @@
-local tabb = require "engine.table"
+local tabb = require "sote.engine.table-utility"
 local good = require "game.raws.raws-utils".trade_good
 local rea = {}
 

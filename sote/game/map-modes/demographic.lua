@@ -1,5 +1,5 @@
 local ut = require "game.map-modes.utils"
-local tabb = require "engine.table"
+local tabb = require "sote.engine.table-utility"
 
 local ev = require "game.raws.values.economical"
 

@@ -9,7 +9,7 @@ local cube = require "game.cube"
 local tile = require "game.entities.tile"
 local tb = require "game.scenes.game.top-bar"
 local callback = require "game.scenes.callbacks"
-local tabb = require "engine.table"
+local tabb = require "sote.engine.table-utility"
 local political = require "game.map-modes.political"
 
 local plate_gen = require "game.world-gen.plate-gen"
@@ -101,7 +101,7 @@ function gam.on_tile_click()
 
 
 	if tile ~= nil then
-		local tab = require "engine.table"
+		local tab = require "sote.engine.table-utility"
 		if tab.contains(ARGS, "--dev") then
 			print("Tile", tile_id)
 			tab.print(tile)
@@ -419,7 +419,7 @@ function gam.click_tile(tile_id)
 
 	gam.reset_decision_selection()
 	---@type Tile
-	if require "engine.table".contains(ARGS, "--dev") then
+	if require "sote.engine.table-utility".contains(ARGS, "--dev") then
 		CLICKED_TILE_GLOBAL = WORLD.tiles[tile_id]
 	end
 end
@@ -1024,7 +1024,7 @@ function gam.draw()
 
 	-- Map modes tab
 	if gam.show_map_mode_panel then
-		local ttab = require "engine.table"
+		local ttab = require "sote.engine.table-utility"
 		local mm_panel_height = ut.BASE_HEIGHT * (22)
 		local panel = bottom_right_main_layout:next(300, mm_panel_height)
 		if ui.trigger(panel) then
@@ -1119,7 +1119,7 @@ function gam.draw()
 	require "game.scenes.game.inspectors.left-side-bar".draw(gam)
 
 	-- Debugging screen thingy in top left
-	local tt = require "engine.table"
+	local tt = require "sote.engine.table-utility"
 	if tt.contains(ARGS, "--dev") == true then
 		gam.debug_ui()
 	end

@@ -134,7 +134,7 @@ end
 ---@field get_random_province fun(self:Realm): Province | nil
 
 local realm = {}
-local tabb = require "engine.table"
+local tabb = require "sote.engine.table-utility"
 
 ---@class RewardFlag
 realm.RewardFlag = {}

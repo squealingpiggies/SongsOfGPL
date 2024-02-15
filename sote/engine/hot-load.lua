@@ -1,6 +1,6 @@
 -- Most of this code comes from the lume library for lua!
 local hot_load = {}
-local copy = require("engine.table").copy
+local copy = require("sote.engine.table-utility").copy
 local patternescape = require("engine.string").patternescape
 local trim = require("engine.string").trim
 

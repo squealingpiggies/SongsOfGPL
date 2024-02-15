@@ -1,4 +1,4 @@
-local tabb = require "engine.table"
+local tabb = require "sote.engine.table-utility"
 local rec = {}
 
 ---Runs recruitment logic on a province, matching pops to needed units

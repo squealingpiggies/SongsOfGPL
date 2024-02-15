@@ -1,4 +1,4 @@
-local tabb = require "engine.table"
+local tabb = require "sote.engine.table-utility"
 
 ---@enum BUILDING_GROUP
 BUILDING_GROUP = {

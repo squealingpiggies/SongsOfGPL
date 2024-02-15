@@ -2,7 +2,7 @@ local realm = require "game.entities.realm"
 local cult = require "game.entities.culture"
 local rel = require "game.entities.religion"
 local pop = require "game.entities.pop"
-local tabb = require "engine.table"
+local tabb = require "sote.engine.table-utility"
 
 local TRAIT = require "game.raws.traits.generic"
 local ranks = require "game.raws.ranks.character_ranks"

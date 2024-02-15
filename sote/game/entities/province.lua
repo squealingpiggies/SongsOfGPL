@@ -1,4 +1,4 @@
-local tabb = require "engine.table"
+local tabb = require "sote.engine.table-utility"
 local wb = require "game.entities.warband"
 
 local EconomicValues = require "game.raws.values.economical"
@@ -196,7 +196,7 @@ end
 ---Doesn't include outlaws and active armies.
 ---@return number
 function prov.Province:population()
-	local tabb = require "engine.table"
+	local tabb = require "sote.engine.table-utility"
 	return tabb.size(self.all_pops)
 end
 

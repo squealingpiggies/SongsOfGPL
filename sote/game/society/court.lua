@@ -1,4 +1,4 @@
-local tabb = require "engine.table"
+local tabb = require "sote.engine.table-utility"
 
 local values = require "game.raws.values.ai_preferences"
 local ef = require "game.raws.effects.economic"

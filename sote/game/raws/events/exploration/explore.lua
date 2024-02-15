@@ -1,4 +1,4 @@
-local tabb = require "engine.table"
+local tabb = require "sote.engine.table-utility"
 
 local Event = require "game.raws.events"
 local event_utils = require "game.raws.events._utils"

@@ -4,7 +4,7 @@
 local re = {}
 local ui = require "engine.ui"
 local uit = require "game.ui-utils"
-local tabb = require "engine.table"
+local tabb = require "sote.engine.table-utility"
 
 local ef = require "game.raws.effects.economic"
 

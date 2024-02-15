@@ -1,7 +1,7 @@
 local trade_good = require "game.raws.raws-utils".trade_good
 local JOBTYPE = require "game.raws.job_types"
 
-local tabb = require "engine.table"
+local tabb = require "sote.engine.table-utility"
 local economic_effects = require "game.raws.effects.economic"
 local ev = require "game.raws.values.economical"
 local pv = require "game.raws.values.political"

@@ -1,7 +1,7 @@
 print("Reading province-gen.lua")
 
 local pp = require "game.entities.province"
-local tabb = require "engine.table"
+local tabb = require "sote.engine.table-utility"
 
 local pro = {}
 

@@ -8,7 +8,7 @@ local utils       = require "game.ui-utils"
 local military_effects = require "game.raws.effects.military"
 local political_values = require "game.raws.values.political"
 
-local tabb = require "engine.table"
+local tabb = require "sote.engine.table-utility"
 
 ---@alias ActionData { [1]: string, [2]: POP, [3]: table, [4]: number}
 ---@alias ScheduledEvent { [1]: string, [2]: POP, [3]: table, [4]: number}

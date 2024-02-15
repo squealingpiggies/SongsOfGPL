@@ -373,7 +373,7 @@ function plate_gen.run()
 			end
 			start = love.timer.getTime()
 
-			local tabb = require "engine.table"
+			local tabb = require "sote.engine.table-utility"
 			for _, plate in pairs(WORLD.plates) do
 			--	local size = tabb.size(plate.tiles)
 			--	print("Number of tiles: " .. tostring(size))

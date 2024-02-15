@@ -1,4 +1,4 @@
-local tabb = require "engine.table"
+local tabb = require "sote.engine.table-utility"
 local ui = require "engine.ui"
 local ut = require "game.ui-utils"
 local ranks = require "game.raws.ranks.character_ranks"
