@@ -186,18 +186,9 @@ function st.run()
 			local rg = rel.Religion:new(culture)
 			local faith = rel.Faith:new(rg, culture)
 			faith.burial_rites = tabb.select_one(love.math.random(), {
-				{
-					weight = 1,
-					entry = 'burial'
-				},
-				{
-					weight = 0.8,
-					entry = 'cremation'
-				},
-				{
-					weight = 0.2,
-					entry = 'none'
-				}
+				['burial'] = 1,
+				['cremation'] = 0.8,
+				['none'] = 0.2
 			})
 			make_new_realm(prov, r, culture, faith)
 			queue:enqueue(prov)
