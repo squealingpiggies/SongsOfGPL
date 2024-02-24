@@ -21,7 +21,7 @@
 ---@field owned_buildings table <Building, Building>
 ---@field inventory table <TradeGoodReference, number?>
 ---@field price_memory table<TradeGoodReference, number?>
----@field need_satisfaction table<NEED, number>
+---@field need_satisfaction table<NEED, {consumed: number, demanded: number}>
 ---@field leading_warband Warband?
 ---@field recruiter_for_warband Warband?
 ---@field unit_of_warband Warband?

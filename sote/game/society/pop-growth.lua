@@ -27,9 +27,13 @@ function pg.growth(province)
 		end
 	end
 	for _, pp in pairs(province.all_pops) do
+		local food_satisfaction = 0.5
+		if pp.need_satisfaction[NEED.FOOD] then
+			food_satisfaction = (pp.need_satisfaction[NEED.FOOD].consumed or 0.5) / (pp.need_satisfaction[NEED.FOOD].demanded or 1)
+		end
 		if pp.age > pp.race.max_age then
 			to_remove[#to_remove + 1] = pp
-		elseif pop > cc and (pp.need_satisfaction[NEED.FOOD] or 0.5) < 0.1 then
+		elseif pop > cc and food_satisfaction < 0.1 then
 			-- Deaths due to starvation!
 			if love.math.random() < (1 - cc / pop) * death_rate * pp.race.carrying_capacity_weight then
 				to_remove[#to_remove + 1] = pp
@@ -67,7 +71,7 @@ function pg.growth(province)
 				-- Make sure that the expected food consumption has been calculated by this point!
 
 				-- Calculate the fraction symbolizing the amount of "overproduction" of food
-				local base = pp.need_satisfaction[NEED.FOOD] or 0
+				local base = food_satisfaction
 
 				local fem = 100 / (100 + pp.race.males_per_hundred_females)
 				local offspring = fem * pp.race.female_needs[NEED.FOOD] + (1 - fem) * pp.race.male_needs[NEED.FOOD]

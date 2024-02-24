@@ -449,9 +449,7 @@ function pro.run(province)
 					pop, pop_table, index, need, free_time, savings)
 
 				if need_demanded > 0 then
-					pop_table.need_satisfaction[index] = consumed / need_demanded
-				else
-					pop_table.need_satisfaction[index] = 0
+					pop_table.need_satisfaction[index].consumed = pop_table.need_satisfaction[index].consumed + consumed
 				end
 
 				total_life_needs = total_life_needs + need_demanded
@@ -478,9 +476,7 @@ function pro.run(province)
 				local free_time_after_need, income, expense, need_demanded, consumed = satisfy_need(
 					pop, pop_table, index, need, free_time, savings)
 				if need_demanded > 0 then
-					pop_table.need_satisfaction[index] = consumed / need_demanded
-				else
-					pop_table.need_satisfaction[index] = 0
+					pop_table.need_satisfaction[index].consumed = pop_table.need_satisfaction[index].consumed + consumed
 				end
 
 				total_needs = total_needs + need_demanded
@@ -603,6 +599,7 @@ function pro.run(province)
 				if not need.age_independent then
 					pop_need_amount[value] = pop_need_amount[value] * pop_view[zero].age_multiplier
 				end
+				pop.need_satisfaction[value] = {consumed = 0, demanded = pop_need_amount[value]}
 			end
 		else
 			for tag, value in pairs(JOBTYPE) do
@@ -616,11 +613,15 @@ function pro.run(province)
 				if not need.age_independent then
 					pop_need_amount[value] = pop_need_amount[value] * pop_view[zero].age_multiplier
 				end
+				pop.need_satisfaction[value] = {consumed = 0, demanded = pop_need_amount[value]}
 			end
 		end
 
 		pop_job_efficiency[JOBTYPE.FORAGER] = pop_job_efficiency[JOBTYPE.FORAGER] * foraging_efficiency
 
+		--reset 
+		for index, _ in pairs(NEEDS) do
+		end
 
 		-- base income: all adult pops forage and help each other which translates into a bit of wealth
 		-- real reason: wealth sources to fuel the economy
