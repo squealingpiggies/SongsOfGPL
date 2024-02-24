@@ -304,14 +304,10 @@ for tag, index in pairs(NEED) do
 		-- start with calculation of distribution over goods:
 		-- "distribution" "density" is precalculated, we only need to find a normalizing coef.
 		local need_amount = pop_need_amount[need_index]
-		local need_job_efficiency = pop_job_efficiency[need.job_to_satisfy]
-		local total_exp = need_total_exp[need_index]
 		local price_expectation = need_price_expectation[need_index]
 
 		-- local traders are greedy and want some income too
 		price_expectation = price_expectation * POP_BUY_PRICE_MULTIPLIER
-
-		local pre_induced_need = need_amount
 
 		-- induced demand:
 		local induced_demand = math.min(2, math.max(0, 1 / price_expectation - 1))
@@ -319,9 +315,12 @@ for tag, index in pairs(NEED) do
 
 		if need_amount < 0 then
 			error("Demanded need is lower than zero!")
+		elseif need_amount == 0 then
+			return free_time, 0, 0, 0
 		end
 
 		-- time required to satisfy need on your own
+		local need_job_efficiency = pop_job_efficiency[need.job_to_satisfy]
 		local time_to_satisfy = need.time_to_satisfy / need_job_efficiency * need_amount
 
 		-- actual time pop is able to spend
@@ -368,6 +367,8 @@ for tag, index in pairs(NEED) do
 			-- forage and buy required goods:
 			local forage_income = forage(pop, pop_table, forage_time)
 			local expense = 0
+
+			local total_exp = need_total_exp[need_index]
 
 			for _, good in pairs(need.goods) do
 				local index = RAWS_MANAGER.trade_good_to_index[good]
