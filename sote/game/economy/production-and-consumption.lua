@@ -160,7 +160,7 @@ function pro.run(province)
 		market_data[i - 1].demand = 0
 	end
 
-	for tag, index in pairs(NEED) do
+for tag, index in pairs(NEED) do
 		local need = NEEDS[index]
 		need_total_exp[index], need_price_expectation[index] = get_price_expectation(need.goods)
 	end
@@ -295,7 +295,6 @@ function pro.run(province)
 	---@return number free_time_left
 	---@return number income
 	---@return number expenses
-	---@return number need_total
 	---@return number need_satisfied
 	local function satisfy_need(pop, pop_table, need_index, need, free_time, savings)
 		if free_time < 0 then
@@ -358,7 +357,7 @@ function pro.run(province)
 			if need.job_to_satisfy == JOBTYPE.FORAGER then
 				foragers_count = foragers_count + work_time
 			end
-			return free_time - work_time, 0, 0, pre_induced_need, need_amount * utility_satisfy_needs_yourself
+			return free_time - work_time, 0, 0, need_amount * utility_satisfy_needs_yourself
 		else
 			-- wealth needed to buy required amount of goods:
 			local wealth_needed = math.min(price_expectation * buy_potential, province.trade_wealth)
@@ -421,7 +420,7 @@ function pro.run(province)
 				)
 			end
 
-			return free_time - forage_time, forage_income, expense, pre_induced_need, total_bought
+			return free_time - forage_time, forage_income, expense, total_bought
 		end
 	end
 
@@ -445,14 +444,14 @@ function pro.run(province)
 		-- buying life needs
 		for index, need in pairs(NEEDS) do
 			if need.life_need then
-				local free_time_after_need, income, expense, need_demanded, consumed = satisfy_need(
+				local free_time_after_need, income, expense, consumed = satisfy_need(
 					pop, pop_table, index, need, free_time, savings)
 
-				if need_demanded > 0 then
+				if consumed > 0 then
 					pop_table.need_satisfaction[index].consumed = pop_table.need_satisfaction[index].consumed + consumed
 				end
 
-				total_life_needs = total_life_needs + need_demanded
+				total_life_needs = total_life_needs + pop_table.need_satisfaction[index].demanded
 				total_life_satisfied = total_life_satisfied + consumed
 
 				total_income = total_income + income
@@ -473,13 +472,14 @@ function pro.run(province)
 		-- buying base needs
 		for index, need in pairs(NEEDS) do
 			if not need.life_need then
-				local free_time_after_need, income, expense, need_demanded, consumed = satisfy_need(
+				local free_time_after_need, income, expense, consumed = satisfy_need(
 					pop, pop_table, index, need, free_time, savings)
-				if need_demanded > 0 then
+
+				if consumed > 0 then
 					pop_table.need_satisfaction[index].consumed = pop_table.need_satisfaction[index].consumed + consumed
 				end
 
-				total_needs = total_needs + need_demanded
+				total_needs = total_needs + pop_table.need_satisfaction[index].demanded
 				total_satisfied = total_satisfied + consumed
 
 				total_income = total_income + income
