@@ -437,7 +437,6 @@ function pro.run(province)
 			return free_time, 0, 0, 0
 		end
 
-		-- TODO make sure utilty measures units of goods produced per unit of time
 		-- time required to satisfy need on your own
 		local need_job_efficiency = pop_job_efficiency[need.job_to_satisfy]
 		local time_to_satisfy = need.time_to_satisfy / need_job_efficiency * need_amount
@@ -445,18 +444,17 @@ function pro.run(province)
 		-- actual time pop is able to spend
 		local work_time = math.max(math.min(free_time, time_to_satisfy), 0)
 
-		-- utility pop gains from satisfying his needs on his own:
-		local utility_satisfy_needs_yourself = math.min(1, work_time / time_to_satisfy)
+		-- utility pop gains from satisfying his needs on his own: units produced vs time
+		local utility_satisfy_needs_yourself = math.min(0, need_amount / time_to_satisfy)
 
 		-- wealth pop can earn by foraging instead
 		local food_produced = pop[zero].foraging_efficiency * 0.5
 		local income_per_unit_of_time = food_price * food_produced
 		local potential_income = math.min(work_time * income_per_unit_of_time, province.trade_wealth)
 
-		-- TODO make sure utilty measures units of goods produced per unit of time
 		-- how many units pop can buy with potential income + savings
 		local buy_potential = math.min(need_amount, (potential_income + savings) / price_expectation)
-		local utility_work_and_buy = math.min(1, buy_potential / need_amount)
+		local utility_work_and_buy = math.min(0, buy_potential / work_time)
 
 		-- if WORLD.player_character and province == WORLD.player_character.province then
 		-- 	print(need_tag)
@@ -471,81 +469,99 @@ function pro.run(province)
 		-- 	print('utility_work_and_buy = \n', utility_work_and_buy)
 		-- end
 
-		-- TODO work to forage and buy if better, then cottage remaining
+		local forage_time = 0
+		local forage_income = 0
+		local remaining_need = 0
+		local cottaged = 0
+		local total_bought = 0
+		local expense = 0
+		local total_exp = need_total_exp[need_index]
+		local demanded_use = math.min(need_amount, savings / price_expectation)
 
-		-- TODO switch check to spending time foraging before buying
-		--		and cottage with based on remaning need
 		-- choose action with best utility
-		if utility_work_and_buy < utility_satisfy_needs_yourself then
-			if need.job_to_satisfy == JOBTYPE.FORAGER then
-				foragers_count = foragers_count + work_time
+		-- forage and buy if more time efficient to cottage
+		-- always try to access market to buy!
+		if utility_work_and_buy > utility_satisfy_needs_yourself then
+			local available = 0
+			-- if goods to buy calculate expect price and forage up to that
+			if available > 0 then
+				-- wealth needed to buy required amount of goods:
+				local wealth_needed = math.min(price_expectation * buy_potential, province.trade_wealth)
+				forage_time = math.max(0, math.min(free_time, wealth_needed / income_per_unit_of_time))
+
+				-- forage and buy required goods:
+				forage_income = forage(pop, pop_table, forage_time)
 			end
-			return free_time - work_time, 0, 0, need_amount * utility_satisfy_needs_yourself
-		else
-			-- wealth needed to buy required amount of goods:
-			local wealth_needed = math.min(price_expectation * buy_potential, province.trade_wealth)
-			local forage_time = math.max(0, math.min(free_time, wealth_needed / income_per_unit_of_time))
+		end
+		--buy from market
+		for use_reference, weight in pairs(need.use_cases) do
+			local demanded_amount = math.max(0, demanded_use - total_bought) / weight * use_case_feature[use_reference] / total_exp
+			local spendings, consumed_amount = buy_use(use_reference, demanded_amount, math.max(0, savings))
 
-			local total_bought = 0
+			total_bought = total_bought + consumed_amount * weight
+			expense = expense + spendings
 
-			-- forage and buy required goods:
-			local forage_income = forage(pop, pop_table, forage_time)
-			local expense = 0
-
-			local total_exp = need_total_exp[need_index]
-
-			local demanded_use = math.min(need_amount, savings / price_expectation)
-
-			for use_reference, weight in pairs(need.use_cases) do
-				local demanded_amount = math.max(0, demanded_use - total_bought) / weight * use_case_feature[use_reference] / total_exp
-				local spendings, consumed_amount = buy_use(use_reference, demanded_amount, math.max(0, savings))
-
-				total_bought = total_bought + consumed_amount * weight
-				expense = expense + spendings
-
-				if total_bought > need_amount + 0.01 then
-					error(
-						"INVALID ATTEMPT OF POP TO BUY A NEED:"
-						.. "\n use_reference = "
-						.. tostring(use_reference)
-						.. "\n weight = "
-						.. tostring(weight)
-						.. "\n spendings = "
-						.. tostring(spendings)
-						.. "\n expense = "
-						.. tostring(expense)
-						.. "\n savings = "
-						.. tostring(savings)
-						.. "\n need_amount = "
-						.. tostring(need_amount)
-						.. "\n demanded_amount = "
-						.. tostring(demanded_amount)
-						.. "\n consumed_amount = "
-						.. tostring(consumed_amount)
-						.. "\n total_bought = "
-						.. tostring(total_bought)
-					)
-				end
-			end
-
-			if total_bought < 0 or total_bought > need_amount + 0.01 then
+			if total_bought > need_amount + 0.01 then
 				error(
-					"INVALID AMOUNT OF CONSUMED GOODS"
-					.. "\n total_bought = "
-					.. tostring(total_bought)
+					"INVALID ATTEMPT OF POP TO BUY A NEED:"
+					.. "\n use_reference = "
+					.. tostring(use_reference)
+					.. "\n weight = "
+					.. tostring(weight)
+					.. "\n spendings = "
+					.. tostring(spendings)
+					.. "\n expense = "
+					.. tostring(expense)
+					.. "\n savings = "
+					.. tostring(savings)
 					.. "\n need_amount = "
 					.. tostring(need_amount)
-					.. "\n buy_potential = "
-					.. tostring(buy_potential)
-					.. "\n potential_income = "
-					.. tostring(potential_income)
-					.. "\n forage_income = "
-					.. tostring(forage_income)
+					.. "\n demanded_amount = "
+					.. tostring(demanded_amount)
+					.. "\n consumed_amount = "
+					.. tostring(consumed_amount)
+					.. "\n total_bought = "
+					.. tostring(total_bought)
 				)
 			end
-
-			return free_time - forage_time, forage_income, expense, total_bought
 		end
+
+		-- attempt to use remaning time to cottage remaining needs
+		if total_bought < need_amount + 0.01 then
+			-- recalculate cottage time
+			remaining_need = math.max(0, need_amount - total_bought)
+			time_to_satisfy = remaining_need * need.time_to_satisfy / need_job_efficiency
+			work_time = math.min(math.max(0, free_time - forage_time), time_to_satisfy)
+			-- add to forage count if needed
+				if need.job_to_satisfy == JOBTYPE.FORAGER then
+					foragers_count = foragers_count + work_time
+				end
+			forage_time = forage_time + work_time
+			cottaged = work_time / need.time_to_satisfy * need_job_efficiency
+			total_bought = total_bought + cottaged
+		end
+
+		if total_bought < 0 or total_bought > need_amount + 0.01 then
+			error(
+				"INVALID AMOUNT OF CONSUMED GOODS"
+				.. "\n total_bought = "
+				.. tostring(total_bought)
+				.. "\n need_amount = "
+				.. tostring(need_amount)
+				.. "\n buy_potential = "
+				.. tostring(buy_potential)
+				.. "\n potential_income = "
+				.. tostring(potential_income)
+				.. "\n forage_income = "
+				.. tostring(forage_income)
+				.. "\n remaining_need = "
+				.. tostring(remaining_need)
+				.. "\n cottaged = "
+				.. tostring(cottaged)
+			)
+		end
+
+		return free_time - forage_time, forage_income, expense, total_bought
 	end
 
 	---comment
