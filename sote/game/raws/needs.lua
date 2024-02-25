@@ -92,7 +92,7 @@ NEEDS = {
 	[NEED.LUXURY] = {
 		use_cases = {
 			["jewlery"] = 1.0,
-			["gemstone"] = 0.5,
+			["gemstones"] = 0.5,
 		},
 		job_to_satisfy = JOBTYPE.ARTISAN,
 		time_to_satisfy = 2.0

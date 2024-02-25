@@ -78,27 +78,6 @@ local total_realm_donations = 0
 local total_local_donations = 0
 local total_trade_donations = 0
 
-
----Calculates price expectation for a list of goods
----@param set_of_goods TradeGoodReference[]
----@return number total_exp total value for softmax
----@return number expectation price expectation
-local function get_price_expectation(set_of_goods)
-	local total_exp = 0.0
-	for _, good in pairs(set_of_goods) do
-		local c_index = RAWS_MANAGER.trade_good_to_index[good] - 1
-		total_exp = total_exp + market_data[c_index].feature
-	end
-
-	-- price expectation:
-	local price_expectation = 0.0
-	for _, good in pairs(set_of_goods) do
-		local c_index = RAWS_MANAGER.trade_good_to_index[good] - 1
-		price_expectation = price_expectation + market_data[c_index].price * market_data[c_index].feature / total_exp
-	end
-	return total_exp, price_expectation
-end
-
 ---Calculates weighted price expectation for a list of goods
 -- weight means how effective this trade good
 -- which means that price expectation will integrate 1 / weight
@@ -121,7 +100,26 @@ local function get_price_expectation_weighted(set_of_goods)
 
 	return total_exp, price_expectation
 end
+---Calculates weighted price expectation for a list of goods
+-- weight means how effective this trade good
+-- which means that price expectation will integrate 1 / weight
+---@param set_of_use_cases table<TradeGoodReference, number>
+---@return number total_exp total value for softmax
+---@return number expectation price expectation
+local function get_price_expectation_needs(set_of_use_cases)
+	local total_exp = 0
+	for use_case, _ in pairs(set_of_use_cases) do
+		total_exp = total_exp + use_case_total_exp[use_case]
+	end
 
+	-- price expectation:
+	local price_expectation = 0
+	for use_case, weight in pairs(set_of_use_cases) do
+		price_expectation = price_expectation + use_case_price_expectation[use_case] / total_exp / weight
+	end
+
+	return total_exp, price_expectation
+end
 
 ---Runs production on a single province!
 ---@param province Province
@@ -160,13 +158,12 @@ function pro.run(province)
 		market_data[i - 1].demand = 0
 	end
 
-for tag, index in pairs(NEED) do
-		local need = NEEDS[index]
-		need_total_exp[index], need_price_expectation[index] = get_price_expectation(need.goods)
-	end
-
 	for tag, use_case in pairs(RAWS_MANAGER.trade_goods_use_cases_by_name) do
 		use_case_total_exp[tag], use_case_price_expectation[tag] = get_price_expectation_weighted(use_case.goods)
+	end
+
+	for index, need in pairs(NEEDS) do
+		need_total_exp[index], need_price_expectation[index] = get_price_expectation_needs(need.use_cases)
 	end
 
 	-- Clear building stats
@@ -282,7 +279,79 @@ for tag, index in pairs(NEED) do
 
 
 
+	local use_case = require "game.raws.raws-utils".trade_good_use_case
 
+	---commenting
+	---@param use_reference TradeGoodUseCaseReference
+	---@return number amount
+	local function available_goods_for_use(use_reference)
+		local use = use_case(use_reference)
+		local total_available = 0
+
+		for good, weight in pairs(use.goods) do
+			local c_index = RAWS_MANAGER.trade_good_to_index[good] - 1
+			total_available = total_available + market_data[c_index].available
+		end
+
+		return total_available
+	end
+
+	---Buys goods according to their use and required amount
+	---@param use_reference TradeGoodUseCaseReference
+	---@param amount number
+	---@param savings number how much money you are ready to spend
+	---@return number spendings
+	---@return number consumed
+	local function buy_use(use_reference, amount, savings)
+		local available = available_goods_for_use(use_reference)
+		if not available > 0 or not amount > 0 or not savings < 0 then
+		--	error("INVALID BUY INPUTS:"
+		--		.. "\n use_reference: " .. use_reference
+		--		.. "\n amount: " .. amount
+		--		.. "\n savings: " .. savings
+		--	)
+			return 0, 0
+		end
+
+		local use = use_case(use_reference)
+
+		local total_exp = use_case_total_exp[use_reference]
+		local price_expectation = use_case_price_expectation[use_reference]
+		local demanded_use = math.max(amount, savings / price_expectation)
+
+
+		if amount > available then
+			amount = available
+		end
+
+		local potential_amount = math.min(amount, demanded_use)
+
+		local total_bought = 0
+		local spendings = 0
+
+		for good, weight in pairs(use.goods) do
+			local c_index = RAWS_MANAGER.trade_good_to_index[good] - 1
+
+			local consumed_amount = math.max(0, math.min(amount, potential_amount / weight * market_data[c_index].feature / total_exp))
+
+			if consumed_amount < 0 then error("TRIED TO BUY LESS THAN 0 GOODS") end -- return spendings, total_bought end
+
+			if consumed_amount > market_data[c_index].available then
+				consumed_amount = market_data[c_index].available
+			end
+
+			local demanded_amount = demanded_use / weight * market_data[c_index].feature / total_exp
+
+			-- we need to get back to use "units" so we multiplay consumed amount back by weight
+			total_bought = total_bought + consumed_amount * weight
+			potential_amount = math.min(amount - total_bought, demanded_use)
+
+			spendings = spendings + record_consumption(c_index + 1, consumed_amount)
+			record_demand(c_index + 1, demanded_amount)
+		end
+
+		return spendings, total_bought
+	end
 
 	---Attepts to satisfy needs of a pop  \
 	---Checks if it is more useful to buy a good or to produce it while using your free time
@@ -303,7 +372,7 @@ for tag, index in pairs(NEED) do
 
 		-- start with calculation of distribution over goods:
 		-- "distribution" "density" is precalculated, we only need to find a normalizing coef.
-		local need_amount = pop_need_amount[need_index]
+		local need_amount = pop_need_amount[need_index] - pop_table.need_satisfaction[need_index].consumed
 		local price_expectation = need_price_expectation[need_index]
 
 		-- local traders are greedy and want some income too
@@ -370,29 +439,24 @@ for tag, index in pairs(NEED) do
 
 			local total_exp = need_total_exp[need_index]
 
-			for _, good in pairs(need.goods) do
-				local index = RAWS_MANAGER.trade_good_to_index[good]
-				local c_index = index - 1
+			local demanded_use = math.min(need_amount, savings / price_expectation)
 
-				local available = market_data[c_index].available
-				local price = market_data[c_index].price
+			for use_reference, weight in pairs(need.use_cases) do
+				local need_remaining = math.max(0,need_amount - total_bought)
+				local demand_remaning = math.max(0, demanded_use / weight  - total_bought)
+				local demanded_amount = math.min(need_remaining, math.max(0, demand_remaning))
+				local spendings, consumed_amount = buy_use(use_reference, demanded_amount, math.max(0, savings + forage_income - expense))
 
-				---@type number
-				local demand = math.min(need_amount, buy_potential * market_data[c_index].feature / total_exp)
-				local consumption = math.max(0, math.min(demand, available))
+				total_bought = total_bought + consumed_amount * weight
+				expense = expense + spendings
 
-				expense = expense + record_consumption(index, consumption) * POP_BUY_PRICE_MULTIPLIER
-				record_demand(index, demand)
 
-				total_bought = total_bought + consumption
 
-				if expense ~= expense or consumption ~= consumption then
+				if expense ~= expense or consumed_amount ~= consumed_amount then
 					error(
 						"INVALID ATTEMPT OF POP TO BUY A NEED:"
-						.. "\n consumption * price = "
-						.. tostring(consumption * price)
-						.. "\n price = "
-						.. tostring(price)
+						.. "\n consumption = "
+						.. tostring(consumed_amount)
 						.. "\n total_exp = "
 						.. tostring(total_exp)
 						.. "\n expense = "
@@ -401,6 +465,21 @@ for tag, index in pairs(NEED) do
 						.. tostring(total_exp)
 						.. "\n buy_potential = "
 						.. tostring(buy_potential)
+					)
+				end
+				if total_bought < 0 or total_bought > need_amount + 0.01 then
+					error(
+						"INVALID AMOUNT OF CONSUMED GOODS IN LOOP"
+						.. "\n total_bought = "
+						.. tostring(total_bought)
+						.. "\n need_amount = "
+						.. tostring(need_amount)
+						.. "\n buy_potential = "
+						.. tostring(buy_potential)
+						.. "\n potential_income = "
+						.. tostring(potential_income)
+						.. "\n forage_income = "
+						.. tostring(forage_income)
 					)
 				end
 			end
@@ -503,63 +582,6 @@ for tag, index in pairs(NEED) do
 	end
 
 
-	local use_case = require "game.raws.raws-utils".trade_good_use_case
-
-	---commenting
-	---@param use_reference TradeGoodUseCaseReference
-	---@return number amount
-	local function available_goods_for_use(use_reference)
-		local use = use_case(use_reference)
-		local total_available = 0
-
-		for good, weight in pairs(use.goods) do
-			local c_index = RAWS_MANAGER.trade_good_to_index[good] - 1
-			total_available = total_available + market_data[c_index].available
-		end
-
-		return total_available
-	end
-
-	---Buys goods according to their use and required amount
-	---@param use_reference TradeGoodUseCaseReference
-	---@param amount number
-	---@param savings number how much money you are ready to spend
-	---@return number spendings
-	---@return number consumed
-	local function buy_use(use_reference, amount, savings)
-		local use = use_case(use_reference)
-
-		local total_exp = use_case_total_exp[use_reference]
-		local price_expectation = use_case_price_expectation[use_reference]
-		local demanded_use = math.max(amount, savings / price_expectation)
-
-		local available = available_goods_for_use(use_reference)
-		if amount > available then
-			amount = available
-		end
-		local potential_amount = math.min(amount, demanded_use)
-
-		local total_bought = 0
-		local spendings = 0
-
-		for good, weight in pairs(use.goods) do
-			local c_index = RAWS_MANAGER.trade_good_to_index[good] - 1
-
-			local consumed_amount = potential_amount / weight * market_data[c_index].feature / total_exp
-			if consumed_amount > market_data[c_index].available then
-				consumed_amount = market_data[c_index].available
-			end
-			local demanded_amount = demanded_use / weight * market_data[c_index].feature / total_exp
-
-			-- we need to get back to use "units" so we multiplay consumed amount back by weight
-			total_bought = total_bought + consumed_amount * weight
-
-			spendings = spendings + record_consumption(c_index + 1, consumed_amount)
-			record_demand(c_index + 1, demanded_amount)
-		end
-
-		return spendings, total_bought
-	end
 
 	---@type table<POP, number>
 	local donations_to_owners = {}
@@ -743,8 +765,8 @@ for tag, index in pairs(NEED) do
 
 				if efficiency > 0 then
 					for input, amount in pairs(prod.inputs) do
-						local required = input_boost * amount * efficiency
-						local spent, consumed = buy_use(input, required, production_budget)
+						local required = math.max(0, input_boost * amount * efficiency)
+						local spent, consumed = buy_use(input, required, math.max(0,production_budget))
 
 						input_satisfaction_2 = math.min(input_satisfaction_2, consumed / required)
 						income = income - spent
