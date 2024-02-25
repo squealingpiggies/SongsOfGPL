@@ -52,7 +52,7 @@ function d.load()
 		category = "good",
 		base_price = 2,
 	}
-	add_use_case("food", "food", 0.5)
+	add_use_case("honey", "food", 0.5)
 	add_use_case("honey", "mead-substrate", 1)
 	-- CRUCIAL SETTLEMENT SERVICES
 	TradeGood:new {
@@ -198,6 +198,7 @@ function d.load()
 
 	add_use_case("blanks-obsidian", "tools-like", 0.4)
 	add_use_case("blanks-obsidian", "blanks-obsidian", 1)
+	add_use_case("blanks-obsidian", "gemstones", 0.4)
 
 
 	TradeGood:new {
@@ -288,6 +289,7 @@ function d.load()
 	}
 	add_use_case("copper-native", "copper-source", 1)
 	add_use_case("copper-native", "copper-native", 1)
+	add_use_case("copper-native", "gemstones", 0.3)
 
 
 	TradeGood:new {

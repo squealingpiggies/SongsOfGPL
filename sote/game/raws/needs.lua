@@ -1,7 +1,7 @@
 local JOBTYPE = require "game.raws.job_types"
 
 ---@class Need
----@field goods TradeGoodReference[]
+---@field use_cases table<TradeGoodUseCaseReference, number>
 ---@field age_independent boolean?
 ---@field life_need boolean?
 ---@field time_to_satisfy number Represents amount of time a pop should spend to satisfy a unit of this need.
@@ -33,54 +33,67 @@ NEED_NAME = {
 ---@type table<NEED, Need>
 NEEDS = {
 	[NEED.WATER] = {
-		goods = {"water", "liquors"},
+		use_cases = {
+			["water"] = 1,
+			["liquors"] = 0.5
+		},
 		life_need = true,
 		job_to_satisfy = JOBTYPE.FORAGER,
 		time_to_satisfy = 0.05,
 	},
 	[NEED.FOOD] = {
-		goods = {"food", "meat", "liquors"},
+		use_cases = {
+			["food"] = 1,
+			["meat"] = 1,
+			["liquors"] = 0.2
+		},
 		-- age_independent = true,
 		life_need = true,
 		job_to_satisfy = JOBTYPE.FORAGER,
 		time_to_satisfy = 1.5,
 	},
 	[NEED.CLOTHING] = {
-		goods = {"hide", "leather", "clothes"},
+		use_cases = {
+			["clothes"] = 1.0,
+		},
 		job_to_satisfy = JOBTYPE.FORAGER,
 		time_to_satisfy = 0.3
 	},
 	[NEED.TOOLS] = {
-		goods = {
-			"blanks-flint",
-			"blanks-obsidian",
-			"tools-flint",
-			"tools-obsidian",
-			"tools-native-copper",
-			"tools-cast-copper",
-			"copper-native",
-			"copper-ore",
+		use_cases = {
+			["tools-like"] = 0.5,
+			["tools"] = 1,
+			["tools-advanced"] = 1.5
 		},
 		job_to_satisfy = JOBTYPE.ARTISAN,
 		time_to_satisfy = 0.3
 	},
 	[NEED.FURNITURE] = {
-		goods = {"furniture", "timber", "stone"},
+		use_cases = {
+			["furniture"] = 1.0,
+		},
 		job_to_satisfy = JOBTYPE.ARTISAN,
 		time_to_satisfy = 0.3
 	},
 	[NEED.HEALTHCARE] = {
-		goods = {"healthcare"},
+		use_cases = {
+			["healthcare"] = 1.0,
+		},
 		job_to_satisfy = JOBTYPE.CLERK,
 		time_to_satisfy = 0.3
 	},
 	[NEED.STORAGE] = {
-		goods = {"containers", "clay", "timber"},
+		use_cases = {
+			["containers"] = 1.0,
+		},
 		job_to_satisfy = JOBTYPE.ARTISAN,
 		time_to_satisfy = 0.3
 	},
 	[NEED.LUXURY] = {
-		goods = {"copper-bars"},
+		use_cases = {
+			["jewlery"] = 1.0,
+			["gemstone"] = 0.5,
+		},
 		job_to_satisfy = JOBTYPE.ARTISAN,
 		time_to_satisfy = 2.0
 	}

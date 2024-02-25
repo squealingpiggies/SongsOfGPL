@@ -55,6 +55,10 @@ function d.load()
 
 	make_use_case("stone", "stone", "stone-block.png", 0.262, 0.241, 0.222)
 	make_use_case("clay", "clay", "powder.png", 0.262, 0.241, 0.222)
+
+	-- luxury goods
+	make_use_case("gemstones", "gemstones", "gems.png", 1.0, 1.0, 1.0)
+	make_use_case("jewlery", "jewlery", "primative-necklace.png", 0.81, 0.71, 0.23)
 end
 
 return d
