@@ -304,9 +304,10 @@ function pro.run(province)
 	---@return number consumed
 	local function buy_use(use_reference, amount, savings)
 		local available = available_goods_for_use(use_reference)
-		if not available > 0 or not amount > 0 or not savings < 0 then
+		if available <= 0 or amount <= 0 or savings <= 0 then
 		--	error("INVALID BUY INPUTS:"
 		--		.. "\n use_reference: " .. use_reference
+		--		.. "\n available: " .. available
 		--		.. "\n amount: " .. amount
 		--		.. "\n savings: " .. savings
 		--	)
@@ -332,22 +333,55 @@ function pro.run(province)
 		for good, weight in pairs(use.goods) do
 			local c_index = RAWS_MANAGER.trade_good_to_index[good] - 1
 
-			local consumed_amount = math.max(0, math.min(amount, potential_amount / weight * market_data[c_index].feature / total_exp))
+			-- adjust demand and purchase amounts to prevent buying too much
+			demanded_use = math.max(0, amount - total_bought)
+			potential_amount = math.max(0, math.min(demanded_use, (savings - spendings) / market_data[c_index].price))
 
-			if consumed_amount < 0 then error("TRIED TO BUY LESS THAN 0 GOODS") end -- return spendings, total_bought end
-
+			local consumed_amount = potential_amount / weight * market_data[c_index].feature / total_exp
 			if consumed_amount > market_data[c_index].available then
 				consumed_amount = market_data[c_index].available
 			end
-
 			local demanded_amount = demanded_use / weight * market_data[c_index].feature / total_exp
 
 			-- we need to get back to use "units" so we multiplay consumed amount back by weight
 			total_bought = total_bought + consumed_amount * weight
-			potential_amount = math.min(amount - total_bought, demanded_use)
 
 			spendings = spendings + record_consumption(c_index + 1, consumed_amount)
 			record_demand(c_index + 1, demanded_amount)
+
+			if total_bought > amount + 0.01 or spendings > savings + 0.01 then
+				error(
+					"INVALID AMOUNT OF PURCHASED GOODS"
+					.. "\n use_reference = "
+					.. tostring(use_reference)
+					.. "\n amount = "
+					.. tostring(amount)
+					.. "\n savings = "
+					.. tostring(savings)
+					.. "\n available = "
+					.. tostring(available)
+					.. "\n total_exp = "
+					.. tostring(total_exp)
+					.. "\n price_expectation = "
+					.. tostring(price_expectation)
+					.. "\n demanded_use = "
+					.. tostring(demanded_use)
+					.. "\n potential_amount = "
+					.. tostring(potential_amount)
+					.. "\n total_bought = "
+					.. tostring(total_bought)
+					.. "\n good = "
+					.. tostring(good)
+					.. "\n weight = "
+					.. tostring(weight)
+					.. "\n consumed_amount = "
+					.. tostring(consumed_amount)
+					.. "\n demanded_amount = "
+					.. tostring(demanded_amount)
+					.. "\n spendings = "
+					.. tostring(spendings)
+				)
+			end
 		end
 
 		return spendings, total_bought
@@ -388,6 +422,7 @@ function pro.run(province)
 			return free_time, 0, 0, 0
 		end
 
+		-- TODO make sure utilty measures units of goods produced per unit of time
 		-- time required to satisfy need on your own
 		local need_job_efficiency = pop_job_efficiency[need.job_to_satisfy]
 		local time_to_satisfy = need.time_to_satisfy / need_job_efficiency * need_amount
@@ -403,6 +438,7 @@ function pro.run(province)
 		local income_per_unit_of_time = food_price * food_produced
 		local potential_income = math.min(work_time * income_per_unit_of_time, province.trade_wealth)
 
+		-- TODO make sure utilty measures units of goods produced per unit of time
 		-- how many units pop can buy with potential income + savings
 		local buy_potential = math.min(need_amount, (potential_income + savings) / price_expectation)
 		local utility_work_and_buy = math.min(1, buy_potential / need_amount)
@@ -420,6 +456,10 @@ function pro.run(province)
 		-- 	print('utility_work_and_buy = \n', utility_work_and_buy)
 		-- end
 
+		-- TODO work to forage and buy if better, then cottage remaining
+
+		-- TODO switch check to spending time foraging before buying
+		--		and cottage with based on remaning need
 		-- choose action with best utility
 		if utility_work_and_buy < utility_satisfy_needs_yourself then
 			if need.job_to_satisfy == JOBTYPE.FORAGER then
@@ -442,44 +482,38 @@ function pro.run(province)
 			local demanded_use = math.min(need_amount, savings / price_expectation)
 
 			for use_reference, weight in pairs(need.use_cases) do
-				local need_remaining = math.max(0,need_amount - total_bought)
-				local demand_remaning = math.max(0, demanded_use / weight  - total_bought)
-				local demanded_amount = math.min(need_remaining, math.max(0, demand_remaning))
-				local spendings, consumed_amount = buy_use(use_reference, demanded_amount, math.max(0, savings + forage_income - expense))
+				local feature = 0
+				for good in pairs(use_case(use_reference).goods) do
+					local c_index = RAWS_MANAGER.trade_good_to_index[good] - 1
+					feature = feature + market_data[c_index].feature
+				end
+				local demanded_amount = math.max(0, demanded_use - total_bought) / weight * feature / total_exp
+				local spendings, consumed_amount = buy_use(use_reference, demanded_amount, math.max(0, savings))
 
 				total_bought = total_bought + consumed_amount * weight
 				expense = expense + spendings
 
-
-
-				if expense ~= expense or consumed_amount ~= consumed_amount then
+				if total_bought > need_amount + 0.01 then
 					error(
 						"INVALID ATTEMPT OF POP TO BUY A NEED:"
-						.. "\n consumption = "
-						.. tostring(consumed_amount)
-						.. "\n total_exp = "
-						.. tostring(total_exp)
+						.. "\n use_reference = "
+						.. tostring(use_reference)
+						.. "\n weight = "
+						.. tostring(weight)
+						.. "\n spendings = "
+						.. tostring(spendings)
 						.. "\n expense = "
 						.. tostring(expense)
-						.. "\n total_exp = "
-						.. tostring(total_exp)
-						.. "\n buy_potential = "
-						.. tostring(buy_potential)
-					)
-				end
-				if total_bought < 0 or total_bought > need_amount + 0.01 then
-					error(
-						"INVALID AMOUNT OF CONSUMED GOODS IN LOOP"
-						.. "\n total_bought = "
-						.. tostring(total_bought)
+						.. "\n savings = "
+						.. tostring(savings)
 						.. "\n need_amount = "
 						.. tostring(need_amount)
-						.. "\n buy_potential = "
-						.. tostring(buy_potential)
-						.. "\n potential_income = "
-						.. tostring(potential_income)
-						.. "\n forage_income = "
-						.. tostring(forage_income)
+						.. "\n demanded_amount = "
+						.. tostring(demanded_amount)
+						.. "\n consumed_amount = "
+						.. tostring(consumed_amount)
+						.. "\n total_bought = "
+						.. tostring(total_bought)
 					)
 				end
 			end
@@ -521,6 +555,8 @@ function pro.run(province)
 		local total_expense = 0
 		local total_income = 0
 
+		-- TODO divy up time and money to life needs
+
 		-- buying life needs
 		for index, need in pairs(NEEDS) do
 			if need.life_need then
@@ -543,12 +579,15 @@ function pro.run(province)
 			end
 		end
 
+
 		if total_life_needs > 0 then
 			pop_table.life_needs_satisfaction = total_life_satisfied / total_life_needs
 		else
 			pop_table.life_needs_satisfaction = 1
 		end
 
+		-- TODO divy up time and money to life needs
+		
 		-- buying base needs
 		for index, need in pairs(NEEDS) do
 			if not need.life_need then
@@ -570,6 +609,8 @@ function pro.run(province)
 				savings = savings + income - expense
 			end
 		end
+
+		-- TODO spend remaining time!
 
 		economic_effects.add_pop_savings(pop_table, total_income, economic_effects.reasons.Forage)
 		economic_effects.add_pop_savings(pop_table, -total_expense, economic_effects.reasons.OtherNeeds)
@@ -761,12 +802,12 @@ function pro.run(province)
 
 				-- real input satisfaction
 				local input_satisfaction_2 = 1
-				local production_budget = pop.savings / 2
+				local production_budget = math.max(0, pop.savings / 2 )
 
 				if efficiency > 0 then
 					for input, amount in pairs(prod.inputs) do
 						local required = math.max(0, input_boost * amount * efficiency)
-						local spent, consumed = buy_use(input, required, math.max(0,production_budget))
+						local spent, consumed = buy_use(input, required, production_budget)
 
 						input_satisfaction_2 = math.min(input_satisfaction_2, consumed / required)
 						income = income - spent
@@ -786,6 +827,8 @@ function pro.run(province)
 					building.earn_from_outputs[output] = (building.earn_from_outputs[output] or 0) + earnt
 
 					record_production(output_index, amount * efficiency * output_boost * throughput_boost)
+					-- TODO give pop to buy good to satisfy needs immedeately before other pop
+					-- 		mainly to prevent employed pop producing food from starving
 				end
 
 				income = income

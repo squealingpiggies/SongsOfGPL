@@ -146,21 +146,20 @@ return function(rect, base_unit, province)
 
                     local needs_tooltip = ""
                     for need, value in pairs(v.need_satisfaction) do
-                        if not NEEDS[need].life_need then
                         local consumed = value.consumed
                         local demanded = value.demanded
                         local ratio = consumed/(demanded or 0)
                         needs_tooltip = needs_tooltip .. "\n"
                             .. NEED_NAME[need] .. " " .. ut.to_fixed_point2(consumed) .. " / "
                             .. ut.to_fixed_point2(demanded) .. " (" .. ut.to_fixed_point2(ratio * 100) .. "%)"
-                        end
                     end
 
                     ut.data_entry_percentage(
                         "",
                         v.basic_needs_satisfaction,
                         rect,
-                        "Satisfaction of needs of this character. \n" .. needs_tooltip
+                        "Satisfaction of this character's wants."
+                            .. needs_tooltip
                     )
                 end,
                 width = base_unit * 3,
@@ -190,7 +189,8 @@ return function(rect, base_unit, province)
                         "",
                         v.life_needs_satisfaction,
                         rect,
-                        "Satisfaction of life needs of this character. " .. needs_tooltip
+                        "Character's life requirements satiated.\n"
+                            .. needs_tooltip
                     )
                 end,
                 width = base_unit * 3,
