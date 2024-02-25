@@ -1,4 +1,5 @@
 local trade_good = require "game.raws.raws-utils".trade_good
+local use_case = require "game.raws.raws-utils".trade_good_use_case
 local JOBTYPE = require "game.raws.job_types"
 
 local tabb = require "engine.table"
@@ -72,6 +73,8 @@ local need_total_exp = ffi.new("float[?]", amount_of_need_types)
 local use_case_total_exp = {}
 ---@type table<TradeGoodUseCaseReference, number>
 local use_case_price_expectation = {}
+---@type table <NEED, number>
+local use_case_feature = {}
 
 local zero = 0
 local total_realm_donations = 0
@@ -100,8 +103,8 @@ local function get_price_expectation_weighted(set_of_goods)
 
 	return total_exp, price_expectation
 end
----Calculates weighted price expectation for a list of goods
--- weight means how effective this trade good
+---Calculates weighted price expectation for a list of use cases
+-- weight means how effective this each use case is
 -- which means that price expectation will integrate 1 / weight
 ---@param set_of_use_cases table<TradeGoodReference, number>
 ---@return number total_exp total value for softmax
@@ -119,6 +122,18 @@ local function get_price_expectation_needs(set_of_use_cases)
 	end
 
 	return total_exp, price_expectation
+end
+
+---@param use_reference TradeGoodReference
+---@return number total_feature goods feature summed
+local function get_use_case_feature(use_reference)
+	local total_feature = 0
+	for good in pairs(use_case(use_reference).goods) do
+		local c_index = RAWS_MANAGER.trade_good_to_index[good] - 1
+		total_feature = total_feature + market_data[c_index].feature
+	end
+
+	return total_feature
 end
 
 ---Runs production on a single province!
@@ -158,8 +173,9 @@ function pro.run(province)
 		market_data[i - 1].demand = 0
 	end
 
-	for tag, use_case in pairs(RAWS_MANAGER.trade_goods_use_cases_by_name) do
-		use_case_total_exp[tag], use_case_price_expectation[tag] = get_price_expectation_weighted(use_case.goods)
+	for tag, case in pairs(RAWS_MANAGER.trade_goods_use_cases_by_name) do
+		use_case_total_exp[tag], use_case_price_expectation[tag] = get_price_expectation_weighted(case.goods)
+		use_case_feature[tag] = get_use_case_feature(tag)
 	end
 
 	for index, need in pairs(NEEDS) do
@@ -279,7 +295,6 @@ function pro.run(province)
 
 
 
-	local use_case = require "game.raws.raws-utils".trade_good_use_case
 
 	---commenting
 	---@param use_reference TradeGoodUseCaseReference
@@ -482,12 +497,7 @@ function pro.run(province)
 			local demanded_use = math.min(need_amount, savings / price_expectation)
 
 			for use_reference, weight in pairs(need.use_cases) do
-				local feature = 0
-				for good in pairs(use_case(use_reference).goods) do
-					local c_index = RAWS_MANAGER.trade_good_to_index[good] - 1
-					feature = feature + market_data[c_index].feature
-				end
-				local demanded_amount = math.max(0, demanded_use - total_bought) / weight * feature / total_exp
+				local demanded_amount = math.max(0, demanded_use - total_bought) / weight * use_case_feature[use_reference] / total_exp
 				local spendings, consumed_amount = buy_use(use_reference, demanded_amount, math.max(0, savings))
 
 				total_bought = total_bought + consumed_amount * weight
