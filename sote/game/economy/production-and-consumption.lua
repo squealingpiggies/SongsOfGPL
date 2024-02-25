@@ -482,11 +482,16 @@ function pro.run(province)
 		-- forage and buy if more time efficient to cottage
 		-- always try to access market to buy!
 		if utility_work_and_buy > utility_satisfy_needs_yourself then
+			-- check available goods on market
 			local available = 0
+			for index, weight in pairs(need.use_cases) do
+				available = available + available_goods_for_use(index) / weight
+			end
 			-- if goods to buy calculate expect price and forage up to that
 			if available > 0 then
 				-- wealth needed to buy required amount of goods:
-				local wealth_needed = math.min(price_expectation * buy_potential, province.trade_wealth)
+				local purchasable = math.min(available, buy_potential)
+				local wealth_needed = math.max(0, math.min(price_expectation *  purchasable, province.trade_wealth) - savings)
 				forage_time = math.max(0, math.min(free_time, wealth_needed / income_per_unit_of_time))
 
 				-- forage and buy required goods:
