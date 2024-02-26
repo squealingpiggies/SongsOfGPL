@@ -719,9 +719,6 @@ function pro.run(province)
 
 		pop_job_efficiency[JOBTYPE.FORAGER] = pop_job_efficiency[JOBTYPE.FORAGER] * foraging_efficiency
 
-		--reset 
-		for index, _ in pairs(NEEDS) do
-		end
 
 		-- base income: all adult pops forage and help each other which translates into a bit of wealth
 		-- real reason: wealth sources to fuel the economy
