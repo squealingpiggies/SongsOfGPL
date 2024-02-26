@@ -586,9 +586,7 @@ function pro.run(province)
 		local total_expense = 0
 		local total_income = 0
 
-		-- TODO divy up time and money to life needs
-
-		-- buying life needs
+		-- satisfying life needs, spending all money and time to satisfy
 		for index, need in pairs(NEEDS) do
 			if need.life_need then
 				local free_time_after_need, income, expense, consumed = satisfy_need(
@@ -599,7 +597,7 @@ function pro.run(province)
 				end
 
 				total_life_needs = total_life_needs + pop_table.need_satisfaction[index].demanded
-				total_life_satisfied = total_life_satisfied + consumed
+				total_life_satisfied = total_life_satisfied + pop_table.need_satisfaction[index].consumed
 
 				total_income = total_income + income
 				total_expense = total_expense + expense
@@ -609,7 +607,6 @@ function pro.run(province)
 				savings = savings + income - expense
 			end
 		end
-
 
 		if total_life_needs > 0 then
 			pop_table.life_needs_satisfaction = total_life_satisfied / total_life_needs
@@ -617,31 +614,39 @@ function pro.run(province)
 			pop_table.life_needs_satisfaction = 1
 		end
 
-		-- TODO divy up time and money to life needs
-		
-		-- buying base needs
+		local time_spent = 0
+		local money_change = 0
+		-- satisfying basic needs, equally split with remaining money and time
 		for index, need in pairs(NEEDS) do
 			if not need.life_need then
+				local basic_need_count = 6 -- TODO calculate someplace earlier
 				local free_time_after_need, income, expense, consumed = satisfy_need(
-					pop, pop_table, index, need, free_time, savings)
+					pop, pop_table, index, need, free_time / basic_need_count, savings / basic_need_count)
 
 				if consumed > 0 then
 					pop_table.need_satisfaction[index].consumed = pop_table.need_satisfaction[index].consumed + consumed
 				end
 
 				total_needs = total_needs + pop_table.need_satisfaction[index].demanded
-				total_satisfied = total_satisfied + consumed
+				total_satisfied = total_satisfied + pop_table.need_satisfaction[index].consumed
 
 				total_income = total_income + income
 				total_expense = total_expense + expense
 
-				free_time = free_time_after_need
+				time_spent = time_spent + free_time_after_need
 
-				savings = savings + income - expense
+				money_change = money_change + income - expense
 			end
 		end
 
-		-- TODO spend remaining time!
+		free_time = free_time - time_spent
+
+		savings = savings - money_change
+	
+		-- use remaing time to forage
+		if free_time > 0 then
+			total_income = total_income + forage(pop, pop_table, free_time)
+		end
 
 		economic_effects.add_pop_savings(pop_table, total_income, economic_effects.reasons.Forage)
 		economic_effects.add_pop_savings(pop_table, -total_expense, economic_effects.reasons.OtherNeeds)
