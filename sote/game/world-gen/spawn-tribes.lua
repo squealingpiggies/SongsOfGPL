@@ -98,11 +98,10 @@ local function make_new_realm(capitol, race, culture, faith)
 
 	-- try to assign a parent to generated children
 	for _,x in pairs(capitol.all_pops) do
-		if x.age > x.race.adult_age then
+		if x.age < x.race.adult_age then
 			local potentials = tabb.filter(capitol.all_pops,
 			function(a) return a.age >= x.age + x.race.adult_age and a.age < x.race.elder_age + x.age end)
-			local size = #potentials
-			local parent = tabb.nth(potentials, math.random(1,size))
+			local parent = tabb.random_select_from_set(potentials)
 			if parent then
 				parent.children[x] = x
 				x.parent = parent

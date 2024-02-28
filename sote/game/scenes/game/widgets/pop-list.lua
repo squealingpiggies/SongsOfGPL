@@ -23,7 +23,14 @@ local function init_state(base_unit)
 end
 
 local function render_name(rect, k, v)
-    ui.left_text(v.name, rect)
+    local name = v.name
+    local children = tabb.size(v.children)
+    if children > 0 then
+        name = name .. " (" .. children .. ")"
+    elseif v.parent then
+        name = name .. " (" .. v.parent.name .. ")"
+    end
+    ui.left_text(name, rect)
 end
 
 local function render_race(rect, k, v)
