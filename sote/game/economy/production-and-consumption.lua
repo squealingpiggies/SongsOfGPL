@@ -1,4 +1,5 @@
 local trade_good = require "game.raws.raws-utils".trade_good
+local use_case = require "game.raws.raws-utils".trade_good_use_case
 local JOBTYPE = require "game.raws.job_types"
 
 local tabb = require "engine.table"
@@ -122,6 +123,21 @@ local function get_price_expectation_weighted(set_of_goods)
 	return total_exp, price_expectation
 end
 
+---@param need NEED
+---@return number total_exp total value for softmax
+---@return number expectation price expectation
+local function get_price_expectation_need(need)
+	-- price expectation:
+	local total_exp = 0
+	local total_price_exp = 0
+	for index, weight in pairs(NEEDS[need].use_cases) do
+		local exp, price_exp = get_price_expectation_weighted(use_case(index).goods)
+		total_price_exp = total_price_exp + price_exp * weight
+		total_exp = total_exp + exp
+	end
+
+	return total_exp, total_price_exp
+end
 
 ---Runs production on a single province!
 ---@param province Province
@@ -160,13 +176,14 @@ function pro.run(province)
 		market_data[i - 1].demand = 0
 	end
 
-	for tag, index in pairs(NEED) do
-		local need = NEEDS[index]
-		need_total_exp[index], need_price_expectation[index] = get_price_expectation(need.goods)
+
+	for tag, use in pairs(RAWS_MANAGER.trade_goods_use_cases_by_name) do
+		use_case_total_exp[tag], use_case_price_expectation[tag] = get_price_expectation_weighted(use.goods)
 	end
 
-	for tag, use_case in pairs(RAWS_MANAGER.trade_goods_use_cases_by_name) do
-		use_case_total_exp[tag], use_case_price_expectation[tag] = get_price_expectation_weighted(use_case.goods)
+	for tag, index in pairs(NEED) do
+		local need = NEEDS[index]
+		need_total_exp[index], need_price_expectation[index] = get_price_expectation_need(index)
 	end
 
 	-- Clear building stats
@@ -281,6 +298,61 @@ function pro.run(province)
 
 
 
+	---commenting
+	---@param use_reference TradeGoodUseCaseReference
+	---@return number amount
+	local function available_goods_for_use(use_reference)
+		local use = use_case(use_reference)
+		local total_available = 0
+
+		for good, weight in pairs(use.goods) do
+			local c_index = RAWS_MANAGER.trade_good_to_index[good] - 1
+			total_available = total_available + market_data[c_index].available
+		end
+
+		return total_available
+	end
+
+	---Buys goods according to their use and required amount
+	---@param use_reference TradeGoodUseCaseReference
+	---@param amount number
+	---@param savings number how much money you are ready to spend
+	---@return number spendings
+	---@return number consumed
+	local function buy_use(use_reference, amount, savings)
+		local use = use_case(use_reference)
+
+		local total_exp = use_case_total_exp[use_reference]
+		local price_expectation = use_case_price_expectation[use_reference]
+		local demanded_use = math.max(amount, savings / price_expectation)
+
+		local available = available_goods_for_use(use_reference)
+		if amount > available then
+			amount = available
+		end
+		local potential_amount = math.min(amount, demanded_use)
+
+		local total_bought = 0
+		local spendings = 0
+
+		for good, weight in pairs(use.goods) do
+			local c_index = RAWS_MANAGER.trade_good_to_index[good] - 1
+
+			local consumed_amount = potential_amount / weight * market_data[c_index].feature / total_exp
+			if consumed_amount > market_data[c_index].available then
+				consumed_amount = market_data[c_index].available
+			end
+			local demanded_amount = demanded_use / weight * market_data[c_index].feature / total_exp
+
+			-- we need to get back to use "units" so we multiplay consumed amount back by weight
+			total_bought = total_bought + consumed_amount * weight
+
+			spendings = spendings + record_consumption(c_index + 1, consumed_amount)
+			record_demand(c_index + 1, demanded_amount)
+		end
+
+		return spendings, total_bought
+	end
 
 
 
@@ -370,29 +442,17 @@ function pro.run(province)
 			local forage_income = forage(pop, pop_table, forage_time)
 			local expense = 0
 
-			for _, good in pairs(need.goods) do
-				local index = RAWS_MANAGER.trade_good_to_index[good]
-				local c_index = index - 1
+			for case, good in pairs(need.use_cases) do
+				local spendings, consumed = buy_use(case, need_amount, savings + forage_income)
 
-				local available = market_data[c_index].available
-				local price = market_data[c_index].price
-
-				---@type number
-				local demand = math.min(need_amount, buy_potential * market_data[c_index].feature / total_exp)
-				local consumption = math.max(0, math.min(demand, available))
-
-				expense = expense + record_consumption(index, consumption) * POP_BUY_PRICE_MULTIPLIER
-				record_demand(index, demand)
-
-				total_bought = total_bought + consumption
-
-				if expense ~= expense or consumption ~= consumption then
+				if spendings > savings + forage_income + 0.01
+					or expense ~= expense
+					or consumed ~= consumed
+				then
 					error(
 						"INVALID ATTEMPT OF POP TO BUY A NEED:"
-						.. "\n consumption * price = "
-						.. tostring(consumption * price)
-						.. "\n price = "
-						.. tostring(price)
+						.. "\n consumed = "
+						.. tostring(consumed)
 						.. "\n total_exp = "
 						.. tostring(total_exp)
 						.. "\n expense = "
@@ -431,13 +491,6 @@ function pro.run(province)
 	---@param free_time number amount of time pop is willing to spend on foraging
 	---@param savings number amount of money pop is willing to spend on needs
 	local function satisfy_needs(pop, pop_table, free_time, savings)
-		pop_table.life_needs_satisfaction = 2
-
-		local total_satisfied = 0
-		local total_needs = 0
-
-		local total_life_satisfied = 0
-		local total_life_needs = 0
 
 		local total_expense = 0
 		local total_income = 0
@@ -448,15 +501,6 @@ function pro.run(province)
 				local free_time_after_need, income, expense, need_demanded, consumed = satisfy_need(
 					pop, pop_table, index, need, free_time, savings)
 
-				if need_demanded > 0 then
-					pop_table.need_satisfaction[index] = consumed / need_demanded
-				else
-					pop_table.need_satisfaction[index] = 0
-				end
-
-				total_life_needs = total_life_needs + need_demanded
-				total_life_satisfied = total_life_satisfied + consumed
-
 				total_income = total_income + income
 				total_expense = total_expense + expense
 
@@ -466,25 +510,11 @@ function pro.run(province)
 			end
 		end
 
-		if total_life_needs > 0 then
-			pop_table.life_needs_satisfaction = total_life_satisfied / total_life_needs
-		else
-			pop_table.life_needs_satisfaction = 1
-		end
-
 		-- buying base needs
 		for index, need in pairs(NEEDS) do
 			if not need.life_need then
 				local free_time_after_need, income, expense, need_demanded, consumed = satisfy_need(
 					pop, pop_table, index, need, free_time, savings)
-				if need_demanded > 0 then
-					pop_table.need_satisfaction[index] = consumed / need_demanded
-				else
-					pop_table.need_satisfaction[index] = 0
-				end
-
-				total_needs = total_needs + need_demanded
-				total_satisfied = total_satisfied + consumed
 
 				total_income = total_income + income
 				total_expense = total_expense + expense
@@ -498,81 +528,36 @@ function pro.run(province)
 		economic_effects.add_pop_savings(pop_table, total_income, economic_effects.reasons.Forage)
 		economic_effects.add_pop_savings(pop_table, -total_expense, economic_effects.reasons.OtherNeeds)
 
-		if total_needs > 0 then
-			pop_table.basic_needs_satisfaction = total_satisfied / total_needs
-		else
-			pop_table.basic_needs_satisfaction = 1
-		end
+		pop_table:gauge_needs()
 	end
 
 
-	local use_case = require "game.raws.raws-utils".trade_good_use_case
-
-	---commenting
-	---@param use_reference TradeGoodUseCaseReference
-	---@return number amount
-	local function available_goods_for_use(use_reference)
-		local use = use_case(use_reference)
-		local total_available = 0
-
-		for good, weight in pairs(use.goods) do
-			local c_index = RAWS_MANAGER.trade_good_to_index[good] - 1
-			total_available = total_available + market_data[c_index].available
-		end
-
-		return total_available
-	end
-
-	---Buys goods according to their use and required amount
-	---@param use_reference TradeGoodUseCaseReference
-	---@param amount number
-	---@param savings number how much money you are ready to spend
-	---@return number spendings
-	---@return number consumed
-	local function buy_use(use_reference, amount, savings)
-		local use = use_case(use_reference)
-
-		local total_exp = use_case_total_exp[use_reference]
-		local price_expectation = use_case_price_expectation[use_reference]
-		local demanded_use = math.max(amount, savings / price_expectation)
-
-		local available = available_goods_for_use(use_reference)
-		if amount > available then
-			amount = available
-		end
-		local potential_amount = math.min(amount, demanded_use)
-
-		local total_bought = 0
-		local spendings = 0
-
-		for good, weight in pairs(use.goods) do
-			local c_index = RAWS_MANAGER.trade_good_to_index[good] - 1
-
-			local consumed_amount = potential_amount / weight * market_data[c_index].feature / total_exp
-			if consumed_amount > market_data[c_index].available then
-				consumed_amount = market_data[c_index].available
-			end
-			local demanded_amount = demanded_use / weight * market_data[c_index].feature / total_exp
-
-			-- we need to get back to use "units" so we multiplay consumed amount back by weight
-			total_bought = total_bought + consumed_amount * weight
-
-			spendings = spendings + record_consumption(c_index + 1, consumed_amount)
-			record_demand(c_index + 1, demanded_amount)
-		end
-
-		return spendings, total_bought
-	end
 
 	---@type table<POP, number>
 	local donations_to_owners = {}
 
 	-- sort pops by wealth:
 	---@type POP[]
-	local pops_by_wealth = {}
-	for _, pop in pairs(province.all_pops) do
-		table.insert(pops_by_wealth, pop)
-	end
+	local pops_by_wealth = tabb.accumulate(province.all_pops, {},  function (by_wealth, _, pop)
+		pop.need_satisfaction = tabb.accumulate(pop.need_satisfaction, {}, function (satisfaction, index , old_sat)
+			satisfaction[index] = tabb.accumulate(old_sat.uses, {consumed = 0, demanded = 0, uses = {}}, function (new_sat, use, value)
+				new_sat.uses[use] = {consumed = value.consumed / 2, demanded = value.demanded }
+				local weight = pop.race.male_needs[index]
+				if pop.female then
+					weight = pop.race.female_needs[index]
+				end
+				local demand = NEEDS[index].use_cases[use] * weight
+				if not NEEDS[index].age_independent then
+					demand = demand * pop:get_age_multiplier()
+				end
+				new_sat.uses[use].demanded = demand
+				return new_sat
+			end)
+			return satisfaction
+		end)
+		table.insert(by_wealth, pop)
+		return by_wealth
+	end)
 	table.sort(pops_by_wealth, function (a, b)
 		return a.savings > b.savings
 	end)

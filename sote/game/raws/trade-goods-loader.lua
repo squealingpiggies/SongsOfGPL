@@ -52,7 +52,7 @@ function d.load()
 		category = "good",
 		base_price = 2,
 	}
-	add_use_case("food", "food", 0.5)
+	add_use_case("honey", "food", 0.5)
 	add_use_case("honey", "mead-substrate", 1)
 	-- CRUCIAL SETTLEMENT SERVICES
 	TradeGood:new {
@@ -118,7 +118,9 @@ function d.load()
 		b = 0.3,
 		base_price = 10,
 	}
+	add_use_case("liquors", "water", 0.5)
 	add_use_case("liquors", "liquors", 1)
+
 	TradeGood:new {
 		name = "containers",
 		description = "containers",
@@ -129,6 +131,7 @@ function d.load()
 		base_price = 7,
 	}
 	add_use_case("containers", "containers", 1)
+
 	-- TRADE GOODS
 	TradeGood:new {
 		name = "hide",
@@ -139,7 +142,9 @@ function d.load()
 		b = 0.3,
 		base_price = 4,
 	}
+	add_use_case("hide", "clothes", 0.2)
 	add_use_case("hide", "hide", 1)
+
 	TradeGood:new {
 		name = "leather",
 		description = "leather",
@@ -150,7 +155,9 @@ function d.load()
 		base_price = 8,
 	}
 	add_use_case("leather", "containers", 0.1)
+	add_use_case("leather", "clothes", 0.4)
 	add_use_case("leather", "leather", 1)
+
 	TradeGood:new {
 		name = "meat",
 		description = "meat",
@@ -160,7 +167,9 @@ function d.load()
 		b = 0.1,
 		base_price = 6,
 	}
+	add_use_case("meat", "food", 1)
 	add_use_case("meat", "meat", 1)
+
 	TradeGood:new {
 		name = "timber",
 		description = "timber",
@@ -182,7 +191,6 @@ function d.load()
 		b = 0.422,
 		base_price = 6,
 	}
-
 	add_use_case("blanks-flint", "tools-like", 0.5)
 	add_use_case("blanks-flint", "blanks-flint", 1)
 
@@ -313,6 +321,30 @@ function d.load()
 	}
 	add_use_case("stone", "stone", 1)
 	add_use_case("stone", "structural-material", 1)
+
+	TradeGood:new {
+		name = "trinket-copper",
+		description = "copper accessories",
+		icon = "stone-block.png",
+		r = 0.8,
+		g = 0.8,
+		b = 0.8,
+		base_price = 2,
+	}
+	add_use_case("trinket-copper", "jewelry", 1)
+	add_use_case("trinket-copper", "accessories", 1)
+
+	TradeGood:new {
+		name = "trinket-obsidian",
+		description = "obsidian ornaments",
+		icon = "stone-block.png",
+		r = 0.8,
+		g = 0.8,
+		b = 0.8,
+		base_price = 2,
+	}
+	add_use_case("trinket-obsidian", "jewelry", 1)
+	add_use_case("trinket-obsidian", "accessories", 1)
 end
 
 return d
