@@ -63,7 +63,7 @@ function co.run(realm)
 		ef.add_pop_savings(character, nobles_wage, ef.reasons.Court)
 	end
 
-	-- raise new nobles
+--[[	-- raise new nobles
 	local NOBLES_RATIO = 0.15
 	for _, prov in pairs(realm.provinces) do
 		local p = {nobles = 0, population = 0, elligible = {}}
@@ -86,7 +86,7 @@ function co.run(realm)
 				pe.grant_nobility(pop,prov, pe.reasons.POPULATION_GROWTH)
 			end
 		end
-	end
+	end]]
 
 	realm.budget.court.budget = realm.budget.court.budget - total_decay
 end

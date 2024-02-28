@@ -627,8 +627,8 @@ function pro.run(province)
 		-- buidings are essentially wealth sinks currently
 		-- so obviously we need some wealth sources
 		-- should be removed when economy simulation will be completed
-		local base_income = 1 * pop.age / 100;
-		economic_effects.add_pop_savings(pop, base_income, economic_effects.reasons.MonthlyChange)
+--		local base_income = 1 * pop.age / 100;
+--		economic_effects.add_pop_savings(pop, base_income, economic_effects.reasons.MonthlyChange)
 
 		-- Drafted pops work only when warband is "idle"
 		if (pop.unit_of_warband == nil) or (pop.unit_of_warband.status == "idle") then
@@ -859,7 +859,7 @@ function pro.run(province)
 	PROFILER:end_timer("production-pops-loop")
 
 
-	--- DISTRIBUTION OF DONATIONS
+--[[	--- DISTRIBUTION OF DONATIONS
 	PROFILER:start_timer('donations')
 	-- pops donate some of their savings as well:
 	for _, pop in pairs(province.all_pops) do
@@ -944,7 +944,7 @@ function pro.run(province)
 			end
 		end
 	end
-
+]]
 	-- At last, record all data
 
 	for good, index in pairs(RAWS_MANAGER.trade_good_to_index) do
