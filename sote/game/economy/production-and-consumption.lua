@@ -822,27 +822,27 @@ function pro.run(province)
 
 			if pop.age < pop.race.teen_age then
 				-- parents help their children
-				local parent = pop.parent
-				if parent then
-					local siphon = parent.savings * 0.125 / 2
-					if siphon > 0 then
-						economic_effects.add_pop_savings(parent, -siphon, economic_effects.reasons.Donation)
-						economic_effects.add_pop_savings(pop, siphon, economic_effects.reasons.Donation)
-					end
-				end
+--				local parent = pop.parent
+--				if parent then
+--					local siphon = parent.savings * 0.125 / 2
+--					if siphon > 0 then
+--						economic_effects.add_pop_savings(parent, -siphon, economic_effects.reasons.Donation)
+--						economic_effects.add_pop_savings(pop, siphon, economic_effects.reasons.Donation)
+--					end
+--				end
 
 				-- community helps children as well
-				if pop.home_province == pop.province then
-					local siphon_to_child = math.min(food_price * 0.5, province.local_wealth * 1 / 512)
-					if siphon_to_child > 0 then
-						economic_effects.add_pop_savings(pop, siphon_to_child, economic_effects.reasons.Donation)
-						economic_effects.change_local_wealth(
-							province,
-							- siphon_to_child,
-							economic_effects.reasons.Donation
-						)
-					end
-				end
+--				if pop.home_province == pop.province then
+--					local siphon_to_child = math.min(food_price * 0.5, province.local_wealth * 1 / 512)
+--					if siphon_to_child > 0 then
+--						economic_effects.add_pop_savings(pop, siphon_to_child, economic_effects.reasons.Donation)
+--						economic_effects.change_local_wealth(
+--							province,
+--							- siphon_to_child,
+--							economic_effects.reasons.Donation
+--						)
+--					end
+--				end
 
 				-- children spend time on games and growing up:
 				free_time_of_pop = free_time_of_pop * pop.age / pop.race.teen_age
