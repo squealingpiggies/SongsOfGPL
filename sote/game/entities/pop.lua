@@ -100,13 +100,14 @@ function rtab.POP:new(race, faith, culture, female, age, home, location, charact
 				demanded = demand
 			}
 			total_demand = total_demand + demand
-			return uses
+			---@type table<string, {consumed: number, demanded: number}>
+			return use
 		end)
 		---@type NeedSatisfaction
 		sat[index] = {
 			consumed = total_demand * 0.25,
 			demanded = total_demand,
-			uses = uses,
+			uses = uses, ---@diagnostic disable-line
 		}
 		return sat
 	end)
