@@ -157,7 +157,7 @@ return function(rect, base_unit, province)
                             .. "\n" .. NEED_NAME[need] .. " " .. ut.to_fixed_point2(value.consumed / value.demanded * 100) .. "%"
                         for use, values in pairs(value.uses) do
                             needs_tooltip = needs_tooltip
-                            .. "\n  " .. use .. ": " .. values.consumed .. " / " .. values. demanded
+                            .. "\n  " .. use .. ": " ..  ut.to_fixed_point2(values.consumed) .. " / " ..  ut.to_fixed_point2(values.demanded)
                             .. " (" .. ut.to_fixed_point2(values.consumed / values.demanded * 100) .. "%)"
                         end
                     end
@@ -181,12 +181,14 @@ return function(rect, base_unit, province)
                     v = v
                     local needs_tooltip = ""
                     for need, value in pairs(v.need_satisfaction) do
-                        needs_tooltip = needs_tooltip
-                            .. "\n" .. NEED_NAME[need] .. " (" .. ut.to_fixed_point2(value.consumed / value.demanded) .. "%):"
-                        for use, values in pairs(value.uses) do
+                        if NEEDS[need].life_need then
                             needs_tooltip = needs_tooltip
-                            .. "\n    " .. use .. ": " .. ut.to_fixed_point2(values.consumed) .. " / " .. ut.to_fixed_point2(values.demanded)
-                            .. " (" .. ut.to_fixed_point2(values.consumed / values.demanded) .. "%)"
+                                .. "\n" .. NEED_NAME[need] .. " (" .. ut.to_fixed_point2(value.consumed / value.demanded) * 100 .. "%):"
+                            for use, values in pairs(value.uses) do
+                                needs_tooltip = needs_tooltip
+                                .. "\n    " .. use .. ": " .. ut.to_fixed_point2(values.consumed) .. " / " .. ut.to_fixed_point2(values.demanded)
+                                .. " (" .. ut.to_fixed_point2(values.consumed / values.demanded * 100) .. "%)"
+                            end
                         end
                     end
                     ut.data_entry_percentage(

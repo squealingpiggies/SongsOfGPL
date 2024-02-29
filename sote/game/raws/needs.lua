@@ -48,7 +48,7 @@ NEEDS = {
 		-- age_independent = true,
 		life_need = true,
 		job_to_satisfy = JOBTYPE.FORAGER,
-		time_to_satisfy = 0.75,
+		time_to_satisfy = 1.5,
 	},
 	[NEED.CLOTHING] = {
 		use_cases = {
@@ -56,35 +56,35 @@ NEEDS = {
 			["accessories"] = 0.2,
 		},
 		job_to_satisfy = JOBTYPE.FORAGER,
-		time_to_satisfy = 0.8
+		time_to_satisfy = 0.3
 	},
 	[NEED.TOOLS] = {
 		use_cases = {
 			["tools-like"] = 1.0,
 		},
 		job_to_satisfy = JOBTYPE.ARTISAN,
-		time_to_satisfy = 0.8
+		time_to_satisfy = 0.3
 	},
 	[NEED.FURNITURE] = {
 		use_cases = {
-			["furniture"] = 1.2,
+			["furniture"] = 1.0,
 		},
 		job_to_satisfy = JOBTYPE.ARTISAN,
-		time_to_satisfy = 1.2
+		time_to_satisfy = 0.3
 	},
 	[NEED.HEALTHCARE] = {
 		use_cases = {
-			["healthcare"] = 1.2,
+			["healthcare"] = 1.0,
 		},
 		job_to_satisfy = JOBTYPE.CLERK,
-		time_to_satisfy = 1.2
+		time_to_satisfy = 0.3
 	},
 	[NEED.STORAGE] = {
 		use_cases = {
 			["containers"] = 1.0
 		},
 		job_to_satisfy = JOBTYPE.ARTISAN,
-		time_to_satisfy = 0.8
+		time_to_satisfy = 0.3
 	},
 	[NEED.LUXURY] = {
 		use_cases = {
