@@ -48,6 +48,7 @@ local C = ffi.C
 local amount_of_goods = tabb.size(RAWS_MANAGER.trade_goods_by_name)
 local amount_of_job_types = tabb.size(JOBTYPE)
 local amount_of_need_types = tabb.size(NEED)
+local amount_of_life_need_types = tabb.size(tabb.filter(NEEDS, function (a) return a.life_need end))
 
 ---@type MarketData[]
 local market_data = ffi.new("good_data[?]", amount_of_goods)
@@ -78,8 +79,6 @@ local zero = 0
 local total_realm_donations = 0
 local total_local_donations = 0
 local total_trade_donations = 0
-local need_count = tabb.size(NEEDS)
-local life_need_count = tabb.size(tabb.filter(NEEDS, function (a) return a.life_need end))
 
 ---Calculates price expectation for a list of goods
 ---@param set_of_goods TradeGoodReference[]
@@ -363,12 +362,13 @@ function pro.run(province)
 	---@param pop_table POP
 	---@param need_index NEED
 	---@param need Need
+	---@param target number
 	---@param free_time number
 	---@param savings number
 	---@return number free_time_left
 	---@return number income
 	---@return number expenses
-	local function satisfy_need(pop, pop_table, need_index, need, free_time, savings)
+	local function satisfy_need(pop, pop_table, need_index, need, target, free_time, savings)
 		if free_time < 0 then
 			error("INVALID FREE TIME: " .. tostring(free_time))
 		end
@@ -391,7 +391,7 @@ function pro.run(province)
 			price_expectation = price_expectation * POP_BUY_PRICE_MULTIPLIER
 
 			-- calculate needed use_case units to buy
-			local need_demanded = math.max(0, pop_table.need_satisfaction[need_index].uses[case].demanded
+			local need_demanded = math.max(0, pop_table.need_satisfaction[need_index].uses[case].demanded * target
 				- pop_table.need_satisfaction[need_index].uses[case].consumed)
 			-- induced demand:
 			local induced_demand = math.min(2, math.max(0, 1 / price_expectation - 1))
@@ -429,9 +429,9 @@ function pro.run(province)
 			expense = expense + spending
 
 
-			-- if still not 25% then
-			local min_need_demanded = math.max(0, pop_table.need_satisfaction[need_index].uses[case].demanded * 0.25
-				- pop_table.need_satisfaction[need_index].uses[case].consumed - consumed)
+			-- if still not at target then staisfy self
+			local min_need_demanded = math.max(0, pop_table.need_satisfaction[need_index].uses[case].demanded * target
+				- (pop_table.need_satisfaction[need_index].uses[case].consumed + consumed))
 			if min_need_demanded > 0 then
 				time_to_satisfy = need.time_to_satisfy / need_job_efficiency * min_need_demanded
 				work_time = math.max(0, math.min(free_time - time_spent, time_to_satisfy))
@@ -494,7 +494,10 @@ function pro.run(province)
 		for index, need in pairs(NEEDS) do
 			if need.life_need then
 				local free_time_after_need, income, expense = satisfy_need(
-					pop, pop_table, index, need, free_time / life_need_count, savings / life_need_count)
+					pop, pop_table,
+					index, need, 0.25,
+					free_time / amount_of_life_need_types,
+					savings / amount_of_life_need_types)
 
 				total_income = total_income + income
 				total_expense = total_expense + expense
@@ -504,12 +507,15 @@ function pro.run(province)
 				savings = savings + income - expense
 			end
 		end
-		free_time = total_time
-		total_time = 0
-		-- set aside equal portion of time and money to satisfy all needs
+
+
+		-- set aside equal portion of time and money to satisfy other needs
 		for index, need in pairs(NEEDS) do
 			local free_time_after_need, income, expense = satisfy_need(
-				pop, pop_table, index, need, total_time / need_count, savings / need_count)
+				pop, pop_table,
+				index, need, 0.10,
+				total_time / amount_of_need_types,
+				savings / amount_of_need_types)
 
 			total_income = total_income + income
 			total_expense = total_expense + expense
@@ -519,7 +525,7 @@ function pro.run(province)
 			savings = savings + income - expense
 		end
 
-		if free_time > 0 then
+		if total_time > 0 then
 			total_income = total_income + forage(pop, pop_table, total_time)
 		end
 		economic_effects.add_pop_savings(pop_table, total_income, economic_effects.reasons.Forage)
@@ -538,7 +544,7 @@ function pro.run(province)
 	local pops_by_wealth = tabb.accumulate(province.all_pops, {},  function (by_wealth, _, pop)
 		pop.need_satisfaction = tabb.accumulate(pop.need_satisfaction, {}, function (satisfaction, index , old_sat)
 			satisfaction[index] = tabb.accumulate(old_sat.uses, {consumed = 0, demanded = 0, uses = {}}, function (new_sat, use, value)
-				new_sat.uses[use] = {consumed = value.consumed / 2, demanded = value.demanded }
+				new_sat.uses[use] = {consumed = 0, demanded = value.demanded }
 				local weight = pop.race.male_needs[index]
 				if pop.female then
 					weight = pop.race.female_needs[index]
