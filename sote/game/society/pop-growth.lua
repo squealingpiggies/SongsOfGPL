@@ -19,40 +19,42 @@ function pg.growth(province)
 	---@type POP[]
 	local to_add = {}
 
-	local race_sex = {}
-
+	local eligible = {}
 	for _, pp in pairs(province.outlaws) do
 		if pp.age > pp.race.max_age then
 			to_remove[#to_remove + 1] = pp
 		end
 	end
-	for _, pp in pairs(province.all_pops) do
+
+	local race_sex = tabb.accumulate(province.all_pops, {}, function (a, _, pp)
+		local food_satisfaction = pp.need_satisfaction[NEED.FOOD].consumed / pp.need_satisfaction[NEED.FOOD].demanded
 		if pp.age > pp.race.max_age then
 			to_remove[#to_remove + 1] = pp
-		elseif pop > cc and (pp.need_satisfaction[NEED.FOOD] or 0.5) < 0.1 then
+		elseif pop > cc and food_satisfaction < 0.1 then
 			-- Deaths due to starvation!
-			if love.math.random() < (1 - cc / pop) * death_rate * pp.race.carrying_capacity_weight then
+			if love.math.random() < (1 - cc / pop) * death_rate then
 				to_remove[#to_remove + 1] = pp
 			end
 		else
-			local sex_prob = 0.1
-
-			if not race_sex[pp.race] then
-				race_sex[pp.race] = {}
-				race_sex[pp.race][pp.female] = true
-			elseif race_sex[pp.race][not pp.female] == nil then
-				if tabb.size(tabb.filter(province.all_pops, function (a)
-					return a.race == pp.race and a.female ~= pp.female
-				end)) > 0 then
-					race_sex[pp.race][not pp.female] = true
-				else race_sex[pp.race][not pp.female] = false end
+			if pp.age > pp.race.teen_age and pp.age < pp.race.elder_age
+			and food_satisfaction > 0.2 then
+				if a[pp.race] == nil then
+					a[pp.race] = {
+						[true] = 0,
+						[false] = 0
+					}
+				end
+				a[pp.race][pp.female] = a[pp.race][pp.female] + 1
+				eligible[pp] = pp
 			end
-			if race_sex[pp.race][not pp.female] then sex_prob = 0 end
+		end
+		return a
+	end)
 
-			if pp.female then
-				sex_prob = 1.0
-			end
-			if pp.age > pp.race.adult_age then
+	tabb.accumulate(eligible, to_add, function (a, _, pp)
+			local sex_prob = race_sex[pp.race][not pp.female] / race_sex[pp.race][pp.female]
+
+			if pp.age > pp.race.adult_age and pp.need_satisfaction[NEED.FOOD].consumed / pp.need_satisfaction[NEED.FOOD].demanded > 0.25 then
 				-- if it's a female adult ...
 				-- commenting out because it leads to instant explosion of population in low population provinces
 				-- if pop < cc then
@@ -67,7 +69,7 @@ function pg.growth(province)
 				-- Make sure that the expected food consumption has been calculated by this point!
 
 				-- Calculate the fraction symbolizing the amount of "overproduction" of food
-				local base = pp.need_satisfaction[NEED.FOOD] or 0
+				local base = pp.need_satisfaction[NEED.FOOD].consumed / pp.need_satisfaction[NEED.FOOD].demanded
 
 				local fem = 100 / (100 + pp.race.males_per_hundred_females)
 				local offspring = fem * pp.race.female_needs[NEED.FOOD] + (1 - fem) * pp.race.male_needs[NEED.FOOD]
@@ -75,11 +77,12 @@ function pg.growth(province)
 
 				if love.math.random() < sex_prob * birth_rate * base * rate * pp.race.fecundity then
 					-- yay! spawn a new pop!
-					to_add[#to_add + 1] = pp
+					a[#to_add + 1] = pp
 				end
 			end
-		end
-	end
+			return a
+		end)
+
 
 	-- Kill old pops...
 	for _, pp in pairs(to_remove) do

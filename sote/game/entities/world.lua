@@ -412,22 +412,22 @@ function world.World:tick()
 		for _, province in pairs(to_remove) do
 			ta[province] = nil
 		end
---[[
+
 		PROFILER:start_timer("growth")
 
 		-- "POP" update
---		local pop_growth = require "game.society.pop-growth"
---		for _, settled_province in pairs(ta) do
---			--print("Pop growth")
---			pop_growth.growth(settled_province)
---		end
+		local pop_growth = require "game.society.pop-growth"
+		for _, settled_province in pairs(ta) do
+			--print("Pop growth")
+			pop_growth.growth(settled_province)
+		end
 
 		PROFILER:end_timer("growth")
-]]
+
 
 		-- "Province" update
---		local employ = require "game.economy.employment"
---		local building_update = require "game.economy.buildings-updates"
+		local employ = require "game.economy.employment"
+		local building_update = require "game.economy.buildings-updates"
 		local production = require "game.economy.production-and-consumption"
 		local wealth_decay = require "game.economy.wealth-decay"
 		local upkeep = require "game.economy.upkeep"
@@ -651,10 +651,10 @@ function world.World:tick()
 					WORLD.year = WORLD.year + 1
 					-- yearly tick
 					--print("Yearly tick!")
---					local pop_aging = require "game.society.pop-aging"
---					for _, settled_province in pairs(WORLD.provinces) do
---						pop_aging.age(settled_province)
---					end
+					local pop_aging = require "game.society.pop-aging"
+					for _, settled_province in pairs(WORLD.provinces) do
+						pop_aging.age(settled_province)
+					end
 				end
 
 				--print("Monthly tick end, refreshing")
