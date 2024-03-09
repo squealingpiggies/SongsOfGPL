@@ -324,11 +324,11 @@ function d.load()
 
 	TradeGood:new {
 		name = "trinket-copper",
-		description = "copper accessories",
-		icon = "stone-block.png",
-		r = 0.8,
-		g = 0.8,
-		b = 0.8,
+		description = "copper bands",
+		icon = "hole.png",
+		r = 0.71,
+		g = 0.25,
+		b = 0.05,
 		base_price = 2,
 	}
 	add_use_case("trinket-copper", "jewelry", 1)
@@ -336,15 +336,15 @@ function d.load()
 
 	TradeGood:new {
 		name = "trinket-obsidian",
-		description = "obsidian ornaments",
-		icon = "stone-block.png",
-		r = 0.8,
-		g = 0.8,
-		b = 0.8,
+		description = "obsidian beads",
+		icon = "mineral-pearls.png",
+		r = 0.1,
+		g = 0.1,
+		b = 0.1,
 		base_price = 2,
 	}
-	add_use_case("trinket-obsidian", "jewelry", 1)
-	add_use_case("trinket-obsidian", "accessories", 1)
+	add_use_case("trinket-obsidian", "jewelry", 0.5)
+	add_use_case("trinket-obsidian", "accessories", 1.0)
 end
 
 return d

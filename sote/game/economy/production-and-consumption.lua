@@ -106,10 +106,10 @@ end
 ---@return number total_exp total value for softmax
 ---@return number expectation price expectation
 local function get_price_expectation_weighted(set_of_goods)
-	local total_exp = 0
+	local total_exp = 1 -- to prevent dividiving by zero in buy_use
 	for good, weight in pairs(set_of_goods) do
 		local c_index = RAWS_MANAGER.trade_good_to_index[good] - 1
-		total_exp = total_exp +market_data[c_index].feature / weight
+		total_exp = total_exp + market_data[c_index].feature / weight
 	end
 
 	-- price expectation:
@@ -166,7 +166,7 @@ function pro.run(province)
 
 		-- prices:
 		local price = ev.get_local_price(province, good)
-		market_data[i-1].price = price
+		market_data[i-1].price = math.max(0.001, price)
 		old_prices[good] = price
 		market_data[i-1].feature = C.expf(-C.sqrtf(market_data[i-1].price) / (1 + market_data[i-1].available))
 
@@ -350,7 +350,9 @@ function pro.run(province)
 				or demanded_amount ~= demanded_amount
 				or consumed_amount ~= consumed_amount
 			then
-				error("INVALID BUY_USE IN SATISFY_NEED"
+				error("INVALID BUY_USE"
+					.. "\n total_exp = "
+					.. tostring(total_exp)
 					.. "\n amount_affordable = "
 					.. tostring(amount_affordable)
 					.. "\n demanded_amount = "
@@ -587,7 +589,7 @@ function pro.run(province)
 			if need.life_need then
 				local free_time_after_need, income, expense = satisfy_need(
 					pop, pop_table,
-					index, need, 0.50, 0.25,
+					index, need, 0.50, 0.12 + 0.1 / pop_table.race.fecundity,
 					total_time,
 					savings)
 

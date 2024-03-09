@@ -30,20 +30,22 @@ function pg.growth(province)
 		local food_satisfaction = pp.need_satisfaction[NEED.FOOD].consumed / pp.need_satisfaction[NEED.FOOD].demanded
 		if pp.age > pp.race.max_age then
 			to_remove[#to_remove + 1] = pp
-		elseif pop > cc and food_satisfaction < 0.1 then
-			-- Deaths due to starvation!
-			if love.math.random() < (1 - cc / pop) * death_rate then
+		elseif (pop > cc and food_satisfaction < 0.1) or pp.age > pp.race.elder_age then
+			-- Deaths due to starvation or old age!
+			if (love.math.random() * food_satisfaction) < (1 - cc / pop) * death_rate then
 				to_remove[#to_remove + 1] = pp
 			end
 		else
-			if pp.age > pp.race.teen_age and pp.age < pp.race.elder_age
-			and food_satisfaction > 0.2 then
-				if a[pp.race] == nil then
-					a[pp.race] = {
-						[true] = 0,
-						[false] = 0
-					}
-				end
+			if a[pp.race] == nil then
+				a[pp.race] = {
+					[true] = 0,
+					[false] = 0,
+					['children'] = 0
+				}
+			end
+			if pp.age < pp.race.teen_age then
+				a[pp.race]['children'] = a[pp.race]['children'] + 1
+			elseif food_satisfaction > 0.1 + 0.1 / pp.race.fecundity then
 				a[pp.race][pp.female] = a[pp.race][pp.female] + 1
 				eligible[pp] = pp
 			end
@@ -54,31 +56,38 @@ function pg.growth(province)
 	tabb.accumulate(eligible, to_add, function (a, _, pp)
 			local sex_prob = race_sex[pp.race][not pp.female] / race_sex[pp.race][pp.female]
 
-			if pp.age > pp.race.adult_age and pp.need_satisfaction[NEED.FOOD].consumed / pp.need_satisfaction[NEED.FOOD].demanded > 0.25 then
-				-- if it's a female adult ...
-				-- commenting out because it leads to instant explosion of population in low population provinces
-				-- if pop < cc then
-				-- 	if love.math.random() < (1 - pop / cc) * birth_rate * pp.race.fecundity / pp.race.carrying_capacity_weight then
-				-- 		-- yay! spawn a new pop!
-				-- 		to_add[#to_add + 1] = pp
-				-- 	end
-				-- end
+			-- if it's a female adult ...
+			-- commenting out because it leads to instant explosion of population in low population provinces
+			-- if pop < cc then
+			-- 	if love.math.random() < (1 - pop / cc) * birth_rate * pp.race.fecundity / pp.race.carrying_capacity_weight then
+			-- 		-- yay! spawn a new pop!
+			-- 		to_add[#to_add + 1] = pp
+			-- 	end
+			-- end
 
-				-- This pop growth is caused by overproduction of resources in the realm.
-				-- The chance for growth should then depend on the amount of food produced
-				-- Make sure that the expected food consumption has been calculated by this point!
+			-- This pop growth is caused by overproduction of resources in the realm.
+			-- The chance for growth should then depend on the amount of food produced
+			-- Make sure that the expected food consumption has been calculated by this point!
 
-				-- Calculate the fraction symbolizing the amount of "overproduction" of food
-				local base = pp.need_satisfaction[NEED.FOOD].consumed / pp.need_satisfaction[NEED.FOOD].demanded
+			-- base on ratio of avaialbe breeding age pops
+			local diff = race_sex[pp.race][not pp.female]
+			local same = race_sex[pp.race][pp.female]
+			local base = diff / same
+			-- Calculate the fraction symbolizing the amount of "overproduction" of food
+			base = base * pp.need_satisfaction[NEED.FOOD].consumed / pp.need_satisfaction[NEED.FOOD].demanded
 
-				local fem = 100 / (100 + pp.race.males_per_hundred_females)
-				local offspring = fem * pp.race.female_needs[NEED.FOOD] + (1 - fem) * pp.race.male_needs[NEED.FOOD]
-				local rate = 1 / offspring
+			local fem = 100 / (100 + pp.race.males_per_hundred_females)
+			local offspring = fem * pp.race.female_needs[NEED.FOOD] + (1 - fem) * pp.race.male_needs[NEED.FOOD]
+			-- reduce rate based on number of children in province and cared for
+			local children = race_sex[pp.race]['children']
+			local dependents = tabb.size(pp.children)
+			local rate = 1 / offspring
+				* (diff + same) / math.max(1, 2 * children) ---@diagnostic disable-line
+				* pp.race.fecundity / math.max(1, dependents)
 
-				if love.math.random() < sex_prob * birth_rate * base * rate * pp.race.fecundity then
-					-- yay! spawn a new pop!
-					a[#to_add + 1] = pp
-				end
+			if love.math.random() < sex_prob * birth_rate * base * rate then
+				-- yay! spawn a new pop!
+				a[#to_add + 1] = pp
 			end
 			return a
 		end)
