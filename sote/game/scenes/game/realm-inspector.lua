@@ -198,7 +198,7 @@ function re.draw(gam)
 						return f
 					end
 					local noble_list = a:copy()
-					noble_list.width = ui_panel.width - ui_panel.x
+					noble_list.width = ui_panel.width
 					noble_list.height = ui_panel.height - ui_panel.y
 					local response = require "game.scenes.game.widgets.list-widget"(
 						noble_list,
@@ -231,9 +231,56 @@ function re.draw(gam)
 									active = true
 								},
 								{
+									header = "savings",
+									render_closure = function (rect, k, v)
+										uit.money_entry(
+											"",
+											v.savings,
+											rect,
+											"Savings of this character. "
+											.. "Characters spend them on buying food and other commodities."
+										)
+									end,
+									width = UI_STYLE.scrollable_list_item_height * 3,
+									value = function(k, v)
+										---@type POP
+										v = v
+										return v.savings
+									end,
+									active = true
+								},
+								{
+									header = "satisf.",
+									render_closure = function (rect, k, v)
+										local needs_tooltip = ""
+										for need, value in pairs(v.need_satisfaction) do
+											needs_tooltip = needs_tooltip
+												.. "\n" .. NEED_NAME[need] .. " " .. uit.to_fixed_point2(value.consumed / value.demanded * 100) .. "%"
+											for use, values in pairs(value.uses) do
+												needs_tooltip = needs_tooltip
+												.. "\n  " .. use .. ": " ..  uit.to_fixed_point2(values.consumed) .. " / " ..  uit.to_fixed_point2(values.demanded)
+												.. " (" .. uit.to_fixed_point2(values.consumed / values.demanded * 100) .. "%)"
+											end
+										end
+										uit.data_entry_percentage(
+											"",
+											v.basic_needs_satisfaction,
+											rect,
+											"Satisfaction of needs of this character. \n" .. needs_tooltip
+										)
+									end,
+									width = UI_STYLE.scrollable_list_item_height * 2,
+									value = function(k, v)
+										---@type POP
+										v = v
+										return v.life_needs_satisfaction
+									end,
+									active = true
+								},
+								{
 									header = "race",
 									render_closure = function (rect, k, v)
-										ui.right_text(v.race.name, rect)
+										ui.centered_text(v.race.name, rect)
 									end,
 									width = UI_STYLE.scrollable_list_item_height * 4,
 									value = function(k, v)
@@ -246,7 +293,7 @@ function re.draw(gam)
 								{
 									header = "faith",
 									render_closure = function (rect, k, v)
-										ui.right_text(v.faith.name, rect)
+										ui.centered_text(v.faith.name, rect)
 									end,
 									width = UI_STYLE.scrollable_list_item_height * 4,
 									value = function(k, v)
@@ -259,7 +306,7 @@ function re.draw(gam)
 								{
 									header = "culture",
 									render_closure = function (rect, k, v)
-										ui.right_text(v.culture.name, rect)
+										ui.centered_text(v.culture.name, rect)
 									end,
 									width = UI_STYLE.scrollable_list_item_height * 4,
 									value = function(k, v)

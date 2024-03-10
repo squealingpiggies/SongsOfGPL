@@ -3,6 +3,7 @@ local cult = require "game.entities.culture"
 local rel = require "game.entities.religion"
 local pop = require "game.entities.pop"
 local tabb = require "engine.table"
+local job_types = require "game.raws.job_types"
 
 local TRAIT = require "game.raws.traits.generic"
 local ranks = require "game.raws.ranks.character_ranks"
@@ -40,9 +41,11 @@ local function make_new_realm(capitol, race, culture, faith)
 	WORLD:set_settled_province(capitol)
 
 	-- We also need to spawn in some population...
-	local pop_to_spawn = math.max(5, capitol.foragers_limit / race.carrying_capacity_weight * 2)
+	local forage_efficiency = (100 * race.female_efficiency[job_types.FORAGER] + race.males_per_hundred_females * race.male_efficiency[job_types.FORAGER])
+		/ (100 + race.males_per_hundred_females)
+	local pop_to_spawn = math.max(5, capitol.foragers_limit / race.carrying_capacity_weight * forage_efficiency)
 	for _ = 1, pop_to_spawn do
-		local age = math.floor(math.abs(love.math.randomNormal(race.middle_age, 0)) + 1)
+		local age = math.floor(math.abs(love.math.randomNormal(race.adult_age, race.adult_age)) + 1)
 		pop.POP:new(
 			race,
 			faith,

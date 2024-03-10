@@ -196,8 +196,7 @@ end
 ---Doesn't include outlaws and active armies.
 ---@return number
 function prov.Province:population()
-	local tabb = require "engine.table"
-	return tabb.size(self.all_pops)
+	return tabb.size(self.home_to)
 end
 
 function prov.Province:validate_population()
@@ -233,7 +232,7 @@ end
 ---@return number
 function prov.Province:population_weight()
 	local total = 0
-	for _, pop in pairs(self.all_pops) do
+	for _, pop in pairs(tabb.join(tabb.copy(self.all_pops), self.characters)) do
 		total = total + pop.race.carrying_capacity_weight
 	end
 	return total
@@ -349,6 +348,7 @@ end
 ---@param pop POP
 function prov.Province:kill_pop(pop)
 	-- print("kill " .. pop.name)
+	pop.dead = true
 
 	self:fire_pop(pop)
 	pop:unregister_military()

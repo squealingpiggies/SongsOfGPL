@@ -38,6 +38,50 @@ function window.mask()
 	end
 end
 
+---comment
+---@param rect Rect
+---@param character Character
+---@return number
+local function inventory_view(rect, character)
+    local count = 0
+    ---@type table<number,string>
+    local inventory = {}
+    tabb.accumulate(character.inventory, inventory, function (a, k, v)
+        if character.inventory[k] and character.inventory[k] > 0 then
+            count = count + 1
+            a[count] = k
+        end
+        return a
+    end)
+    return ut.scrollview(
+        rect,
+        function (index, rectangle)
+            if index > 0 then
+                local good = inventory[index]
+                local amount = character.inventory[good] or 0
+                local good_entity = trade_good(good)
+
+                local tooltip = "Amount of "
+                    .. good_entity.name
+                    .. " "
+                    .. character.name
+                    .. " owns. They think that its price is "
+                    .. ut.to_fixed_point2(character.price_memory[good] or 0)
+                ut.sqrt_number_entry_icon(
+                    good_entity.icon,
+                    amount or 0,
+                    rectangle,
+                    tooltip
+                )
+            end
+        end,
+        UI_STYLE.scrollable_list_large_item_height,
+        count,
+        20,
+        inventory_slider
+    )
+end
+
 ---Draw character window
 ---@param game GameScene
 function window.draw(game)
@@ -57,35 +101,28 @@ function window.draw(game)
     local coa = ui_panel:subrect(unit * 3 - 2, unit * 3 - 2, unit, unit, "left", "up")
     require "game.scenes.game.widgets.portrait" (portrait, character)
 
-    local inventory_panel = ui_panel:subrect(0, 0, 4 * unit, ui_panel.height, "right", "up")
-
-    inventory_slider = ut.scrollview(
-        inventory_panel,
-        function (index, rect)
-            if index > 0 then
-                local good = tabb.nth(RAWS_MANAGER.trade_goods_by_name, index)
-                local amount = character.inventory[good] or 0
-                local good_entity = trade_good(good)
-
-                local tooltip = "Amount of "
-                    .. good_entity.name
-                    .. " "
-                    .. character.name
-                    .. " owns. They think that its price is "
-                    .. ut.to_fixed_point2(character.price_memory[good] or 0)
-                ut.sqrt_number_entry_icon(
-                    good_entity.icon,
-                    amount or 0,
-                    rect,
-                    tooltip
-                )
-            end
-        end,
-        UI_STYLE.scrollable_list_large_item_height,
-        tabb.size(RAWS_MANAGER.trade_goods_by_name),
-        unit,
-        inventory_slider
+    -- character needs information
+    local statisfaction_panel = ui_panel:subrect(0, 0, 4 * unit, 2 * unit, "right", "up")
+    local needs_tooltip = ""
+    for need, value in pairs(character.need_satisfaction) do
+        needs_tooltip = needs_tooltip
+            .. "\n" .. NEED_NAME[need] .. " " .. ut.to_fixed_point2(value.consumed / value.demanded * 100) .. "%"
+        for use, values in pairs(value.uses) do
+            needs_tooltip = needs_tooltip
+            .. "\n  " .. use .. ": " ..  ut.to_fixed_point2(values.consumed) .. " / " ..  ut.to_fixed_point2(values.demanded)
+            .. " (" .. ut.to_fixed_point2(values.consumed / values.demanded * 100) .. "%)"
+        end
+    end
+    ut.data_entry_percentage(
+        "",
+        character.basic_needs_satisfaction,
+        statisfaction_panel,
+        "Satisfaction of needs of this character. \n" .. needs_tooltip
     )
+
+    -- character inventory panel, limited to only owned
+    local inventory_panel = ui_panel:subrect(0, 2 * unit, 4 * unit, ui_panel.height - (2 * unit), "right", "up")
+    inventory_slider = inventory_view(inventory_panel, character)
 
 
     -- name panel
@@ -113,8 +150,8 @@ function window.draw(game)
     local decisions_label_panel =           layout:next(unit * 16, unit * 1)
     local decisions_panel =                 layout:next(unit * 16, unit * 7)
     local decisions_confirmation_panel =    layout:next(unit * 16, unit * 1)
-    local character_tab =                 layout:next(unit * 16, unit * 1)
-    local characters_list =                 layout:next(unit * 16, unit * 8)
+    local character_tab =                   layout:next(unit * 16, unit * 1)
+    local characters_list =                 layout:next(unit * 16, unit * 7)
 
     character_name_widget(name_panel, character)
 

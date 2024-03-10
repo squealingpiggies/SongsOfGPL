@@ -259,10 +259,12 @@ local function load()
 			local realm = root.province.realm
 			local province = root.province
 			local warband = root.leading_warband
-			if office_triggers.guard_leader(root, root.province.realm) then
-				warband = realm.capitol_guard
+			if realm and province and warband then
+				if office_triggers.guard_leader(root, root.province.realm) then
+					warband = realm.capitol_guard
+				end
+				realm:add_patrol(province, warband) ---@diagnostic disable-line
 			end
-			realm:add_patrol(province, warband)
 		end
 	}
 
@@ -623,7 +625,7 @@ local function load()
 		secondary_target = 'none',
 		base_probability = 1 / 2 ,
 		pretrigger = function(root)
-			if root.busy then return false end
+			if root.dead or root.busy then return false end
 			if WORLD:is_player(root) then
 				return false
 			end

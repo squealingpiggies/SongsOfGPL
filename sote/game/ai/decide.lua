@@ -73,7 +73,7 @@ function de.run_character(character)
 				while fails < d.ai_targetting_attempts do
 					-- 5. Select target (AI only) << ai_target >>
 					local target, success = d.ai_target(character)
-					if success then
+					if success and not character.dead then
 						-- 6. Check visibility << visible >>
 						if d.clickable(character, target) then
 							-- 7. Select secondary target (AI only) << ai_secondary_target >>

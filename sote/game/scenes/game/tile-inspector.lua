@@ -72,20 +72,43 @@ local function header_panel(gam, tile, panel)
 	population_panel.y = population_panel.y - population_panel.height
 	population_panel.x = population_panel.x + population_panel.width
 	uit.generic_number_field(
-		"minions.png",
+		"village.png",
 		tile.province:population(),
 		population_panel,
+		"Realm population",
+		uit.NUMBER_MODE.INTEGER,
+		uit.NAME_MODE.ICON
+	)
+
+	local all_pops_panel = population_panel
+	all_pops_panel.y = all_pops_panel.y + all_pops_panel.height
+	uit.generic_number_field(
+		"minions.png",
+		tabb.size(tile.province.all_pops),
+		all_pops_panel,
 		"Local population",
 		uit.NUMBER_MODE.INTEGER,
 		uit.NAME_MODE.ICON
 	)
 
-	local unemployed_panel = population_panel
+	local characters_panel = all_pops_panel
+	characters_panel.y = characters_panel.y - characters_panel.height
+	characters_panel.x = characters_panel.x + characters_panel.width
+	uit.generic_number_field(
+		"inner-self.png",
+		tabb.size(tile.province.characters),
+		characters_panel,
+		"Local characters",
+		uit.NUMBER_MODE.INTEGER,
+		uit.NAME_MODE.ICON
+	)
+
+	local unemployed_panel = characters_panel
 	unemployed_panel.y = unemployed_panel.y + unemployed_panel.height
 	uit.generic_number_field(
 		"shrug.png",
 		tile.province:get_unemployment(),
-		population_panel,
+		unemployed_panel,
 		"Local unemployed population",
 		uit.NUMBER_MODE.INTEGER,
 		uit.NAME_MODE.ICON
@@ -1096,7 +1119,7 @@ function re.draw(gam)
 	gam.tile_inspector_tab = uit.tabs(gam.tile_inspector_tab, layout, tabs, 1)
 end
 
----@param gam GameScene
+--[[-@param gam GameScene
 function re.draw_old(gam)
 	local tt = gam.clicked_tile_id
 	local mbt = WORLD.tiles[tt]
@@ -1152,6 +1175,6 @@ function re.draw_old(gam)
 			end
 		}, rect)
 	end
-end
+end]]
 
 return re

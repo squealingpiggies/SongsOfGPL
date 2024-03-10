@@ -21,8 +21,10 @@ local function load()
 
             local party = root.leading_warband
             party.status = "travelling"
-            party:consume_supplies(associated_data.travel_time)
-            WORLD:emit_action("travel", root, associated_data.destination, associated_data.travel_time, true)
+            if party then
+                party:consume_supplies(associated_data.travel_time)
+                WORLD:emit_action("travel", root, associated_data.destination, associated_data.travel_time, true)
+            end
         end
     }
 
@@ -63,8 +65,10 @@ local function load()
                 outcome = function ()
                     local party = root.leading_warband
                     party.status = "travelling"
-                    party:consume_supplies(associated_data.travel_time)
-                    WORLD:emit_action("travel", root, associated_data.destination, associated_data.travel_time, true)
+                    if party then
+                        party:consume_supplies(associated_data.travel_time)
+                        WORLD:emit_action("travel", root, associated_data.destination, associated_data.travel_time, true)
+                    end
                 end,
                 viable =function ()
                     return true
@@ -115,10 +119,10 @@ local function load()
                 .. "This land is controlled by people of " .. data.realm.name .. ". "
                 .. data.realm.leader.race.name .. " " .. data.realm.leader.name .. " rules over them."
         end,
-        function (self, root, data)
+        function (root, data)
             return "Finally!"
         end,
-        function (self, root, data)
+        function (root, data)
             return "What should I do now?"
         end
     )

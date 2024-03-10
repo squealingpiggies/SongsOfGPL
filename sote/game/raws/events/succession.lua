@@ -212,8 +212,8 @@ local function load()
             if wealth_successor then
                 ee.add_pop_savings(wealth_successor, character.savings, ee.reasons.Inheritance)
                 ee.add_pop_savings(character, -character.savings, ee.reasons.Inheritance)
-            else
-                ee.change_local_wealth(character.province, character.savings, ee.reasons.Inheritance)
+            elseif associated_data then
+                ee.change_local_wealth(associated_data, character.savings, ee.reasons.Inheritance)
                 ee.add_pop_savings(character, -character.savings, ee.reasons.Inheritance)
             end
 
@@ -221,8 +221,8 @@ local function load()
             ie.remove_all_loyal(character)
 
             -- clear references to character
-            character.province:remove_character(character)
-            character.home_province:unset_home(character)
+            if character.province then character.province:remove_character(character) end
+            if character.home_province then character.home_province:unset_home(character) end
 		end,
     }
 

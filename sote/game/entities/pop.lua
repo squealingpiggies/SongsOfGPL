@@ -134,7 +134,7 @@ end
 ---Checks if pop belongs to characters table of current province
 ---@return boolean
 function rtab.POP:is_character()
-	return self.province.characters[self] == self
+	return not self.dead and self.province.characters[self] == self
 end
 
 ---Unregisters a pop as a military pop.  \
@@ -189,6 +189,21 @@ function rtab.POP:gauge_needs()
 	self.life_needs_satisfaction = total_consumed_life / total_demanded_life
 	self.basic_needs_satisfaction = (total_consumed_need + total_consumed_life)
 		/ (total_demanded_need + total_demanded_life)
+end
+
+function rtab.POP:get_satisfaction_tooltip()
+	local uit = require "game.ui-utils"
+	local s = ""
+	for need, value in pairs(self.need_satisfaction) do
+		s = s
+			.. "\n" .. NEED_NAME[need] .. " " .. uit.to_fixed_point2(value.consumed / value.demanded * 100) .. "%"
+		for use, values in pairs(value.uses) do
+			s = s
+			.. "\n  " .. use .. ": " ..  uit.to_fixed_point2(values.consumed) .. " / " ..  uit.to_fixed_point2(values.demanded)
+			.. " (" .. uit.to_fixed_point2(values.consumed / values.demanded * 100) .. "%)"
+		end
+	end
+	return s
 end
 
 return rtab

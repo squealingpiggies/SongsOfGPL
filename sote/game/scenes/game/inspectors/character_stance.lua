@@ -42,43 +42,107 @@ function window.draw(game)
     ui.text("Your preferences", rect_title, "center", "up")
 
     ui.text("Exploration preparation:", vertical_layout:next(width, unit), "center", "up")
-    if ui.named_checkbox("Depending on situation", vertical_layout:next(width, unit), OPTIONS["exploration"] == 0, 4) then
+    local old_exploration_prep = OPTIONS["exploration"]
+    if ui.named_checkbox("Depending on situation", vertical_layout:next(width, unit), OPTIONS["exploration"] == 0, 4)
+        and old_exploration_prep ~= 0
+    then
         OPTIONS["exploration"] = 0
         save()
     end
-    if ui.named_checkbox("Explore by yourself", vertical_layout:next(width, unit), OPTIONS["exploration"] == 1, 4) then
+    if ui.named_checkbox("Explore by yourself", vertical_layout:next(width, unit), OPTIONS["exploration"] == 1, 4)
+        and old_exploration_prep ~= 1
+    then
         OPTIONS["exploration"] = 1
         save()
     end
-    if ui.named_checkbox("Ask for help", vertical_layout:next(width, unit), OPTIONS["exploration"] == 2, 4) then
+    if ui.named_checkbox("Ask for help", vertical_layout:next(width, unit), OPTIONS["exploration"] == 2, 4)
+        and old_exploration_prep ~= 2
+    then
         OPTIONS["exploration"] = 2
         save()
     end
 
     ui.text("Travel start:", vertical_layout:next(width, unit), "center", "up")
-    if ui.named_checkbox("Requires confirmation", vertical_layout:next(width, unit), OPTIONS["travel-start"] == 0, 4) then
+    local old_travel_start = OPTIONS["travel-start"]
+    if ui.named_checkbox("Requires confirmation", vertical_layout:next(width, unit), OPTIONS["travel-start"] == 0, 4)
+        and old_travel_start ~= 0
+    then
         OPTIONS["travel-start"] = 0
         save()
     end
-    if ui.named_checkbox("Does not require confirmation", vertical_layout:next(width, unit), OPTIONS["travel-start"] == 1, 4) then
+    if ui.named_checkbox("Does not require confirmation", vertical_layout:next(width, unit), OPTIONS["travel-start"] == 1, 4)
+        and old_travel_start ~= 1
+    then
         OPTIONS["travel-start"] = 1
         save()
     end
 
     ui.text("Travel end:", vertical_layout:next(width, unit), "center", "up")
-    if ui.named_checkbox("Notify me", vertical_layout:next(width, unit), OPTIONS["travel-end"] == 0, 4) then
+    local old_travel_end = OPTIONS["travel-end"]
+    if ui.named_checkbox("Notify me", vertical_layout:next(width, unit), OPTIONS["travel-end"] == 0, 4)
+        and old_travel_end ~= 0
+    then
         OPTIONS["travel-end"] = 0
         save()
     end
-    if ui.named_checkbox("Do not notify me", vertical_layout:next(width, unit), OPTIONS["travel-end"] == 1, 4) then
+    if ui.named_checkbox("Do not notify me", vertical_layout:next(width, unit), OPTIONS["travel-end"] == 1, 4)
+        and old_travel_end ~= 1
+    then
         OPTIONS["travel-end"] = 1
         save()
     end
-    if ui.named_checkbox("Pause on travel end", vertical_layout:next(width, unit), OPTIONS["travel-end"] == 2, 4) then
+    if ui.named_checkbox("Pause on travel end", vertical_layout:next(width, unit), OPTIONS["travel-end"] == 2, 4)
+        and old_travel_end ~= 2
+    then
         OPTIONS["travel-end"] = 2
         save()
     end
 
+    -- CHARACTER SATISFY NEEDS OPTIONS
+    ui.text("Needs Satisfaction:", vertical_layout:next(width, unit), "center", "up")
+--    local old_needs_inventory = OPTIONS["needs-inventory"]
+--    if ui.named_checkbox("Satisfy needs with inventory", vertical_layout:next(width, unit), OPTIONS["needs-inventory"], 4) ~= old_needs_inventory then
+--        OPTIONS["needs-inventory"] = not old_needs_inventory
+--        save()
+--    end
+    -- slider to determine savings spent
+    local old_needs_savings = OPTIONS["needs-savings"]
+    OPTIONS["needs-savings"] = ui.named_slider("Amount of savings willing to spend: " .. ut.to_fixed_point2(OPTIONS["needs-savings"] * 100)  .. "%",
+        vertical_layout:next(width, 2 * unit), OPTIONS["needs-savings"], 0, 1, unit)
+    if OPTIONS["needs-savings"] ~= old_needs_savings then
+        save()
+    end
+    -- slider to determine time spent hunting
+    local old_needs_hunt = OPTIONS["needs-hunt"]
+    OPTIONS["needs-hunt"] = ui.named_slider("Minimum time to spend hunting: " .. ut.to_fixed_point2(OPTIONS["needs-hunt"] * 100)  .. "%",
+        vertical_layout:next(width, 2 * unit), OPTIONS["needs-hunt"], 0, 1, unit)
+    if OPTIONS["needs-hunt"] ~= old_needs_hunt then
+        save()
+    end
+    local old_needs_auto = OPTIONS["needs-auto"]
+    if ui.named_checkbox("Custom Satisfaction Targets", vertical_layout:next(width, unit), OPTIONS["needs-auto"], 4) ~= old_needs_auto then
+        OPTIONS["needs-auto"] = not old_needs_auto
+        save()
+    end
+    if OPTIONS["needs-auto"] then
+        -- slider to determine buy target
+        local old_needs_buy = OPTIONS["needs-buy"]
+        OPTIONS["needs-buy"] = ui.named_slider("How much of your needs you want to buy to: " .. ut.to_fixed_point2(OPTIONS["needs-buy"] * 100)  .. "%",
+            vertical_layout:next(width, 2 * unit), OPTIONS["needs-buy"], 0, 1, unit)
+        if OPTIONS["needs-buy"] ~= old_needs_buy then
+            save()
+        end
+        -- slider to determine work target
+        local old_needs_work = OPTIONS["needs-work"]
+        OPTIONS["needs-work"] = ui.named_slider("How much of your needs you are willing to work for: " .. ut.to_fixed_point2(OPTIONS["needs-work"] * 100)  .. "%",
+            vertical_layout:next(width, 2 * unit), OPTIONS["needs-work"], 0, 1, unit)
+        if OPTIONS["needs-work"] ~= old_needs_work then
+            save()
+        end
+        -- TODO slider for life needs
+        -- TODO sliders to specify time
+        -- TODO sliders for children
+    end
 
 end
 

@@ -174,4 +174,17 @@ function tab.accumulate(items, accumulable, accumulator)
 	return accumulable
 end
 
+---Given two tables of similar key-value pairs, insert all values from the second table into the first.
+---Returns the first table with all values in both tables, where the second overwrites the first
+---@generic K, V
+---@param first table<K, V>
+---@param second table<K, V>
+---@return table<K, V>
+function tab.join(first, second)
+	for k,v in pairs(second) do
+		first[k] = v
+	end
+	return first
+end
+
 return tab

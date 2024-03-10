@@ -11,9 +11,10 @@ function co.run(realm)
 	---@type number
 	local con = 0
 	-- Your court is nobles of your capital
-	for _, character in pairs(realm.capitol.characters) do
-		if character.province == nil then
-
+	for _, character in pairs(tabb.filter(realm.capitol.home_to, function (a)
+		return a:is_character()
+	end)) do
+		if character.province == nil and not character.dead then
 			error("CHARACTER DOES NOT HAVE A PROVINCE .. \n"
 			.. character.name .. "\n"
 			.. tostring(character.age) .. "\n"
@@ -63,7 +64,7 @@ function co.run(realm)
 		ef.add_pop_savings(character, nobles_wage, ef.reasons.Court)
 	end
 
---[[	-- raise new nobles
+	-- raise new nobles
 	local NOBLES_RATIO = 0.15
 	for _, prov in pairs(realm.provinces) do
 		local p = {nobles = 0, population = 0, elligible = {}}
@@ -86,7 +87,7 @@ function co.run(realm)
 				pe.grant_nobility(pop,prov, pe.reasons.POPULATION_GROWTH)
 			end
 		end
-	end]]
+	end
 
 	realm.budget.court.budget = realm.budget.court.budget - total_decay
 end

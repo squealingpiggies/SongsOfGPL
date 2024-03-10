@@ -4,6 +4,7 @@ local effects = {}
 ---@param character Character
 function effects.death(character)
     -- print('character', character.name, 'died')
+    character.dead = true
 
     if WORLD:does_player_see_realm_news(character.realm) then
         WORLD:emit_notification(character.name .. " had died.")
@@ -20,7 +21,6 @@ function effects.death(character)
         character.successor_of[target] = nil
     end
 
-    character.dead = true
 end
 
 

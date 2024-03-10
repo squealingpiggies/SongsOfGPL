@@ -1,11 +1,11 @@
 
 local opt = {}
 
----@alias Fullscreen "false" | "exclusive" | "desktop"
 ---@class Options
 ---@field ["version"] string
 ---@field ["volume"] number
----@field ["fullscreen"] Fullscreen
+---@field ["screen_resolution"] {width: number, height: number}
+---@field ["fullscreen"] love.FullscreenType
 ---@field ["fitscreen"] boolean
 ---@field ["rotation"] boolean
 ---@field ["update_map"] boolean
@@ -16,14 +16,19 @@ local opt = {}
 ---@field ["exploration"] number
 ---@field ["travel-start"] number
 ---@field ["travel-end"] number
----@field ["screen_resolution"] {width: number, height: number}
+---@field ["needs-inventory"] boolean
+---@field ["needs-savings"] number
+---@field ["needs-hunt"] number
+---@field ["needs-buy"] number
+---@field ["needs-work"] number
 
 ---@return Options
 function opt.init()
 	return {
-		["version"] = "v0.3.1",
+		["version"] = VERSION_STRING,
 		["volume"] = 0,
-		["fullscreen"] = "false",
+		["screen_resolution"] = {width = 1280, height = 720},
+		["fullscreen"] = "normal",
 		["fitscreen"] = true,
 		["rotation"] = false,
 		["update_map"] = false,
@@ -34,7 +39,11 @@ function opt.init()
 		["exploration"] = 0,
 		["travel-start"] = 0,
 		["travel-end"] = 0,
-		["screen_resolution"] = {width = 1280, height = 720}
+		["needs-inventory"] = false,
+		["needs-savings"] = 1/12,
+		["needs-hunt"] = 1/4,
+		["needs-buy"] = 1/2,
+		["needs-work"] = 1/4,
 	}
 end
 
@@ -64,20 +73,20 @@ function opt.verify()
 	end
 end
 
----@param fullscreen Fullscreen
+---@param fullscreen love.FullscreenType
 function opt.updateFullscreen(fullscreen)
 	if OPTIONS == nil then return end
 	---@class Options
 	OPTIONS = OPTIONS
 	local ui = require "engine.ui"
 	OPTIONS.fullscreen = fullscreen
-	if fullscreen == "false" then
+	if fullscreen == "normal" then
 		love.window.setFullscreen(false)
 	else
 		love.window.setFullscreen(true, fullscreen)
 	end
 	local dim_x, dim_y = love.graphics.getDimensions()
-	if fullscreen ~= "false" and OPTIONS.fitscreen then
+	if fullscreen ~= "normal" and OPTIONS.fitscreen then
 		if fullscreen == "desktop" then
 			ui.set_reference_screen_dimensions(dim_x, dim_y)
 		else

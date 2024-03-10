@@ -151,7 +151,7 @@ function tb.draw(gam)
 			"noodles.png",
 			amount,
 			layout:next(uit.BASE_HEIGHT * 4, uit.BASE_HEIGHT),
-			"Food in my inventory")
+			"Food in my inventory.")
 
 		local days_of_travel = 0
 		if character.leading_warband then
@@ -171,9 +171,14 @@ function tb.draw(gam)
 			layout:next(uit.BASE_HEIGHT * 3, uit.BASE_HEIGHT),
 			"My popularity")
 
+		-- player character needs satisfaction
+		amount = character.basic_needs_satisfaction
+		tr = layout:next(uit.BASE_HEIGHT * 3, uit.BASE_HEIGHT)
+		local trs = "My needs satisfaction. \n" .. character:get_satisfaction_tooltip()
+		uit.generic_number_field("chart.png", amount, tr, trs, uit.NUMBER_MODE.PERCENTAGE, uit.NAME_MODE.ICON)
 
 		-- COA + name
-		local layout = ui.layout_builder()
+		layout = ui.layout_builder()
 			:position(uit.BASE_HEIGHT * 2, 0)
 			:horizontal()
 			:build()
@@ -204,42 +209,42 @@ function tb.draw(gam)
 		DRAW_EFFECTS(trt)
 
 		-- Food
-		local amount = character.province.realm.resources["food"] or 0
+		amount = character.province.realm.resources["food"] or 0
 		uit.sqrt_number_entry_icon(
-			"noodles.png",
+			"fruit-bowl.png",
 			amount,
 			layout:next(uit.BASE_HEIGHT * 4, uit.BASE_HEIGHT),
-			"Food")
+			"Food in province.")
 
 		-- Technology
-		local amount = character.province.realm:get_education_efficiency()
-		local tr = layout:next(uit.BASE_HEIGHT * 3, uit.BASE_HEIGHT)
-		local trs = "Current ability to research new technologies. When it's under 100%, technologies will be slowly forgotten, when above 100% they will be researched. Controlled largely through treasury spending on research and education but in most states the bulk of the contribution will come from POPs in the realm instead."
+		amount = character.province.realm:get_education_efficiency()
+		tr = layout:next(uit.BASE_HEIGHT * 3, uit.BASE_HEIGHT)
+		trs = "Current ability to research new technologies. When it's under 100%, technologies will be slowly forgotten, when above 100% they will be researched. Controlled largely through treasury spending on research and education but in most states the bulk of the contribution will come from POPs in the realm instead."
 		uit.generic_number_field("erlenmeyer.png", amount, tr, trs, uit.NUMBER_MODE.PERCENTAGE, uit.NAME_MODE.ICON)
 
 		-- Happiness
-		local amount = character.province.realm:get_average_mood()
-		local tr = layout:next(uit.BASE_HEIGHT * 3, uit.BASE_HEIGHT)
-		local trs = "Average mood (happiness) of population in our realm. Happy pops contribute more voluntarily to our treasury, whereas unhappy ones contribute less."
-		uit.balance_entry_icon("duality-mask.png", amount, tr, trs)
+		amount = character.province.realm:get_average_mood()
+		tr = layout:next(uit.BASE_HEIGHT * 3, uit.BASE_HEIGHT)
+		trs = "Average mood (happiness) of population in our realm. Happy pops contribute more voluntarily to our treasury, whereas unhappy ones contribute less."
+		uit.balance_entry_icon("musical-notes.png", amount, tr, trs)
 
 		-- Quality of life
-		local amount = character.province.realm:get_average_needs_satisfaction()
-		local tr = layout:next(uit.BASE_HEIGHT * 3, uit.BASE_HEIGHT)
-		local trs = "Average quality of life of population in our realm. Pops which do not starve do not die."
-		uit.generic_number_field("duality-mask.png", amount, tr, trs, uit.NUMBER_MODE.PERCENTAGE, uit.NAME_MODE.ICON)
+		amount = character.province.realm:get_average_needs_satisfaction()
+		tr = layout:next(uit.BASE_HEIGHT * 3, uit.BASE_HEIGHT)
+		trs = "Average quality of life of population in our realm. Pops which do not starve do not die."
+		uit.generic_number_field("chart.png", amount, tr, trs, uit.NUMBER_MODE.PERCENTAGE, uit.NAME_MODE.ICON)
 
 		-- POP
-		local amount = character.province.realm:get_total_population()
-		local tr = layout:next(uit.BASE_HEIGHT * 3, uit.BASE_HEIGHT)
-		local trs = "Current population of our realm."
+		amount = character.province.realm:get_total_population()
+		tr = layout:next(uit.BASE_HEIGHT * 3, uit.BASE_HEIGHT)
+		trs = "Current population of our realm."
 		uit.data_entry_icon("minions.png", tostring(math.floor(amount)), tr, trs)
 
 		-- Army size
-		local amount = character.province.realm:get_realm_military()
+		amount = character.province.realm:get_realm_military()
 		local target = character.province.realm:get_realm_military_target() + character.province.realm:get_realm_active_army_size()
-		local tr = layout:next(uit.BASE_HEIGHT * 3, uit.BASE_HEIGHT)
-		local trs = "Size of our realms armies."
+		tr = layout:next(uit.BASE_HEIGHT * 3, uit.BASE_HEIGHT)
+		trs = "Size of our realms armies."
 		uit.data_entry_icon("barbute.png", tostring(math.floor(amount)) .. " / " .. tostring(math.floor(target)), tr, trs)
 
 
@@ -250,6 +255,22 @@ function tb.draw(gam)
 
 		---@type Alert[]
 		local alerts = {}
+
+		local food_satisfaction = character.need_satisfaction[NEED.FOOD].consumed / character.need_satisfaction[NEED.FOOD].demanded
+		local water_satisfaction = character.need_satisfaction[NEED.WATER].consumed / character.need_satisfaction[NEED.WATER].demanded
+		if food_satisfaction < 0.1 then
+			table.insert(alerts, {
+				["icon"] = "fruit-bowl.png",
+				["tooltip"] = "At less than 10% food satisfaction, you are starving. Your character may die from lack of food!",
+			})
+		end
+
+		if water_satisfaction < 0.1 then
+			table.insert(alerts, {
+				["icon"] = "droplets.png",
+				["tooltip"] = "At less than 10% water satisfaction, you are severely dehydrated. Your character may die from lack of water!",
+			})
+		end
 
 		if character.province:get_unemployment() > 5 then
 			table.insert(alerts, {

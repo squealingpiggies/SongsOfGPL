@@ -32,9 +32,12 @@ local function load()
 			local p = root.province
 			if p == nil             then return nil, false end
 			-- Once you target a province, try selecting a random courtier
-			local s = tabb.size(p.characters)
+			local characters = tabb.filter(p.characters, function (a)
+				return not a.dead
+			end)
+			local s = tabb.size(characters)
 			---@type Character
-			local c = tabb.nth(p.characters, love.math.random(s))
+			local c = tabb.nth(characters, love.math.random(s))
 			if c then
 				if c.loyalty == root or c.traits[TRAIT.GOOD_ORGANISER] then
 					return c, true
@@ -112,9 +115,12 @@ local function load()
 			local p = root.province
 			if p == nil             then return nil, false end
 			-- Once you target a province, try selecting a random courtier
-			local s = tabb.size(p.characters)
+			local characters = tabb.filter(p.characters, function (a)
+				return not a.dead
+			end)
+			local s = tabb.size(characters)
 			---@type Character
-			local c = tabb.nth(p.characters, love.math.random(s))
+			local c = tabb.nth(characters, love.math.random(s))
 			if c then
 				if c.loyalty == root or c.traits[TRAIT.GOOD_ORGANISER] then
 					return c, true
@@ -161,9 +167,12 @@ local function load()
 			local p = root.province
 			if p == nil             then return nil, false end
 			-- Once you target a province, try selecting a random courtier
-			local s = tabb.size(p.characters)
+			local characters = tabb.filter(p.characters, function (a)
+				return not a.dead
+			end)
+			local s = tabb.size(characters)
 			---@type Character
-			local c = tabb.nth(p.characters, love.math.random(s))
+			local c = tabb.nth(characters, love.math.random(s))
 			if c then
 				if (c.realm == root.realm) and (not c.traits[TRAIT.TRADER]) and not (root.realm.overseer == c) then
 					return c, true
@@ -230,9 +239,12 @@ local function load()
 			local p = root.province
 			if p == nil             then return nil, false end
 			-- Once you target a province, try selecting a random courtier
-			local s = tabb.size(p.characters)
+			local characters = tabb.filter(p.characters, function (a)
+				return not a.dead
+			end)
+			local s = tabb.size(characters)
 			---@type Character
-			local c = tabb.nth(p.characters, love.math.random(s))
+			local c = tabb.nth(characters, love.math.random(s))
 			if c then
 				if c.loyalty == root or c.traits[TRAIT.GOOD_ORGANISER] then
 					return c, true
@@ -334,7 +346,10 @@ local function load()
 		end,
 		ai_target = function(root)
 			local province = root.realm.capitol
-			local character = tabb.random_select_from_set(province.characters)
+			local characters = tabb.filter(province.characters, function (a)
+				return not a.dead
+			end)
+			local character = tabb.random_select_from_set(characters)
 			if character then
 				if ot.valid_guard_leader(character, root.realm) then
 					return character, true

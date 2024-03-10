@@ -223,7 +223,7 @@ end
 ---Schedules an event immediately
 ---@param event string
 ---@param root Character
----@param associated_data table
+---@param associated_data table?
 function world.World:emit_immediate_event(event, root, associated_data)
 	if root == nil then
 		error("Attempt to call event for nil root")
@@ -413,17 +413,6 @@ function world.World:tick()
 			ta[province] = nil
 		end
 
-		PROFILER:start_timer("growth")
-
-		-- "POP" update
-		local pop_growth = require "game.society.pop-growth"
-		for _, settled_province in pairs(ta) do
-			--print("Pop growth")
-			pop_growth.growth(settled_province)
-		end
-
-		PROFILER:end_timer("growth")
-
 
 		-- "Province" update
 		local employ = require "game.economy.employment"
@@ -462,7 +451,7 @@ function world.World:tick()
 		-- local decide = require "game.ai.decide"
 		local events = require "game.ai.events"
 		local education = require "game.society.education"
---		local court = require "game.society.court"
+		local court = require "game.society.court"
 		local construct = require "game.ai.construction"
 		for _, settled_province in pairs(ta) do
 			local realm = settled_province.realm
@@ -473,7 +462,11 @@ function world.World:tick()
 					error(realm.name)
 				end
 				if overseer.province == nil then
-					error(overseer.name .. " " .. realm.name)
+					if overseer.dead then
+						realm.overseer = realm.leader
+					else
+						error(overseer.name .. " " .. realm.name)
+					end
 				end
 			end
 
@@ -499,7 +492,7 @@ function world.World:tick()
 --				PROFILER:end_timer("realm-construct-update")
 
 				--print("Court")
---				court.run(realm)
+				court.run(realm)
 				--print("Edu")
 				education.run(realm)
 				--print("Econ")
@@ -552,7 +545,9 @@ function world.World:tick()
 		PROFILER:start_timer("decisions")
 
 		for _, settled_province in pairs(ta) do
-			for _, character in pairs(settled_province.characters) do
+			for _, character in pairs(tabb.filter(settled_province.characters,function (a)
+				return not a.dead
+			end)) do
 				if character ~= WORLD.player_character then
 					decide.run_character(character)
 				end
@@ -560,6 +555,18 @@ function world.World:tick()
 		end
 
 		PROFILER:end_timer("decisions")
+
+
+		PROFILER:start_timer("growth")
+
+		-- lastly, "POP" update so dead characters are immediately processed next tick
+		local pop_growth = require "game.society.pop-growth"
+		for _, settled_province in pairs(ta) do
+			--print("Pop growth")
+			pop_growth.growth(settled_province)
+		end
+
+		PROFILER:end_timer("growth")
 
 	end
 

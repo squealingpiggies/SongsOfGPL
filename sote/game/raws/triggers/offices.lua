@@ -76,12 +76,12 @@ function triggers.valid_patrol_participant(character, province)
     -- sanity checks passed, now check if character leads controls some warband
     if character.leading_warband then
         local warband = character.leading_warband
-        if warband.status ~= 'idle' then
+        if warband and warband.status ~= 'idle' then
             return false
         end
     elseif triggers.guard_leader(character, province.realm) then
         local warband = character.realm.capitol_guard
-        if warband.status ~= 'idle' then
+        if warband and warband.status ~= 'idle' then
             return false
         end
         return true
@@ -94,6 +94,18 @@ end
 ---@param province Province
 ---@return boolean
 function triggers.designates_offices(character, province)
+    if not province then
+        error( "FAILED TO FIND PROVINCE"
+            .. "\n character: "
+            .. tostring(character.name)
+            .. "\n dead: "
+            .. tostring(character.dead)
+            .. "\n character.province: "
+            .. tostring(character.province)
+            .. "\n province: "
+            .. tostring(province)
+        )
+    end
     local realm_target = province.realm
     local realm = character.realm
 
