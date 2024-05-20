@@ -96,7 +96,7 @@ return function(rect, character)
             ut.render_icon(player_relation_icon_rect, "self-love.png", 1, 1, 1, 1)
             player_relation_icon_rect:shrink(-1)
             ut.render_icon(player_relation_icon_rect, "self-love.png", 0.72, 0.13, 0.27, 1.0)
-        elseif WORLD.player_character.parent == character or WORLD.player_character.children[character] then
+        elseif WORLD.player_character.mother == character or WORLD.player_character.children[character] then
             ut.render_icon(player_relation_icon_rect, "ages.png", 1, 1, 1, 1)
             player_relation_icon_rect:shrink(-1)
             ut.render_icon(player_relation_icon_rect, "ages.png", 0.72, 0.13, 0.27, 1.0)

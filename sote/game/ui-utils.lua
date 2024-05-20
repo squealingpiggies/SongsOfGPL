@@ -941,7 +941,7 @@ end
 ---@param rect Rect
 ---@param pop POP
 function ut.render_pop_satsifaction(rect, pop)
-	local needs_tooltip = "Forage Ratio: " .. ut.to_fixed_point2(pop.forage_ratio) .. "%, Work Ratio: " .. ut.to_fixed_point2(pop.work_ratio) .. "%"
+	local needs_tooltip = ""
 	for need, values in pairs(pop.need_satisfaction) do
 		local tooltip = ""
 		for case, value in pairs(values) do
@@ -960,7 +960,7 @@ function ut.render_pop_satsifaction(rect, pop)
 		"inner-self.png",
 		pop.basic_needs_satisfaction,
 		rect,
-		"Satisfaction of needs of this character. \n" .. needs_tooltip,
+		"Satisfaction of needs: \n" .. needs_tooltip,
 		ut.NUMBER_MODE.PERCENTAGE,
 		ut.NAME_MODE.ICON
 	)

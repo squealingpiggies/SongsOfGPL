@@ -22,33 +22,6 @@ local function init_state(base_unit)
     end
 end
 
-local function render_name(rect, k, v)
-    local children = tabb.size(v.children)
-    local name = v.name
-    ui.left_text(name, rect)
-end
-
----comment
----@param pop POP
----@return string
-local function pop_display_occupation(pop)
-    local job = "unemployed"
-    if pop.job then
-        job = pop.job.name
-    elseif pop.age < pop.race.teen_age then
-        job = "child"
-    elseif pop.unit_of_warband then
-        job = "warrior"
-    end
-    return job
-end
-
-local function pop_sex(pop)
-    local f = "m"
-    if pop.female then f = "f" end
-    return f
-end
-
 ---@param rect Rect
 ---@param base_unit number
 ---@param province Province
@@ -58,122 +31,124 @@ return function(rect, base_unit, province)
         local columns = {
             {
                 header = ".",
-                render_closure = function(rect, k, v)
+                render_closure = function(rect, k, v) ---@param v PopGroup
                     --ui.image(ASSETS.get_icon(v.race.icon)
-                    require "game.scenes.game.widgets.portrait"(rect, v)
+                    require "game.scenes.game.widgets.portrait"(rect, v.head)
                 end,
                 width = 1,
-                value = function(k, v)
-                    ---@type POP
-                    v = v
+                value = function(k, v) ---@param v PopGroup
                     return v.name
                 end
             },
             {
-                header = "name",
-                render_closure = render_name,
+                header = "head",
+                render_closure = function (rect, k, v) ---@param v PopGroup
+                    ui.centered_text(v.head.name, rect)
+                end,
                 width = 6,
-                value = function(k, v)
-                    ---@type POP
-                    v = v
-                    return v.name
+                value = function(k, v) ---@param v PopGroup
+                    return v.head.name
                 end
             },
             {
                 header = "race",
-                render_closure = function (rect, k, v)
+                render_closure = function (rect, k, v) ---@param v PopGroup
                     ui.centered_text(v.race.name, rect)
                 end,
                 width = 4,
-                value = function(k, v)
-                    ---@type POP
-                    v = v
+                value = function(k, v) ---@param v PopGroup
                     return v.race.name
                 end
             },
             {
                 header = "culture",
-                render_closure = function (rect, k, v)
+                render_closure = function (rect, k, v) ---@param v PopGroup
                     ui.centered_text(v.culture.name, rect)
                     ui.tooltip("This character follows the customs of " .. v.culture.name .. "."
                         .. require "game.economy.diet-breadth-model".culture_target_tooltip(v.culture), rect)
                 end,
                 width = 4,
-                value = function(k, v)
-                    ---@type POP
-                    v = v
+                value = function(k, v) ---@param v PopGroup
                     return v.culture.name
                 end
             },
             {
                 header = "faith",
-                render_closure = function (rect, k, v)
+                render_closure = function (rect, k, v) ---@param v PopGroup
                     ui.centered_text(v.faith.name, rect)
                 end,
                 width = 4,
-                value = function(k, v)
-                    ---@type POP
-                    v = v
+                value = function(k, v) ---@param v PopGroup
                     return v.faith.name
                 end
             },
             {
                 header = "home",
-                render_closure = function (rect, k, v)
+                render_closure = function (rect, k, v) ---@param v PopGroup
                     ui.centered_text(v.home_province.name, rect)
                 end,
                 width = 4,
-                value = function(k, v)
-                    ---@type POP
-                    v = v
+                value = function(k, v) ---@param v PopGroup
                     return v.home_province.name
                 end
             },
             {
-                header = "job",
-                render_closure = function (rect, k, v)
-                    ui.centered_text(pop_display_occupation(v), rect)
+                header = "size",
+                render_closure = function (rect, k, v) ---@param v PopGroup
+                    ui.centered_text(tostring(tabb.size(v:pops())), rect)
                 end,
-                width = 4,
-                value = function(k, v)
-                    return pop_display_occupation(v)
+                width = 2,
+                value = function(k, v) ---@param v PopGroup
+                    return tabb.size(v:pops())
                 end
             },
             {
-                header = "age",
-                render_closure = function (rect, k, v)
-                    ui.right_text(tostring(v.age), rect)
+                header = "weight",
+                render_closure = function (rect, k, v) ---@param v PopGroup
+                    ut.generic_number_field(
+                        "",
+                        v:population_weight(),
+                        rect,
+                        "Combined CC weight of population group.",
+                        ut.NUMBER_MODE.NUMBER,
+                        ut.NAME_MODE.NAME
+                    )
                 end,
-                width = 1,
-                value = function(k, v)
-                    return v.age
+                width = 2,
+                value = function(k, v) ---@param v PopGroup
+                    return v:population_weight()
                 end
             },
             {
-                header = "sex",
-                render_closure = function (rect, k, v)
-                    ui.centered_text(pop_sex(v), rect)
+                header = "work",
+                render_closure = function (rect, k, v) ---@param v PopGroup
+                    ut.generic_number_field(
+                        "stone-crafting.png",
+                        v.work_ratio,
+                        rect,
+                        "Percent of free time spent working versus foraging.",
+                        ut.NUMBER_MODE.PERCENTAGE,
+                        ut.NAME_MODE.ICON
+                    )
                 end,
-                width = 1,
-                value = function(k, v)
-                    return pop_sex(v)
+                width = 2,
+                value = function(k, v) ---@param v PopGroup
+                    return v.work_ratio
                 end
             },
             {
                 header = "savings",
-                render_closure = function (rect, k, v)
-                    ---@type POP
-                    v = v
+                render_closure = function (rect, k, v) ---@param v PopGroup
                     ut.money_entry(
                         "",
                         v.savings,
                         rect,
-                        "Savings of this character. "
-                        .. "Characters spend them on buying food and other commodities."
+                        "Total wealth of this pop group. "
+                        .. "Pops spend them on buying food and other commodities."
                     )
                 end,
                 width = 2,
-                value = function(k, v)
+                value = function(k, v) ---@param v PopGroup
                     return v.savings
                 end
             },
@@ -181,15 +156,13 @@ return function(rect, base_unit, province)
                 header = "satisfac.",
                 render_closure = ut.render_pop_satsifaction,
                 width = 2,
-                value = function(k, v)
+                value = function(k, v) ---@param v PopGroup
                     return v.basic_needs_satisfaction
                 end
             },
             {
                 header = "life needs",
-                render_closure = function (rect, k, v)
-                    ---@type POP
-                    v = v
+                render_closure = function (rect, k, v) ---@param v PopGroup
 
                     local needs_tooltip = ""
                     for need, values in pairs(v.need_satisfaction) do
@@ -216,7 +189,7 @@ return function(rect, base_unit, province)
                     )
                 end,
                 width = 2,
-                value = function(k, v)
+                value = function(k, v) ---@param v PopGroup
                     return v.life_needs_satisfaction
                 end
             }
@@ -224,7 +197,7 @@ return function(rect, base_unit, province)
         init_state(base_unit)
         local top = rect:subrect(0, 0, rect.width, base_unit, "left", "up")
         local bottom = rect:subrect(0, base_unit, rect.width, rect.height - base_unit, "left", "up")
-        ui.centered_text("Population", top)
-        ut.table(bottom, province.all_pops, columns, state)
+        ui.centered_text("Population Groups", top)
+        ut.table(bottom, province:get_pop_groups(), columns, state)
     end
 end

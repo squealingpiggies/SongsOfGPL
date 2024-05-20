@@ -187,9 +187,9 @@ function re.draw(gam)
 						local children = tabb.size(v.children)
 						local name = v.name
 						local tooltip = v.name
-						if v.parent then
-							name = name .. " [" .. v.parent.name .. "]"
-							tooltip = tooltip .. "'s parent is " .. v.parent.name
+						if v.mother then
+							name = name .. " [" .. v.mother.name .. "]"
+							tooltip = tooltip .. "'s parent is " .. v.mother.name
 							if children > 0 then
 								tooltip = tooltip .. "and"
 							else

@@ -17,9 +17,11 @@ function effects.death(character)
         end
     end
 
-    if character.parent then character.parent.children[character] = nil end
+    if character.mother then character.mother.children[character] = nil end
+    if character.father then character.father.children[character] = nil end
     for _,c in pairs(character.children) do
-        c.parent = nil
+        if c.mother == character then c.mother = nil end
+        if c.father == character then c.father = nil end
         character.children[c] = nil
     end
 

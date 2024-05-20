@@ -213,7 +213,7 @@ local function load()
 				ee.add_pop_savings(wealth_successor, character.savings, ee.reasons.Inheritance)
 				ee.add_pop_savings(character, -character.savings, ee.reasons.Inheritance)
 			else
-				ee.change_local_wealth(character.province, character.savings, ee.reasons.Inheritance)
+				ee.change_local_wealth(character.home_province, character.savings, ee.reasons.Inheritance)
 				ee.add_pop_savings(character, -character.savings, ee.reasons.Inheritance)
 			end
 

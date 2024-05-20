@@ -321,27 +321,17 @@ function PoliticalEffects.grant_nobility(pop, province, reason)
 			.. pop.province.name)
 	end
 
-	-- break parent-child link with pops
-	if pop.parent then
-		pop.parent.children[pop] = nil
-		pop.parent = nil
-	end
-	for _, v in pairs(pop.children) do
-		pop.children[v].parent = nil
-		pop.children[v] = nil
-	end
-
 	province:fire_pop(pop)
 	pop:unregister_military()
-	province.all_pops[pop] = nil
-
-	province:add_character(pop)
-	province:set_home(pop)
+	pop.province:take_away_pop(pop)
 
 	pop.realm = province.realm
 	pop.rank = ranks.NOBLE
 	pop.popularity[province.realm] = 0.1
 	pop.former_pop = true
+
+	province:add_character(pop)
+	province:set_home(pop)
 
 	roll_traits(pop)
 

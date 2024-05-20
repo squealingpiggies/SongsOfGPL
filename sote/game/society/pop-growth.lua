@@ -14,7 +14,7 @@ function pg.growth(province)
 	local cc_used = province:population_weight()
 	local min_life_need = 0.125
 	local death_rate = 0.003333333 -- 4% per year
-	local birth_rate = 0.005833333 -- 7% per year
+	local birth_rate = 1 / 24 -- 1 every 2 years
 
 	-- Mark pops for removal...
 	---@type POP[]
@@ -28,10 +28,9 @@ function pg.growth(province)
 		end
 	end
 
-	local starvation_check = min_life_need * 2
-	local eligible = tabb.accumulate(tabb.join(tabb.copy(province.all_pops), province.characters), {}, function (a, _, pp)
-		local age_adjusted_starvation_check = starvation_check / pp:get_age_multiplier()
-		local min_life_satisfaction = tabb.accumulate(pp.need_satisfaction, 3, function(b, need, cases)
+	tabb.accumulate(province:get_pop_groups(), nil, function (_, _, group)
+		-- find groups min life need satisfaction
+		local min_life_satisfaction = tabb.accumulate(group.need_satisfaction, 3, function(b, need, cases)
 			if NEEDS[need].life_need then
 				b = tabb.accumulate(cases, b, function (c, _, v)
 					local ratio = v.consumed / v.demanded
@@ -43,45 +42,40 @@ function pg.growth(province)
 			end
 			return b
 		end)
-		-- first remove all pop that reach max age
-		if pp.age > pp.race.max_age then
-			to_remove[#to_remove + 1] = pp
-		-- next check for starvation
-		elseif min_life_satisfaction < age_adjusted_starvation_check then -- prevent births if not at least 25% food and water
-			-- children are more likely to die of starvation 
-			if (age_adjusted_starvation_check - min_life_satisfaction) / age_adjusted_starvation_check * love.math.random() < death_rate then
+		local k = (cc / group.race.carrying_capacity_weight)
+		local rate = birth_rate * group.race.fecundity * min_life_need * (k - cc_used) / k * cc_used
+		-- kill off pops for reasons
+		tabb.accumulate(group:pops(), nil, function (_, _, pp)
+			local age_adjusted_starvation_check = min_life_need / pp:get_age_multiplier()
+			-- first remove all pop that reach max age
+			if pp.age > pp.race.max_age then
 				to_remove[#to_remove + 1] = pp
+			-- next check for starvation
+			elseif min_life_satisfaction < age_adjusted_starvation_check then -- prevent births if not at least 12.5% food or water
+				-- children are more likely to die of starvation 
+				if (age_adjusted_starvation_check - min_life_satisfaction) / age_adjusted_starvation_check * love.math.random() < death_rate then
+					to_remove[#to_remove + 1] = pp
+				end
+			-- finally kill some old people for being old
+			elseif pp.age >= pp.race.elder_age then
+				if love.math.random() < (pp.race.max_age - pp.age) / (pp.race.max_age - pp.race.elder_age) * death_rate then
+					to_remove[#to_remove + 1] = pp
+				end
+			elseif pp.age > pp.race.teen_age then
+				-- teens and older adults have reduced chance to conceive
+				local base = 1
+				if pp.age < pp.race.adult_age then
+					base = base * (pp.age - pp.race.teen_age) / (pp.race.adult_age - pp.race.teen_age)
+				elseif pp.age >= pp.race.middle_age then
+					base = base * (1 - (pp.age - pp.race.middle_age) / (pp.race.elder_age - pp.race.middle_age))
+				end
+				if love.math.random() < base * rate then
+					-- yay! spawn a new pop!
+					to_add[#to_add + 1] = pp
+				end
 			end
-		elseif pp.age >= pp.race.elder_age then
-			if love.math.random() < (pp.race.max_age - pp.age) / (pp.race.max_age - pp.race.elder_age) * death_rate then
-				to_remove[#to_remove + 1] = pp
-			end
-		-- finally, pop is eligable to breed if old enough
-		elseif pp.age >= pp.race.teen_age then
-			a[pp] = min_life_satisfaction
-		end
-		return a
+		end)
 	end)
-
-	tabb.accumulate(eligible, to_add, function (a, pp, min_life_satisfaction)
-		---@type POP
-		pp = pp
-
-		-- teens and older adults have reduced chance to conceive
-		local base = 1
-		if pp.age < pp.race.adult_age then
-			base = base * (pp.age - pp.race.teen_age) / (pp.race.adult_age - pp.race.teen_age)
-		elseif pp.age >= pp.race.middle_age then
-			base = base * (1 - (pp.age - pp.race.middle_age) / (pp.race.elder_age - pp.race.middle_age))
-		end
-
-		if love.math.random() < base * birth_rate * pp.race.fecundity then
-			-- yay! spawn a new pop!
-			a[#to_add + 1] = pp
-		end
-		return a
-	end)
-
 	-- Kill old pops...
 	for _, pp in pairs(to_remove) do
 		if pp:is_character() then
@@ -91,33 +85,21 @@ function pg.growth(province)
 		end
 	end
 	-- Add new pops...
-	local food_price = economical.get_local_price_of_use(province,'calories')
 	for _, pp in pairs(to_add) do
 		local character = pp:is_character()
-		-- TODO figure out beter way to keep character count lower
-		-- spawn orphan pop instead of character child if too many nobles to home pop
-		if character and pp.province:home_characters()/pp.province:home_population() > 0.3 then -- if twice more than ideal noble percentage
-			POP:new(
-				pp.race,
-				pp.faith,
-				pp.culture,
-				love.math.random() > pp.race.males_per_hundred_females / (100 + pp.race.males_per_hundred_females),
-				pp.race.teen_age, -- otherwise fails at foraging and instantly dies without market surplus
-				pp.home_province, province,
-				false
-			)
-		else
-			local newborn = POP:new(
-				pp.race,
-				pp.faith,
-				pp.culture,
-				love.math.random() > pp.race.males_per_hundred_females / (100 + pp.race.males_per_hundred_females),
-				0,
-				pp.home_province, province,
-				character
-			)
-			newborn.parent = pp
+		local newborn = POP:new(
+			pp.race,
+			pp.faith,
+			pp.culture,
+			love.math.random() > pp.race.males_per_hundred_females / (100 + pp.race.males_per_hundred_females),
+			0,
+			pp.home_province, province,
+			character
+		)
+		if character then
+			newborn.mother = pp
 			pp.children[newborn] = newborn
+			newborn.rank = character_ranks.NOBLE
 			local needs = newborn.race.male_needs
 			if newborn.female then
 				needs = newborn.race.female_needs
@@ -133,16 +115,7 @@ function pg.growth(province)
 				end)
 				return need_satisfaction
 			end)
-			newborn:get_need_satisfaction()
-			-- donate a small amount of funs should it suddenly be left without a parent
-			local amount = needs[NEED.FOOD]['calories']
-			local donation = math.max(math.min(pp.savings / 12, food_price * amount), 0)
-			economic_effects.add_pop_savings(pp, -donation, economic_effects.reasons.Donation)
-			economic_effects.add_pop_savings(newborn, donation, economic_effects.reasons.Donation)
-			if character then
-				newborn.rank = character_ranks.NOBLE
-				WORLD:emit_immediate_event('character-child-birth-notification', pp, newborn)
-			end
+			WORLD:emit_immediate_event('character-child-birth-notification', pp, newborn)
 		end
 	end
 

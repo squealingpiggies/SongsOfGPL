@@ -52,7 +52,7 @@ local function make_new_realm(capitol, race, culture, faith)
 	local pop_to_spawn = math.max(5, capitol.foragers_limit / race.carrying_capacity_weight * race.fecundity * 0.5)
 	for _ = 1, pop_to_spawn do
 		local age = math.floor(math.abs(love.math.randomNormal(race.adult_age, race.adult_age)) + 1)
-		pop.POP:new(
+		local pop = pop.POP:new(
 			race,
 			faith,
 			culture,
@@ -61,6 +61,8 @@ local function make_new_realm(capitol, race, culture, faith)
 			capitol, capitol
 		)
 	end
+	-- recalculate pop group variables satisfaction percenatages
+	capitol.pop_groups[capitol][race][culture][faith]:calculate_needs()
 
 	-- spawn leader
 	local elite_character = pe.generate_new_noble(r, capitol, race, faith, culture)
@@ -103,18 +105,6 @@ local function make_new_realm(capitol, race, culture, faith)
 		end
 	end
 
-	-- match children pop to some possible parent
-	for _, child in pairs(tabb.filter(capitol.all_pops, function (a)
-		return a.age < a.race.teen_age
-	end)) do
-		local parent = tabb.random_select_from_set(tabb.filter(capitol.all_pops, function (a)
-			return a.age > child.age + child.race.adult_age and a.age < child.age + child.race.elder_age
-		end))
-		if parent then
-			child.parent = parent
-			parent.children[child] = child
-		end
-	end
 	-- capitol:validate_population()
 
 	-- print("test battle")
@@ -226,7 +216,7 @@ function st.run()
 			queue:enqueue(prov)
 		end
 	end
-	-- Loop through all entries in the queue and flood fill out
+--[[	-- Loop through all entries in the queue and flood fill out
 	while queue:length() > 0 do
 		---@type Province
 		local prov = queue:dequeue()
@@ -258,7 +248,7 @@ function st.run()
 			-- queue:enqueue(prov)
 		end
 	end
-
+]]
 	-- At the end, print the amount of spawned tribes
 	print("Spawned tribes:", tabb.size(WORLD.realms))
 	local pops = 0

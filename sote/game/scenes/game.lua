@@ -2,6 +2,7 @@
 
 ---@class (exact) GameScene
 ---@field macrobuilder_public_mode boolean
+---@field pops_inspector_tab POPSInspectorTabs | nil
 ---@field tile_inspector_tab TileInspectorTabs | nil
 ---@field realm_inspector_tab RealmInspectorTabs | nil
 ---@field realm_stockpile_scrollbar number
@@ -110,6 +111,7 @@ local gam = {}
 ---@alias MenuTypes 'options' | 'confirm-exit' | 'preferences'
 ---@alias MapModeTab 'all' | 'debug' | 'demographic' | 'economic' | 'political'
 
+---@alias POPSInspectorTabs "ALL POPS"|"POP GROUPS"|"CHARACTERS"|"FAMILIES"
 ---@alias TileInspectorTabs "GEN"
 ---@alias RealmInspectorTabs "GEN"
 

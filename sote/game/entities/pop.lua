@@ -1,4 +1,6 @@
 local job_types = require "game.raws.job_types"
+local tabb = require "engine.table"
+
 ---@class (exact) POP
 ---@field __index POP
 ---@field race Race
@@ -8,8 +10,10 @@ local job_types = require "game.raws.job_types"
 ---@field age number
 ---@field name string
 ---@field savings number
----@field parent POP?
+---@field mother POP?
+---@field father POP?
 ---@field children table<POP, POP>
+---@field group PopGroup
 ---@field life_needs_satisfaction number from 0 to 1
 ---@field basic_needs_satisfaction number from 0 to 1
 ---@field popularity table<Realm, number|nil>
@@ -58,9 +62,9 @@ rtab.POP.__index = rtab.POP
 ---@param character_flag boolean?
 ---@return POP
 function rtab.POP:new(race, faith, culture, female, age, home, location, character_flag)
-	local tabb = require "engine.table"
 	---@type POP
 	local r = {}
+	setmetatable(r, rtab.POP)
 
 	r.race = race
 	r.faith = faith
@@ -69,6 +73,12 @@ function rtab.POP:new(race, faith, culture, female, age, home, location, charact
 	r.age = age
 
 	r.name = culture.language:get_random_name()
+
+	-- calculate needs statisfaction before adding to group or family!
+	r.forage_ratio = 0.75
+	r.work_ratio = 0.25
+	r.need_satisfaction = {}
+	r:recalculate_needs_satisfaction(0.5)
 
 	home:set_home(r)
 	if character_flag then
@@ -84,39 +94,6 @@ function rtab.POP:new(race, faith, culture, female, age, home, location, charact
 	r.children                 = {}
 	r.successor_of             = {}
 	r.current_negotiations     = {}
-
-	local need_satisfaction = race.male_needs
-	if female then
-		need_satisfaction = race.female_needs
-	end
-	local total_consumed, total_demanded = 0, 0
-	r.need_satisfaction = tabb.accumulate(NEEDS, {}, function (a, need_index, need)
-			local age_dependant = not need.age_independent
-			local life_need = need.life_need
-			if need_satisfaction[need_index] then
-				a[need_index] = tabb.accumulate(need_satisfaction[need_index], {}, function (b, use_case, value)
-					local demanded = value
-					if age_dependant then
-						demanded = demanded * rtab.POP.get_age_multiplier(r)
-					end
-					if life_need then
-						local consumed = demanded * 0.5
-						b[use_case] = {consumed = consumed, demanded = demanded}
-						total_consumed = total_consumed + consumed
-					else
-						b[use_case] = {consumed = 0, demanded = demanded}
-					end
-					total_demanded = total_demanded + demanded
-					return b
-				end)
-			end
-			return a
-		end)
-	r.forage_ratio = 0.75
-	r.work_ratio = 0.25
-
-	r.basic_needs_satisfaction = total_consumed / total_demanded
-	r.life_needs_satisfaction = 0.5
 
 	r.has_trade_permits_in     = {}
 	r.has_building_permits_in  = {}
@@ -136,8 +113,6 @@ function rtab.POP:new(race, faith, culture, female, age, home, location, charact
 	for i = 1, 20 do
 		table.insert(r.dna, love.math.random())
 	end
-
-	setmetatable(r, rtab.POP)
 
 	return r
 end
@@ -194,7 +169,6 @@ function rtab.POP:get_need_satisfaction()
 	end
 	self.life_needs_satisfaction = life_consumed / life_demanded
 	self.basic_needs_satisfaction = (total_consumed + life_consumed) / (total_demanded + life_demanded)
-	return self.life_needs_satisfaction, self.basic_needs_satisfaction
 end
 
 ---Returns age adjusted size of pop
@@ -216,29 +190,110 @@ function rtab.POP:job_efficiency(jobtype)
 	return self.race.male_efficiency[jobtype] * self:get_age_multiplier()
 end
 
----Returns age adjust racial efficiency
+function rtab.POP:free_time()
+	if self.age < self.race.teen_age then
+		return self.age / self.race.teen_age
+	end
+	return 1
+end
+
+---Returns age adjust racial need for a single use case
 ---@param need NEED
 ---@param use_case TradeGoodUseCaseReference
 ---@return number
-function rtab.POP:calculate_need_use_case_satisfaction(need, use_case)
+function rtab.POP:get_racial_need_use_case(need, use_case)
 	if self.female then
 		return self.race.female_needs[need][use_case] * self:get_age_multiplier()
 	end
 	return self.race.male_needs[need][use_case] * self:get_age_multiplier()
 end
 
+---Returns all use cases for a single need
+---@param need_index NEED
+---@param percentage number? optionally set consumed to percentage of demanded
+---@return table<TradeGoodUseCaseReference, table<{consumed:number, demanded: number}>>
+---@return number total_demanded
+---@return number total_consumed
+function rtab.POP:get_racial_need(need_index, percentage)
+	local total_consumed, total_demanded = 0, 0
+	local racial_need_table
+	if self.female then
+		racial_need_table = self.race.female_needs
+	else
+		racial_need_table = self.race.male_needs
+	end
+	local needs_collection = {}
+	if racial_need_table and racial_need_table[need_index] then
+		needs_collection = tabb.accumulate(racial_need_table[need_index], {}, function(need_collection, case, value)
+			local demanded = value * self:get_age_multiplier()
+			local consumed = percentage and (percentage * demanded) or
+				(self.need_satisfaction[need_index] and self.need_satisfaction[need_index][case] and self.need_satisfaction[need_index][case].consumed or 0)
+			total_consumed = total_consumed + consumed
+			total_demanded = total_demanded + demanded
+			need_collection[case] = {consumed = consumed, demanded = demanded }
+			return need_collection
+		end)
+	end
+	return needs_collection, total_consumed, total_demanded
+end
+
+---calculate and set pop needs
+---@param percentage? number optional percentage to set life needs
+function rtab.POP:recalculate_needs_satisfaction(percentage)
+	local total_life_need, total_basic_need = 0, 0
+	local total_life_satisfaction, total_basic_satisfaction = 0, 0
+	local needs_satsifaction = tabb.accumulate(NEEDS, {}, function(needs_satsifaction, need_index, need)
+		local need_collection, consumed, demanded = self:get_racial_need(need_index, need.life_need and percentage or nil)
+		if demanded > 0 then
+			if need.life_need then
+				total_life_need = total_life_need + demanded
+				total_life_satisfaction = total_life_satisfaction + consumed
+			else
+				total_basic_need = total_basic_need + demanded
+				total_basic_satisfaction = total_basic_satisfaction + consumed
+			end
+			needs_satsifaction[need_index] = need_collection
+		end
+		return needs_satsifaction
+	end)
+	-- Add foraging tools from pop culture targets
+	if not needs_satsifaction[NEED.TOOLS] then needs_satsifaction[NEED.TOOLS] = {} end
+	local water_search = self.culture.traditional_forager_targets['water'].search
+	local tools_like_demanded = (1 - water_search) * self:size()
+	local tools_like_consumed = (self.need_satisfaction[NEED.TOOLS] and self.need_satisfaction[NEED.TOOLS]['tools-like'] and self.need_satisfaction[NEED.TOOLS]['tools-like'].consumed or 0)
+	local containers_demanded = water_search * self:size()
+	local containers_consumed = (self.need_satisfaction[NEED.TOOLS] and self.need_satisfaction[NEED.TOOLS]['containers'] and self.need_satisfaction[NEED.TOOLS]['containers'].consumed or 0)
+	total_basic_need = total_basic_need + containers_demanded + tools_like_demanded
+	total_basic_satisfaction = total_basic_satisfaction + containers_consumed + tools_like_consumed
+	needs_satsifaction[NEED.TOOLS]['tools-like'] = {
+		consumed = tools_like_consumed,
+		demanded = tools_like_demanded,
+	}
+	needs_satsifaction[NEED.TOOLS]['containers'] = {
+		consumed = containers_consumed,
+		demanded = containers_demanded,
+	}
+
+	-- TOTO use production methods from culture foraging targets and get tool needs
+	-- TOTO use culture to hold non life needs and calculate/update here
+
+	self.need_satisfaction = needs_satsifaction
+	self.life_needs_satisfaction = total_life_satisfaction / total_life_need
+	self.basic_needs_satisfaction = (total_basic_satisfaction + total_life_satisfaction) / (total_basic_need + total_life_need)
+end
+
 ---Returns the adjusted health value for the provided pop.
 ---@param unit UnitType
 ---@return number attack health modified by pop race and sex
 function rtab.POP:get_health(unit)
-	return unit.base_health * self:size()
+	return unit.base_health * rtab.POP.size(self)
 end
 
 ---Returns the adjusted attack value for the provided pop.
 ---@param unit UnitType
 ---@return number pop_adjusted attack modified by pop race and sex
 function rtab.POP:get_attack(unit)
-	return unit.base_attack * self:job_efficiency(job_types.WARRIOR)
+	return unit.base_attack * rtab.POP.job_efficiency(self,job_types.WARRIOR)
 end
 
 ---Returns the adjusted armor value for the provided pop.
@@ -262,7 +317,7 @@ end
 ---@return number armor
 ---@return number speed
 function rtab.POP:get_strength(unit)
-	return self:get_health(unit), self:get_attack(unit), self:get_armor(unit), self:get_speed(unit)
+	return self:get_health( unit), self:get_attack(unit), self:get_armor(unit), self:get_speed(unit)
 end
 
 ---Returns the adjusted spotting value for the provided pop.
@@ -283,7 +338,7 @@ end
 ---@param unit UnitType?
 ---@return number pop_adjusted food need modified by pop race and sex
 function rtab.POP:get_supply_use(unit)
-	local pop_food = self:calculate_need_use_case_satisfaction(NEED.FOOD,'calories')
+	local pop_food = self:get_racial_need_use_case(NEED.FOOD, 'calories')
 	return ((unit and unit.supply_useds or 0) + pop_food) / 30
 end
 

@@ -838,7 +838,7 @@ function pro.run(province)
 				end
 			end
 			-- update 'family units', add to pop satisfy needs list only if an 'adult' or an absant parent, either away or none at all
-			if (pop.age >= pop.race.teen_age) or (not pop.parent or pop.parent.province ~= pop.province) then
+			if (pop.age >= pop.race.teen_age) or (not pop.mother or pop.mother.province ~= pop.province) then
 				-- record foraging time of 'family unit' for efficiency
 				local water_search = pop.culture.traditional_forager_targets['water'].search
 				local foragers_increase = pop.race.carrying_capacity_weight * pop:get_age_multiplier()

@@ -28,6 +28,7 @@ local prov = {}
 ---@field realm Realm?
 ---@field buildings table<Building, Building>
 ---@field all_pops table<POP, POP> -- all pops
+---@field pop_groups table<Province, table<Race, table<Culture, table<Faith, PopGroup>>>>
 ---@field characters table<Character, Character>
 ---@field home_to table<POP, POP> Set of characters and pops which think of this province as their home
 ---@field technologies_present table<Technology, Technology>
@@ -93,6 +94,7 @@ function prov.Province:new(fake_flag)
 	o.is_land = false
 	o.buildings = {}
 	o.all_pops = {}
+	o.pop_groups = {}
 	o.characters = {}
 	o.home_to = {}
 	o.technologies_present = {}
@@ -254,17 +256,71 @@ function prov.Province:population_weight()
 	return total
 end
 
+---@return table<PopGroup, PopGroup>
+function prov.Province:get_pop_groups()
+	return tabb.accumulate(self.pop_groups, {}, function (groups, _, h)
+		tabb.accumulate(h, nil, function (a, _, r)
+			tabb.accumulate(r, nil, function (a, _, c)
+				tabb.accumulate(c, nil, function (a, _, f)
+					groups[f] = f
+				end)
+			end)
+		end)
+		return groups
+	end)
+end
+
+---Adds a pop to the appropriate pop group, creating it if necessary
+---@param pop POP
+function prov.Province:add_to_group(pop)
+	local group = require "game.entities.pop-group".PopGroup
+	if not self.pop_groups[pop.home_province] then
+		self.pop_groups[pop.home_province] = {[pop.race] = {[pop.culture] = {[pop.faith] = group:new(pop, pop.home_province, self)}}}
+	elseif not self.pop_groups[pop.home_province][pop.race] then
+		self.pop_groups[pop.home_province][pop.race] = {[pop.culture] = {[pop.faith] = group:new(pop, pop.home_province, self)}}
+	elseif not self.pop_groups[pop.home_province][pop.race][pop.culture] then
+		self.pop_groups[pop.home_province][pop.race][pop.culture] = {[pop.faith] = group:new(pop, pop.home_province, self)}
+	elseif not self.pop_groups[pop.home_province][pop.race][pop.culture][pop.faith] then
+		self.pop_groups[pop.home_province][pop.race][pop.culture][pop.faith] = group:new(pop, pop.home_province, self)
+	else
+		if pop.age < pop.race.teen_age then
+			self.pop_groups[pop.home_province][pop.race][pop.culture][pop.faith]:add_child(pop)
+		else
+			self.pop_groups[pop.home_province][pop.race][pop.culture][pop.faith]:add_adult(pop)
+		end
+	end
+end
+
+---Removes a pop from the appropriate pop group, deleting empty tables afterwards
+---@param pop POP
+function prov.Province:remove_from_group(pop)
+	self.pop_groups[pop.home_province][pop.race][pop.culture][pop.faith]:remove_pop(pop)
+	if self.pop_groups[pop.home_province][pop.race][pop.culture][pop.faith].head == nil then
+		self.pop_groups[pop.home_province][pop.race][pop.culture][pop.faith] = nil
+		if next(self.pop_groups[pop.home_province][pop.race][pop.culture]) == nil then
+			self.pop_groups[pop.home_province][pop.race][pop.culture] = nil
+			if next(self.pop_groups[pop.home_province][pop.race]) == nil then
+				self.pop_groups[pop.home_province][pop.race] = nil
+				if next(self.pop_groups[pop.home_province]) == nil then
+					self.pop_groups[pop.home_province] = nil
+				end
+			end
+		end
+	end
+end
+
 ---Adds a pop to the province. Sets province as a home. Does not handle cleaning of old data
 ---@param pop POP
 function prov.Province:add_pop(pop)
-	self:add_guest_pop(pop)
 	self:set_home(pop)
+	self:add_guest_pop(pop)
 end
 
 ---Adds pop as a guest of this province. Preserves old home of a pop.
 ---@param pop POP
 function prov.Province:add_guest_pop(pop)
 	self.all_pops[pop] = pop
+	self:add_to_group(pop)
 	pop.province = self
 end
 
@@ -277,14 +333,22 @@ function prov.Province:add_character(character)
 	character.province = self
 end
 
----Sets province as pop's home
+---Sets province as pop's home, moves to appropriate group if a pop in province
 ---@param pop POP
 function prov.Province:set_home(pop)
 	-- print('SET HOME', pop.name)
-
-	self.home_to[pop] = pop
+	if pop.province and not pop:is_character() then
+		pop.province:remove_from_group(pop)
+	end
+	if pop.home_province then
+		pop.home_province:set_home_pop_nil_wrapper(pop)
+	end
 	pop.home_province = self
 	pop.realm = self.realm
+	self.home_to[pop] = pop
+	if pop.province and not pop:is_character() then
+		pop.province:add_to_group(pop)
+	end
 end
 
 --- Transfers a character to the target province
@@ -311,18 +375,9 @@ function prov.Province:transfer_pop(pop, target)
 		error("POP DOES NOT HAS ACCORDING PROVINCE ")
 	end
 
-	self.all_pops[pop] = nil
-	target.all_pops[pop] = pop
+	self:take_away_pop(pop)
+	target:add_guest_pop(pop)
 
-	pop.province = target
-
-	local children = tabb.filter(pop.children, function(c)
-		return self.all_pops[c] and c.home_province ~= self
-			and not c.unit_of_warband and not c.employer
-	end)
-	for _, c in pairs(children) do
-		self:transfer_pop(c, target)
-	end
 end
 
 --- Changes home province of a pop/character to the target province
@@ -332,15 +387,7 @@ function prov.Province:transfer_home(pop, target)
 	if pop.home_province ~= self then
 		error("POP DOES NOT HAS ACCORDING HOME PROVINCE ")
 	end
-
-	self:set_home_pop_nil_wrapper(pop)
 	target:set_home(pop)
-	local children = tabb.filter(pop.children, function(c)
-		return self.all_pops[c] and not c.unit_of_warband and not c.employer
-	end)
-	for _, c in pairs(children) do
-		self:transfer_home(c, target)
-	end
 end
 
 --- Removes a character from the province
@@ -361,8 +408,10 @@ end
 --- Pop stops thinking of this province as a home
 ---@param pop POP
 function prov.Province:unset_home(pop)
-	self:set_home_pop_nil_wrapper(pop)
-	pop.home_province = nil
+	if pop.home_province then
+		self:set_home_pop_nil_wrapper(pop)
+		pop.home_province = nil
+	end
 end
 
 ---Kills a single pop and removes it from all relevant references.
@@ -372,21 +421,13 @@ function prov.Province:kill_pop(pop)
 
 	self:fire_pop(pop)
 	pop:unregister_military()
+	self:remove_from_group(pop)
 	self.all_pops[pop] = nil
-	self:set_home_pop_nil_wrapper(pop)
+	pop.home_province:unset_home(pop)
 
 	self.outlaws[pop] = nil
 	pop.province = nil
 
-	if pop.home_province then
-		pop.home_province:unset_home(pop)
-	end
-
-	if pop.parent then pop.parent.children[pop] = nil end
-	for _, c in pairs(pop.children) do
-		c.parent = nil
-		pop.children[c] = nil
-	end
 end
 
 function prov.Province:local_army_size()
@@ -405,13 +446,15 @@ end
 ---@return POP
 function prov.Province:take_away_pop(pop)
 	-- print("take away", pop.name)
+	self:remove_from_group(pop)
 	self.all_pops[pop] = nil
+	pop.province = nil
 	return pop
 end
 
 function prov.Province:return_pop_from_army(pop, unit_type)
 	-- print("return", pop.name)
-	self.all_pops[pop] = pop
+	self:add_guest_pop(pop)
 	return pop
 end
 
