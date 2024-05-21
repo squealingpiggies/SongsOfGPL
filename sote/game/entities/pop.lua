@@ -74,6 +74,28 @@ function rtab.POP:new(race, faith, culture, female, age, home, location, charact
 
 	r.name = culture.language:get_random_name()
 
+	r.busy                      = false
+	r.owned_buildings           = {}
+	r.inventory                 = {}
+	r.price_memory              = {}
+	r.children                  = {}
+	r.successor_of              = {}
+	r.current_negotiations      = {}
+
+	r.has_trade_permits_in      = {}
+	r.has_building_permits_in   = {}
+
+	r.savings                   = 0
+	r.popularity                = {}
+	r.loyalty                   = nil
+	r.loyal                     = {}
+	r.traits                    = {}
+
+	r.leader_of                 = {}
+
+	r.dead                      = false
+	r.former_pop                = false
+
 	-- calculate needs statisfaction before adding to group or family!
 	r.forage_ratio = 0.75
 	r.work_ratio = 0.25
@@ -86,28 +108,6 @@ function rtab.POP:new(race, faith, culture, female, age, home, location, charact
 	else
 		location:add_guest_pop(r)
 	end
-
-	r.busy                     = false
-	r.owned_buildings          = {}
-	r.inventory                = {}
-	r.price_memory             = {}
-	r.children                 = {}
-	r.successor_of             = {}
-	r.current_negotiations     = {}
-
-	r.has_trade_permits_in     = {}
-	r.has_building_permits_in  = {}
-
-	r.savings                  = 0
-	r.popularity               = {}
-	r.loyalty                  = nil
-	r.loyal                    = {}
-	r.traits                   = {}
-
-	r.leader_of                = {}
-
-	r.dead                     = false
-	r.former_pop               = false
 
 	r.dna                      = {}
 	for i = 1, 20 do
@@ -197,6 +197,12 @@ function rtab.POP:free_time()
 	return 1
 end
 
+---Returns age adjust CC weight of pop
+---@return number
+function rtab.POP:carrying_capacity_weight()
+	return self.race.carrying_capacity_weight * self:get_age_multiplier()
+end
+
 ---Returns age adjust racial need for a single use case
 ---@param need NEED
 ---@param use_case TradeGoodUseCaseReference
@@ -237,6 +243,24 @@ function rtab.POP:get_racial_need(need_index, percentage)
 	return needs_collection, total_consumed, total_demanded
 end
 
+function rtab.POP:recalcualte_foraging_tools(needs_satsifaction)
+	if not needs_satsifaction[NEED.TOOLS] then needs_satsifaction[NEED.TOOLS] = {} end
+	local water_search = self.culture.traditional_forager_targets['water'].search
+	local tools_like_demanded = (1 - water_search) * self:size()
+	local tools_like_consumed = (self.need_satisfaction[NEED.TOOLS] and self.need_satisfaction[NEED.TOOLS]['tools-like'] and self.need_satisfaction[NEED.TOOLS]['tools-like'].consumed or 0)
+	local containers_demanded = water_search * self:size()
+	local containers_consumed = (self.need_satisfaction[NEED.TOOLS] and self.need_satisfaction[NEED.TOOLS]['containers'] and self.need_satisfaction[NEED.TOOLS]['containers'].consumed or 0)
+	needs_satsifaction[NEED.TOOLS]['tools-like'] = {
+		consumed = tools_like_consumed,
+		demanded = tools_like_demanded,
+	}
+	needs_satsifaction[NEED.TOOLS]['containers'] = {
+		consumed = containers_consumed,
+		demanded = containers_demanded,
+	}
+	return tools_like_consumed + containers_consumed, containers_demanded + containers_demanded
+end
+
 ---calculate and set pop needs
 ---@param percentage? number optional percentage to set life needs
 function rtab.POP:recalculate_needs_satisfaction(percentage)
@@ -257,22 +281,9 @@ function rtab.POP:recalculate_needs_satisfaction(percentage)
 		return needs_satsifaction
 	end)
 	-- Add foraging tools from pop culture targets
-	if not needs_satsifaction[NEED.TOOLS] then needs_satsifaction[NEED.TOOLS] = {} end
-	local water_search = self.culture.traditional_forager_targets['water'].search
-	local tools_like_demanded = (1 - water_search) * self:size()
-	local tools_like_consumed = (self.need_satisfaction[NEED.TOOLS] and self.need_satisfaction[NEED.TOOLS]['tools-like'] and self.need_satisfaction[NEED.TOOLS]['tools-like'].consumed or 0)
-	local containers_demanded = water_search * self:size()
-	local containers_consumed = (self.need_satisfaction[NEED.TOOLS] and self.need_satisfaction[NEED.TOOLS]['containers'] and self.need_satisfaction[NEED.TOOLS]['containers'].consumed or 0)
-	total_basic_need = total_basic_need + containers_demanded + tools_like_demanded
-	total_basic_satisfaction = total_basic_satisfaction + containers_consumed + tools_like_consumed
-	needs_satsifaction[NEED.TOOLS]['tools-like'] = {
-		consumed = tools_like_consumed,
-		demanded = tools_like_demanded,
-	}
-	needs_satsifaction[NEED.TOOLS]['containers'] = {
-		consumed = containers_consumed,
-		demanded = containers_demanded,
-	}
+	local tools_consumed, tools_demanded = self:recalcualte_foraging_tools(needs_satsifaction)
+	total_basic_satisfaction = total_basic_satisfaction + tools_consumed
+	total_basic_need = total_basic_need + tools_demanded
 
 	-- TOTO use production methods from culture foraging targets and get tool needs
 	-- TOTO use culture to hold non life needs and calculate/update here
@@ -351,6 +362,9 @@ function rtab.POP:get_supply_capacity(unit)
 		job = self.race.female_efficiency[job_types.HAULING]
 	end
 	return (unit and unit.supply_capacity * 0.25 or 0) + job
+end
+
+function rtab.POP:distribute_satsisfaction()
 end
 
 return rtab

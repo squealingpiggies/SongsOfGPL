@@ -251,7 +251,7 @@ function prov.Province:population_weight()
 	local total = 0
 	for _, pop in pairs(self.all_pops) do
 		 -- weight is dependent on food needs, which are age dependent
-		total = total + pop.race.carrying_capacity_weight * pop:get_age_multiplier()
+		total = total + pop:carrying_capacity_weight()
 	end
 	return total
 end
@@ -295,7 +295,7 @@ end
 ---@param pop POP
 function prov.Province:remove_from_group(pop)
 	self.pop_groups[pop.home_province][pop.race][pop.culture][pop.faith]:remove_pop(pop)
-	if self.pop_groups[pop.home_province][pop.race][pop.culture][pop.faith].head == nil then
+	if self.pop_groups[pop.home_province][pop.race][pop.culture][pop.faith].size == 0 then
 		self.pop_groups[pop.home_province][pop.race][pop.culture][pop.faith] = nil
 		if next(self.pop_groups[pop.home_province][pop.race][pop.culture]) == nil then
 			self.pop_groups[pop.home_province][pop.race][pop.culture] = nil

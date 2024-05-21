@@ -7,7 +7,8 @@ local tabb = require "engine.table"
 ---@field faith Faith
 ---@field culture Culture
 ---@field name string
----@field savings number
+---@field savings number total wealth of all pops in group
+---@field size number total number of individual pops in group
 ---@field head POP
 ---@field adults table<POP, POP>
 ---@field children table<POP, POP>
@@ -15,6 +16,7 @@ local tabb = require "engine.table"
 ---@field basic_needs_satisfaction number from 0 to 1
 ---@field need_satisfaction table<NEED, table<TradeGoodUseCaseReference,{consumed:number, demanded:number}>>
 ---@field total_time number cumulative time from all pops in group
+---@field forage_efficiency number a number in (0, 1) of foraging tools satisfaction
 ---@field forage_ratio number a number in (0, 1) interval representing a ratio of time pop spends to forage
 ---@field work_ratio number a number in (0, 1) interval representing a ratio of time workers spend on a job compared to maximal
 ---@field province Province Points to current position of pops.
@@ -29,31 +31,34 @@ rtab.PopGroup.__index = rtab.PopGroup
 ---@param head POP
 ---@param home Province
 ---@param location Province
+---@param character boolean? whether to build a PopGroup or Family
 ---@return PopGroup
-function rtab.PopGroup:new(head, home, location)
+function rtab.PopGroup:new(head, home, location, character)
 	local tabb = require "engine.table"
 
 	---@type PopGroup
 	local r = {}
 	setmetatable(r, rtab.PopGroup)
 
-	r.province                 = location
-	r.home_province            = home
+	r.province              = location
+	r.home_province         = home
 
-	r.race                     = head.race
-	r.faith                    = head.faith
-	r.culture                  = head.culture
+	r.race                  = head.race
+	r.faith                 = head.faith
+	r.culture               = head.culture
 
-	r.name                     = head.culture.language:get_random_name()
+	r.name                  = character and head.culture.language:get_random_name()
+								or (head.faith.name .. " " .. head.culture.name .. " " .. require "engine.string".title(head.race.name))
 
-	r.savings                  = 0
-	r.head                     = head
-	r.adults                   = {}
-	r.children                 = {}
+	r.size					= 1
+	r.head                  = head
+	r.adults                = {}
+	r.children              = {}
 
-	r.total_time               = 0
-	r.forage_ratio             = 0.75
-	r.work_ratio               = 0.25
+	r.total_time            = 0
+	r.forage_efficiency     = 0
+	r.forage_ratio          = 0.75
+	r.work_ratio            = 0.25
 	r:calculate_needs()
 
 	return r
@@ -77,6 +82,7 @@ end
 function rtab.PopGroup:add_child(pop)
 	self.children[pop] = pop
 	self:add_needs(pop)
+	self.size = self.size + 1
 end
 
 ---Adds a pop to the adults table
@@ -84,6 +90,7 @@ end
 function rtab.PopGroup:add_adult(pop)
 	self.adults[pop] = pop
 	self:add_needs(pop)
+	self.size = self.size + 1
 end
 
 ---Removes a pop from group and sets new head if needed
@@ -99,29 +106,25 @@ function rtab.PopGroup:remove_pop(pop)
 		else
 			self.adults[self.head] = nil
 		end
+	else
+		self.children[pop] = nil
+		self.adults[pop] = nil
 	end
-	self.children[pop] = nil
-	self.adults[pop] = nil
-	if self.head == pop
-		or self.children[pop] ~= nil
-		or self.adults[pop] ~= nil
-	then
-		error("FAILED TO REMOVE POP FROM GROUP IN POP")
-	end
+	self.size = self.size - 1
 	--self:remove_needs(pop)
 end
 
 ---Recallulates and aggregates all pop's need demands, free_time
 function rtab.PopGroup:calculate_needs()
-	local low_life_need, high_life_needs = false, true
 	local total_time, total_life_need, total_basic_need = 0, 0, 0
-	local life_needs_satisfaction, basic_needs_satisfaction = 0, 0
+	local total_savings, life_needs_satisfaction, basic_needs_satisfaction = 0, 0, 0
 	local needs_satisfaction = tabb.accumulate(NEEDS, {}, function (needs_satisfaction, need_index, _)
 		needs_satisfaction[need_index] = {}
 		return needs_satisfaction
 	end)
 	tabb.accumulate(self:pops(), nil, function (_, _, pop)
 		total_time = total_time + pop:free_time()
+		total_savings = total_savings + (pop.savings or 0)
 		pop.forage_ratio = self.forage_ratio
 		pop.work_ratio = self.work_ratio
 		--pop:recalculate_needs_satisfaction()
@@ -134,12 +137,6 @@ function rtab.PopGroup:calculate_needs()
 						if need.life_need then
 							total_life_need = total_life_need + demanded
 							life_needs_satisfaction = life_needs_satisfaction + consumed
-							local ratio = consumed / demanded
-							if ratio < 0.5 then
-								low_life_need = true
-							elseif ratio < 0.6 then
-								high_life_needs = false
-							end
 						else
 							total_basic_need = total_basic_need + demanded
 							basic_needs_satisfaction = basic_needs_satisfaction + consumed
@@ -155,20 +152,15 @@ function rtab.PopGroup:calculate_needs()
 		end)
 		return needs_satisfaction
 	end)
-	if low_life_need then
-		self.forage_ratio = math.min(0.99, self.forage_ratio * 1.15)
-		self.work_ratio = math.max(0.01, 1 - self.forage_ratio)
-	elseif high_life_needs then
-		self.forage_ratio = math.max(0.01, self.forage_ratio * 0.9)
-		self.work_ratio = math.max(0.01, 1 - self.forage_ratio)
-	end
 	self.life_needs_satisfaction = life_needs_satisfaction / total_life_need
 	self.basic_needs_satisfaction = (basic_needs_satisfaction + life_needs_satisfaction) / (total_basic_need + total_life_need)
 	self.need_satisfaction = needs_satisfaction
+	self.savings = total_savings
 end
 
 function rtab.PopGroup:add_needs(pop)
 	self.total_time = self.total_time + pop:free_time(pop)
+	self.savings = self.savings + pop.savings
 	tabb.accumulate(pop.need_satisfaction, self.need_satisfaction, function (group_need_satisfaction, need_index, cases)
 		tabb.accumulate(cases, nil, function (_, case, values)
 			local base = group_need_satisfaction[need_index] and group_need_satisfaction[need_index][case] or nil
@@ -183,6 +175,7 @@ end
 
 function rtab.PopGroup:remove_needs(pop)
 	self.total_time = self.total_time - pop:free_time(pop)
+	self.savings = math.max(0, self.savings - pop.savings)
 	tabb.accumulate(pop.need_satisfaction, self.need_satisfaction, function (group_need_satisfaction, need_index, cases)
 		tabb.accumulate(cases, nil, function (_, case, values)
 			local base = group_need_satisfaction[need_index] and group_need_satisfaction[need_index][case] or nil
@@ -198,10 +191,96 @@ function rtab.PopGroup:remove_needs(pop)
 	end)
 end
 
+---Returns racial efficiency
+---@param jobtype JOBTYPE
+---@return number
+function rtab.PopGroup:job_efficiency(jobtype)
+	-- estimate average age from get_age_multiplier applied to population weight
+	local age_weight = self:population_weight() / self.size
+	local male_ratio = self.race.males_per_hundred_females / (100 + self.race.males_per_hundred_females)
+	local efficiency = male_ratio * self.race.male_efficiency[jobtype] + (1 - male_ratio) * self.race.female_efficiency[jobtype] 
+	return efficiency * age_weight
+end
+
+--- recalculates foraging time and tool needs then distributes pop group need satsifactions to pops
+function rtab.PopGroup:distribute_satsisfaction()
+	local list = { [self.head] = self.head}
+	list = tabb.join(tabb.join(list, self.adults), self.children)
+	local total_basic_need, total_basic_satisfaction = 0, 0
+	local total_life_need, total_life_satisfaction = 0, 0
+	local low_life_need, high_life_needs = false, true
+	tabb.accumulate(self.need_satisfaction, nil, function (_, need_index, cases)
+		if NEEDS[need_index].life_need then
+			tabb.accumulate(cases, nil, function (_, case, values)
+				local ratio = values.consumed / values.demanded
+				if ratio < 0.5 then
+					low_life_need = true
+				elseif ratio < 0.6 then
+					high_life_needs = false
+				end
+			end)
+		end
+	end)
+	if low_life_need then
+		self.forage_ratio = math.min(0.99, self.forage_ratio * 1.15)
+		self.work_ratio = math.max(0.01, 1 - self.forage_ratio)
+	elseif high_life_needs then
+		self.forage_ratio = math.max(0.01, self.forage_ratio * 0.9)
+		self.work_ratio = math.max(0.01, 1 - self.forage_ratio)
+	end
+	tabb.accumulate(list, nil, function (_, _, pop)
+		pop.forage_ratio = self.forage_ratio
+		pop.work_ratio = self.work_ratio
+		local tools_like, containers = 0, 0
+		if pop.need_satisfaction[NEED.TOOLS] then
+			tools_like = pop.need_satisfaction[NEED.TOOLS]['tools-like'] and pop.need_satisfaction[NEED.TOOLS]['tools-like'].demanded or 0
+			containers = pop.need_satisfaction[NEED.TOOLS]['containers'] and pop.need_satisfaction[NEED.TOOLS]['containers'].demanded or 0
+		end
+		pop:recalcualte_foraging_tools(pop.need_satisfaction)
+		pop.need_satisfaction = tabb.accumulate(self.need_satisfaction, {}, function(need_satsifcation, need_index, cases)
+			need_satsifcation[need_index] = tabb.accumulate(cases, {}, function (case_satisfaction, case, values)
+				local demand = values.demanded
+				if need_index == NEED.TOOLS then
+					if case == 'tools-like' and tools_like then
+						demand = tools_like
+					end
+					if case == 'containers' and containers then
+						demand = containers
+					end
+				end
+				local demanded = pop.need_satisfaction[need_index][case].demanded or 0
+				if demanded > 0 then
+					local ratio = values.consumed / demand
+					local consumed = demanded * ratio
+					if NEEDS[need_index].life_need then
+						total_life_need = total_life_need + demanded
+						total_life_satisfaction = total_life_satisfaction + consumed
+					else
+						total_basic_need = total_basic_need + demanded
+						total_basic_satisfaction = total_basic_satisfaction + consumed
+					end
+					case_satisfaction[case] = {consumed = consumed, demanded = demanded}
+				end
+				return case_satisfaction
+			end)
+			return need_satsifcation
+	 	end)
+	end)
+	local life_needs_satisfaction = total_life_satisfaction / (total_life_need or 1)
+	local basic_needs_satisfaction = (total_basic_satisfaction + total_life_satisfaction) / ((total_life_need or 0) + (total_basic_need or 1))
+	self.life_needs_satisfaction = life_needs_satisfaction
+	self.basic_needs_satisfaction = basic_needs_satisfaction
+	local tools_consumed, tools_demanded = 0, 0
+	for _, pop in pairs(list) do
+		pop.life_needs_satisfaction = life_needs_satisfaction
+		pop.basic_needs_satisfaction = basic_needs_satisfaction
+	end
+end
+
 ---@return number pop_group_weight
 function rtab.PopGroup:population_weight()
 	return tabb.accumulate(self:pops(),0,function (weight, _, pop)
-		return weight + pop.race.carrying_capacity_weight * pop:get_age_multiplier()
+		return weight + pop:carrying_capacity_weight()
 	end)
 end
 

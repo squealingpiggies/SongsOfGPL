@@ -102,15 +102,49 @@ end
 ---@param x number
 ---@param reason EconomicReason
 function EconomicEffects.add_pop_savings(pop, x, reason)
+	if x ~= x or pop.savings ~= pop.savings
+		or tostring(pop.savings) == "inf"
+		or tostring(pop.savings) == "-inf"
+	then
+		error("BAD POP SAVINGS INCREASE VALUES: " .. tostring(pop.savings) .. " + " .. tostring(x))
+	end
+
 	pop.savings = pop.savings + x
 
 	if pop.savings ~= pop.savings then
-		error("BAD POP SAVINGS INCREASE: " .. tostring(x) .. " " .. reason)
+		error("BAD POP SAVINGS INCREASE RESULT: " .. tostring(pop.savings) .. " + " .. tostring(x))
 	end
 
 	if math.abs(x) > 0 then
 		EconomicEffects.display_character_savings_change(pop, x, reason)
 	end
+end
+
+
+---@enum WeightMode
+EconomicEffects.WEIGHT_MODE = {
+	NONE = 1,
+	WEIGHT = 2,
+	WEALTH = 3,
+}
+
+---Change popgroup savings and display effects to player
+---, individual pop amounts recieved are weighted by current pop wealth
+---@param pops PopGroup
+---@param x number
+---@param weight_mode WeightMode
+---@param reason EconomicReason
+function EconomicEffects.add_to_pops_savings(pops, x, weight_mode, reason)
+	local population_weight = pops:population_weight()
+	local size_weight = (1 / pops.size)
+	for _, pop in pairs(pops:pops()) do
+		local weight = 
+			weight_mode == EconomicEffects.WEIGHT_MODE.WEALTH and pops.savings ~= 0 and (pop.savings / pops.savings)
+				or (weight_mode == EconomicEffects.WEIGHT_MODE.WEIGHT and (pop:carrying_capacity_weight() / population_weight) or size_weight)
+		local amount = x * weight
+		EconomicEffects.add_pop_savings(pop, amount, reason)
+	end
+	pops.savings = pops.savings + x
 end
 
 function EconomicEffects.display_character_savings_change(pop, x, reason)

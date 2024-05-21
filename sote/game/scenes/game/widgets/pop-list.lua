@@ -57,6 +57,73 @@ return function(rect, base_unit, province)
         ---@type TableColumn[]
         local columns = {
             {
+                header = "h",
+                render_closure = function(rect, k, v)
+                    local subrect = rect:centered_square()
+                    subrect:shrink(1)
+                    ut.coa(v.home_province.realm, subrect)
+                    ui.tooltip("This pop considers itself a memeber of " .. v.home_province.realm.name .. ".", rect)
+                end,
+                width = 1,
+                value = function(k, v)
+                    ---@type POP
+                    v = v
+                    return v.home_province.realm.name
+                end
+            },
+            {
+                header = "r",
+                render_closure = function (rect, k, v)
+                    local subrect = rect:centered_square()
+                    subrect:shrink(1)
+                    ut.render_icon(subrect, v.race.icon, 1, 1, 1, 1)
+                    subrect:shrink(-1)
+                    ut.render_icon(subrect, v.race.icon, v.race.r, v.race.g, v.race.b, 1)
+                    ui.tooltip("This pop is a " .. v.race.name .. ".", rect)
+                end,
+                width = 1,
+                value = function(k, v)
+                    ---@type POP
+                    v = v
+                    return v.race.name
+                end
+            },
+            {
+                header = "c",
+                render_closure = function (rect, k, v)
+                    local subrect = rect:centered_square()
+                    subrect:shrink(1)
+                    ut.render_icon(subrect, "musical-notes.png", 1, 1, 1, 1)
+                    subrect:shrink(-1)
+                    ut.render_icon(subrect, "musical-notes.png", v.culture.r, v.culture.g, v.culture.b, 1)
+                    ui.tooltip("This pop follows the customs of " .. v.culture.name .. "."
+                        .. require "game.economy.diet-breadth-model".culture_target_tooltip(v.culture), rect)
+                end,
+                width = 1,
+                value = function(k, v)
+                    ---@type POP
+                    v = v
+                    return v.culture.name
+                end
+            },
+            {
+                header = "f",
+                render_closure = function (rect, k, v)
+                    local subrect = rect:centered_square()
+                    subrect:shrink(1)
+                    ut.render_icon(subrect, "prayer.png", 1, 1, 1, 1)
+                    subrect:shrink(-1)
+                    ut.render_icon(subrect, "prayer.png", v.faith.r, v.faith.g, v.faith.b, 1)
+                    ui.tooltip("This pop is a member of the " .. v.faith.name .. " faith.", rect)
+                end,
+                width = 1,
+                value = function(k, v)
+                    ---@type POP
+                    v = v
+                    return v.faith.name
+                end
+            },
+            {
                 header = ".",
                 render_closure = function(rect, k, v)
                     --ui.image(ASSETS.get_icon(v.race.icon)
@@ -80,61 +147,11 @@ return function(rect, base_unit, province)
                 end
             },
             {
-                header = "race",
-                render_closure = function (rect, k, v)
-                    ui.centered_text(v.race.name, rect)
-                end,
-                width = 4,
-                value = function(k, v)
-                    ---@type POP
-                    v = v
-                    return v.race.name
-                end
-            },
-            {
-                header = "culture",
-                render_closure = function (rect, k, v)
-                    ui.centered_text(v.culture.name, rect)
-                    ui.tooltip("This character follows the customs of " .. v.culture.name .. "."
-                        .. require "game.economy.diet-breadth-model".culture_target_tooltip(v.culture), rect)
-                end,
-                width = 4,
-                value = function(k, v)
-                    ---@type POP
-                    v = v
-                    return v.culture.name
-                end
-            },
-            {
-                header = "faith",
-                render_closure = function (rect, k, v)
-                    ui.centered_text(v.faith.name, rect)
-                end,
-                width = 4,
-                value = function(k, v)
-                    ---@type POP
-                    v = v
-                    return v.faith.name
-                end
-            },
-            {
-                header = "home",
-                render_closure = function (rect, k, v)
-                    ui.centered_text(v.home_province.name, rect)
-                end,
-                width = 4,
-                value = function(k, v)
-                    ---@type POP
-                    v = v
-                    return v.home_province.name
-                end
-            },
-            {
                 header = "job",
                 render_closure = function (rect, k, v)
                     ui.centered_text(pop_display_occupation(v), rect)
                 end,
-                width = 4,
+                width = 6,
                 value = function(k, v)
                     return pop_display_occupation(v)
                 end
@@ -142,9 +159,9 @@ return function(rect, base_unit, province)
             {
                 header = "age",
                 render_closure = function (rect, k, v)
-                    ui.right_text(tostring(v.age), rect)
+                    ui.centered_text(tostring(v.age), rect)
                 end,
-                width = 1,
+                width = 2,
                 value = function(k, v)
                     return v.age
                 end
@@ -160,6 +177,40 @@ return function(rect, base_unit, province)
                 end
             },
             {
+                header = "weight",
+                render_closure = function (rect, k, v) ---@param v POP
+                    ut.generic_number_field(
+                        "",
+                        v:carrying_capacity_weight(),
+                        rect,
+                        "Combined CC weight of population group.",
+                        ut.NUMBER_MODE.NUMBER,
+                        ut.NAME_MODE.NAME
+                    )
+                end,
+                width = 3,
+                value = function(k, v) ---@param v POP
+                    return v:carrying_capacity_weight()
+                end
+            },
+            {
+                header = "work",
+                render_closure = function (rect, k, v) ---@param v POP
+                    ut.generic_number_field(
+                        "stone-crafting.png",
+                        v.work_ratio,
+                        rect,
+                        "Percent of free time spent working versus foraging.",
+                        ut.NUMBER_MODE.PERCENTAGE,
+                        ut.NAME_MODE.ICON
+                    )
+                end,
+                width = 3,
+                value = function(k, v) ---@param v POP
+                    return v.work_ratio
+                end
+            },
+            {
                 header = "savings",
                 render_closure = function (rect, k, v)
                     ---@type POP
@@ -172,7 +223,7 @@ return function(rect, base_unit, province)
                         .. "Characters spend them on buying food and other commodities."
                     )
                 end,
-                width = 2,
+                width = 3,
                 value = function(k, v)
                     return v.savings
                 end
@@ -180,7 +231,7 @@ return function(rect, base_unit, province)
             {
                 header = "satisfac.",
                 render_closure = ut.render_pop_satsifaction,
-                width = 2,
+                width = 3,
                 value = function(k, v)
                     return v.basic_needs_satisfaction
                 end
@@ -215,7 +266,7 @@ return function(rect, base_unit, province)
                         "Satisfaction of life needs of this character. " .. needs_tooltip
                     )
                 end,
-                width = 2,
+                width = 3,
                 value = function(k, v)
                     return v.life_needs_satisfaction
                 end

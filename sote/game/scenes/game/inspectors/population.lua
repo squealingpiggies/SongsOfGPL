@@ -79,7 +79,7 @@ function inspector.draw(gam)
                 end,
             }
         },
-        1
+        1, ut.BASE_HEIGHT * 6
     )
 end
 
