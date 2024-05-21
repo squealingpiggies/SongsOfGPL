@@ -203,32 +203,29 @@ function rtab.PopGroup:job_efficiency(jobtype)
 end
 
 --- recalculates foraging time and tool needs then distributes pop group need satsifactions to pops
-function rtab.PopGroup:distribute_satsisfaction()
-	local list = { [self.head] = self.head}
-	list = tabb.join(tabb.join(list, self.adults), self.children)
+---@param satsifaction table<NEED, table<TradeGoodUseCaseReference, number>>
+function rtab.PopGroup:distribute_satsisfaction(satsifaction)
+print("DISTRIBUTE SATISFACTION: ")
 	local total_basic_need, total_basic_satisfaction = 0, 0
 	local total_life_need, total_life_satisfaction = 0, 0
 	local low_life_need, high_life_needs = false, true
-	tabb.accumulate(self.need_satisfaction, nil, function (_, need_index, cases)
-		if NEEDS[need_index].life_need then
-			tabb.accumulate(cases, nil, function (_, case, values)
-				local ratio = values.consumed / values.demanded
-				if ratio < 0.5 then
-					low_life_need = true
-				elseif ratio < 0.6 then
-					high_life_needs = false
-				end
-			end)
-		end
-	end)
-	if low_life_need then
-		self.forage_ratio = math.min(0.99, self.forage_ratio * 1.15)
-		self.work_ratio = math.max(0.01, 1 - self.forage_ratio)
-	elseif high_life_needs then
-		self.forage_ratio = math.max(0.01, self.forage_ratio * 0.9)
-		self.work_ratio = math.max(0.01, 1 - self.forage_ratio)
+print("  OLD SATISFACTION: ")
+for need_index, cases in pairs (self.need_satisfaction) do
+	print("    " .. NEED_NAME[need_index])
+	for case, value in pairs(cases) do
+		print("      " .. case .. " " .. value.consumed .. " / " .. value.demanded)
 	end
-	tabb.accumulate(list, nil, function (_, _, pop)
+end
+print("  ADD SATISFACTION: ")
+for need_index, cases in pairs(satsifaction) do
+	print("    " .. NEED_NAME[need_index])
+	for case, value in pairs(cases) do
+		print("      " .. case .. " " .. value)
+	end
+end
+	tabb.accumulate(self:pops(), nil, function (_, _, pop)
+		local pop_basic_need, pop_basic_satisfaction = 0, 0
+		local pop_life_need, pop_life_satisfaction = 0, 0
 		pop.forage_ratio = self.forage_ratio
 		pop.work_ratio = self.work_ratio
 		local tools_like, containers = 0, 0
@@ -237,44 +234,77 @@ function rtab.PopGroup:distribute_satsisfaction()
 			containers = pop.need_satisfaction[NEED.TOOLS]['containers'] and pop.need_satisfaction[NEED.TOOLS]['containers'].demanded or 0
 		end
 		pop:recalcualte_foraging_tools(pop.need_satisfaction)
-		pop.need_satisfaction = tabb.accumulate(self.need_satisfaction, {}, function(need_satsifcation, need_index, cases)
-			need_satsifcation[need_index] = tabb.accumulate(cases, {}, function (case_satisfaction, case, values)
-				local demand = values.demanded
+	print("  " .. pop.name .. " " .. pop.savings .. " / " .. self.savings .. "(".. pop.savings / self.savings .. ")")
+		tabb.accumulate(pop.need_satisfaction, nil, function(_, need_index, cases)
+print("    " .. NEED_NAME[need_index])
+			tabb.accumulate(cases, nil, function (_, case, values)
+				local demanded = values.demanded
 				if need_index == NEED.TOOLS then
 					if case == 'tools-like' and tools_like then
-						demand = tools_like
+						demanded = tools_like
 					end
 					if case == 'containers' and containers then
-						demand = containers
+						demanded = containers
 					end
 				end
-				local demanded = pop.need_satisfaction[need_index][case].demanded or 0
 				if demanded > 0 then
-					local ratio = values.consumed / demand
-					local consumed = demanded * ratio
+					local percentage = self.savings and (pop.savings / self.savings) or (1 / self.size)
+					local pops_consumed = self.need_satisfaction[need_index][case].consumed / self.need_satisfaction[need_index][case].demanded
+					local pop_consumed = percentage * (satsifaction[need_index] and satsifaction[need_index][case] or 0)
+					pop.need_satisfaction[need_index][case].consumed = pops_consumed * values.demanded + pop_consumed
+print("      " .. case .. " " .. pop.need_satisfaction[need_index][case].consumed)
 					if NEEDS[need_index].life_need then
-						total_life_need = total_life_need + demanded
-						total_life_satisfaction = total_life_satisfaction + consumed
+						pop_life_need = pop_life_need + values.demanded
+						pop_life_satisfaction = pop_life_satisfaction + pop.need_satisfaction[need_index][case].consumed
 					else
-						total_basic_need = total_basic_need + demanded
-						total_basic_satisfaction = total_basic_satisfaction + consumed
+						pop_basic_need = pop_basic_need + values.demanded
+						pop_basic_satisfaction = pop_basic_satisfaction + pop.need_satisfaction[need_index][case].consumed
 					end
-					case_satisfaction[case] = {consumed = consumed, demanded = demanded}
 				end
-				return case_satisfaction
 			end)
-			return need_satsifcation
 	 	end)
+		pop_basic_need = pop_basic_need + pop_life_need
+		pop_basic_satisfaction = pop_basic_satisfaction + pop_life_satisfaction
+		pop.life_needs_satisfaction = pop_life_satisfaction / pop_life_need
+		pop.basic_needs_satisfaction = pop_basic_satisfaction / pop_basic_need
+print("  LIFE: " .. pop.life_needs_satisfaction .. " BASIC: " .. pop.basic_needs_satisfaction)
+		total_life_need = total_life_need + pop_life_need
+		total_life_satisfaction = total_life_satisfaction + pop_life_satisfaction
+		total_basic_need = total_basic_need + pop_basic_need
+		total_basic_satisfaction = total_basic_satisfaction + pop_basic_satisfaction
 	end)
 	local life_needs_satisfaction = total_life_satisfaction / (total_life_need or 1)
-	local basic_needs_satisfaction = (total_basic_satisfaction + total_life_satisfaction) / ((total_life_need or 0) + (total_basic_need or 1))
+	local basic_needs_satisfaction = total_basic_satisfaction / (total_basic_need or 1)
 	self.life_needs_satisfaction = life_needs_satisfaction
 	self.basic_needs_satisfaction = basic_needs_satisfaction
-	local tools_consumed, tools_demanded = 0, 0
-	for _, pop in pairs(list) do
-		pop.life_needs_satisfaction = life_needs_satisfaction
-		pop.basic_needs_satisfaction = basic_needs_satisfaction
+	tabb.accumulate(self.need_satisfaction, nil, function (_, need_index, cases)
+		tabb.accumulate(cases, nil, function (_, case, values)
+			self.need_satisfaction[need_index][case].consumed  = values.consumed + (satsifaction[need_index] and satsifaction[need_index][case] or 0)
+			if NEEDS[need_index].life_need then
+				local ratio = self.need_satisfaction[need_index][case].consumed / values.demanded
+				if ratio < 0.5 then
+					low_life_need = true
+				elseif ratio < 0.6 then
+					high_life_needs = false
+				end
+			end
+		end)
+	end)
+--	if low_life_need then
+--		self.forage_ratio = math.min(0.99, self.forage_ratio * 1.15)
+--		self.work_ratio = math.max(0.01, 1 - self.forage_ratio)
+--	elseif high_life_needs then
+--		self.forage_ratio = math.max(0.01, self.forage_ratio * 0.9)
+--		self.work_ratio = math.max(0.01, 1 - self.forage_ratio)
+--	end
+print("  NEW SATISFACTION: ")
+for need_index, cases in pairs (self.need_satisfaction) do
+	print("    " .. NEED_NAME[need_index])
+	for case, value in pairs(cases) do
+		print("      " .. case .. " " .. value.consumed .. " / " .. value.demanded)
 	end
+end
+print("    LIFE: " .. self.life_needs_satisfaction .. " BASIC: " .. self.basic_needs_satisfaction)
 end
 
 ---@return number pop_group_weight

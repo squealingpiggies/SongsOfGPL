@@ -111,9 +111,9 @@ return function(rect, base_unit, province)
                 render_closure = function (rect, k, v)
                     local subrect = rect:centered_square()
                     subrect:shrink(1)
-                    ut.render_icon(subrect, "prayer.png", 1, 1, 1, 1)
+                    ut.render_icon(subrect, "tombstone.png", 1, 1, 1, 1)
                     subrect:shrink(-1)
-                    ut.render_icon(subrect, "prayer.png", v.faith.r, v.faith.g, v.faith.b, 1)
+                    ut.render_icon(subrect, "tombstone.png", v.faith.r, v.faith.g, v.faith.b, 1)
                     ui.tooltip("This pop is a member of the " .. v.faith.name .. " faith.", rect)
                 end,
                 width = 1,

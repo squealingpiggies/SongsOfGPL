@@ -501,16 +501,15 @@ function pro.run(province)
 	end
 
 	---makes buy_use calls for a single need
-	---@param pop POP|PopGroup
-	---@param need_satisfaction table<NEED, table<TradeGoodUseCaseReference, {consumed: number, demanded: number}>>
+	---@param need_satisfaction table<TradeGoodUseCaseReference, number>
 	---@param need_index NEED
 	---@param need Need
 	---@param savings number
 	---@return number expenses
 	---@return table<TradeGoodUseCase, number> consumed
-	local function satisfy_need(pop, need_satisfaction, need_index, need, savings)
+	local function satisfy_need(need_satisfaction, need_index, need, savings)
 		local income, expenses, total_need_cost = 0, 0, 0.001
-		local total_bought = {[need_index] = {}}
+		local total_bought = {}
 	--	print("  ".. NEED_NAME[need_index] .. " free_time: " .. free_time .. " saving: " .. savings ..  " saving: " .. target)
 		-- start with calculation of distribution over goods:
 		-- "distribution" "density" is precalculated, we only need to find a normalizing coef.
@@ -520,22 +519,20 @@ function pro.run(province)
 		-- expected costs and estimated time needed to satisfy
 		---@type table<string,{need_amount: number, need_cost: number, need_time: number}>
 		local need_cases = {}
-		for case, value in pairs(need_satisfaction[need_index]) do
+		for case, value in pairs(need_satisfaction) do
 			if use_case_total_exp[case] > 0 then
-				local need_amount = value.demanded
+				local need_amount = value or 0
 				-- induced demand:
 				local price_expectation = math.max(use_case_price_expectation[case] or 0, 0.0001)
 				local induced_demand = math.min(2, math.max(0, 1 / price_expectation - 1))
 		--		print("    " .. " case: " .. case .." need: " .. need_amount .. " induced_demand: " .. need_amount * (1 + induced_demand))
 				need_amount = need_amount * (1 + induced_demand)
-				need_amount = need_amount
 				if need_amount < 0 then
 					error("Demanded need is lower than zero!")
 				end
 				-- estimate cost in money and time to satisfy each use_case
-				local remaining_need_amount = math.max(0, need_amount - value.consumed)
-				local need_cost = price_expectation * remaining_need_amount * POP_BUY_PRICE_MULTIPLIER
-				need_cases[case] = {need_amount = remaining_need_amount, need_cost = need_cost}
+				local need_cost = price_expectation * need_amount * POP_BUY_PRICE_MULTIPLIER
+				need_cases[case] = {need_amount = need_amount, need_cost = need_cost}
 				-- count totals for weighting
 				total_need_cost = total_need_cost + need_cost
 			end
@@ -547,7 +544,7 @@ function pro.run(province)
 			if savings_fraction > 0 then
 				local spendings, consumed = buy_use(case, values.need_amount, savings_fraction)
 	--			print("    " .. " case: " .. case .." spendings: " .. spendings .. " consumed: " .. consumed)
-				total_bought[need_index][case] = (total_bought[need_index][case] or 0) + consumed
+				total_bought[case] = (total_bought[case] or 0) + consumed
 				expenses = expenses + spendings
 
 				if consumed > values.need_amount + 0.01
@@ -584,16 +581,17 @@ function pro.run(province)
 	end
 
 	---makes satisfy_need call for each need
-	---@param pop POP|PopGroup
+	---@param needs table<NEED, table<TradeGoodUseCaseReference, number>>
 	---@param savings number
 	---@return number expenses
-	local function satisfy_needs(pop, savings)
-
+	---@return table<NEED,table<TradeGoodUseCaseReference, number>>> satisfaction
+	local function satisfy_needs(needs, savings)
+		local satisfaction = {}
 		-- BUYING NEEDS
 		local need_buy_cost = {}
 		local total_need_cost = tabb.accumulate(NEEDS, 0, function (total_needs_cost, index, need)
-			local cummulative_use_totals = tabb.accumulate(pop.need_satisfaction[index], 0, function (a, case, value)
-				return a + math.max(0, value.demanded - value.consumed) * use_case_price_expectation[case]
+			local cummulative_use_totals = tabb.accumulate(needs[index], 0, function (a, case, value)
+				return a +value * use_case_price_expectation[case]
 			end)
 			need_buy_cost[index] = cummulative_use_totals
 			return total_needs_cost + cummulative_use_totals
@@ -602,14 +600,10 @@ function pro.run(province)
 		local total_expense = 0
 		for index, need in pairs(NEEDS) do
 			local savings_fraction = savings * need_buy_cost[index] / total_need_cost * 0.99 -- to counter potential float errors
-			local expense, consumed = satisfy_need(pop, pop.need_satisfaction, index, need, savings_fraction)
+			local expense, consumed = satisfy_need(needs[index], index, need, savings_fraction)
 
 			total_expense = total_expense + expense
-
-			tabb.accumulate(consumed[index], nil, function (_, k, v)
-	--			print("  " .. NEED_NAME[index] .. " BOUGHT: " .. " " .. k .. " " .. v)
-				pop.need_satisfaction[index][k].consumed = pop.need_satisfaction[index][k].consumed + v
-			end)
+			satisfaction[index] = consumed
 
 			if expense ~= expense or tostring(expense) == "inf"
 				or expense > savings_fraction + 0.01
@@ -631,7 +625,7 @@ function pro.run(province)
 			end
 		end
 
-		return total_expense
+		return total_expense, satisfaction
 	end
 
 
@@ -665,9 +659,11 @@ function pro.run(province)
 		foragers_water = foragers_water + foragers_increase * water_search
 
 		-- reset consumption for pop group for satisfy calls
-		tabb.accumulate(pops.need_satisfaction, nil, function (_, _, cases)
-			tabb.accumulate(cases, nil, function (_, _, values)
-				values.consumed = 0
+		tabb.accumulate(pops.need_satisfaction, nil, function (_, need_index, cases)
+			tabb.accumulate(cases, nil, function (_, case, values)
+				if pops.need_satisfaction[need_index] and pops.need_satisfaction[need_index][case] then
+					pops.need_satisfaction[need_index][case].consumed = 0
+				end
 			end)
 		end)
 		-- TODO change foraging to use production methods and collect total production method inputs
@@ -704,6 +700,7 @@ function pro.run(province)
 	hydration_efficiency = dbm.foraging_efficiency(province.hydration * 0.5, foragers_water)
 
 	local total_remaining_needs = {}
+	local total_needs_spendings = 0
 
 	-- POP GROUP PRODUCTION LOOP
 	PROFILER:start_timer("production-pops-loop")
@@ -905,26 +902,27 @@ function pro.run(province)
 				province.trade_wealth = math.max(0, province.trade_wealth - income)
 			end
 			PROFILER:end_timer('production-building-update')
+		end
 ]]
 
-			-- every pop spends some time or wealth on fullfilling the need of their children and themselves
-			--local savings_fraction = pop.savings / 10 + group_donations
-			PROFILER:start_timer("production-forage-needs-and-cottage")
-			local forage_income = forage_life_needs(pops, pops.forage_ratio * free_time_of_pop)
-			economic_effects.add_to_pops_savings(pops, forage_income, economic_effects.WEIGHT_MODE.WEIGHT, economic_effects.reasons.Forage)
-			--local cottage_income = income + cottage_with_time(pop, pop.work_ratio * free_time_of_pop, math.max(0, savings_fraction))
-			--economic_effects.add_pop_savings(pop, cottage_income, economic_effects.WEIGHT_MODE.WEIGHT, economic_effects.reasons.Forage)
-			PROFILER:end_timer("production-forage-needs-and-cottage")
---		end
+		-- every pop spends some time or wealth on fullfilling the need of their children and themselves
+		--local savings_fraction = pop.savings / 10 + group_donations
+		PROFILER:start_timer("production-forage-needs-and-work")
+		local forage_income = forage_life_needs(pops, pops.forage_ratio * free_time_of_pop)
+		economic_effects.add_to_pops_savings(pops, forage_income, economic_effects.WEIGHT_MODE.WEIGHT, economic_effects.reasons.Forage)
+		--local cottage_income = income + cottage_with_time(pop, pop.work_ratio * free_time_of_pop, math.max(0, savings_fraction))
+		--economic_effects.add_pop_savings(pop, cottage_income, economic_effects.WEIGHT_MODE.WEIGHT, economic_effects.reasons.Forage)
+		PROFILER:end_timer("production-forage-needs-and-work")
 
 		-- collect total remaining demand after foraging call
 		total_remaining_needs = tabb.accumulate(pops.need_satisfaction, {}, function (total_remaining_needs, need_index, cases)
 			total_remaining_needs[need_index] = tabb.accumulate(cases, {}, function(need_case, case, values)
-				need_case[case] = values.consumed - values.demanded + (total_remaining_needs[need_index] and total_remaining_needs[need_index][case] or 0)
+				need_case[case] = values.demanded - values.consumed + (total_remaining_needs[need_index] and total_remaining_needs[need_index][case] or 0)
 				return need_case
 			end)
 			return total_remaining_needs
 		end)
+		total_needs_spendings = total_needs_spendings + pops.savings * 0.125
 	end
 	PROFILER:end_timer("production-pops-loop")
 
@@ -933,14 +931,49 @@ function pro.run(province)
 		market_data[i - 1].available = market_data[i- 1].available + market_data[i - 1].supply
 	end
 
-	-- TODO MAKE SINGLE PROVINCE BUY_USE CALL AND DISTRIBUTE TO GROUPS BY WEALTH
+	-- MAKES SINGLE PROVINCE BUY_USE CALL AND DISTRIBUTE TO GROUPS BY WEALTH
+	print("REMAINING NEEDS:")
+	for need_index, cases in pairs (total_remaining_needs) do
+		print("  " .. NEED_NAME[need_index])
+		for case, value in pairs(cases) do
+			print("    " .. case .. " " .. value)
+		end
+	end
+
+	local total_expenses, total_satisfaction = satisfy_needs(total_remaining_needs, total_needs_spendings)
+
+	print("BUY_USE SATISFACTION:")
+	for need_index, cases in pairs (total_satisfaction) do
+		print("  " .. NEED_NAME[need_index])
+		for case, value in pairs(cases) do
+			print("    " .. case .. " " .. value)
+		end
+	end
 
 	-- POP GROUP CONSUMPTION DISTRIBUTION LOOP
 	PROFILER:start_timer("consumption-pops-loop")
 	for _, pops in pairs(province:get_pop_groups()) do
-		--local expenses = satisfy_needs(pops, pops.savings * 0.125)
-		--economic_effects.add_to_pops_savings(pops, -expenses, economic_effects.WEIGHT_MODE.NONE, economic_effects.reasons.BasicNeeds)
-		pops:distribute_satsisfaction()
+		local percentage = total_expenses * pops.savings / total_needs_spendings 
+		local statisfaction_fraction = tabb.accumulate(total_satisfaction, {}, function (need_satisfaction, need_index, cases)
+			need_satisfaction[need_index] = tabb.accumulate(cases, {}, function (case_satisfaction, case, value)
+				if pops.need_satisfaction[need_index] and pops.need_satisfaction[need_index][case] then
+					local demand = math.max(0, pops.need_satisfaction[need_index][case].demanded - pops.need_satisfaction[need_index][case].consumed)
+					local consumed = percentage * (demand / total_remaining_needs[need_index][case]) * value
+					case_satisfaction[case] = consumed
+				end
+				return case_satisfaction
+			end)
+			return need_satisfaction
+		end)
+		print("SATISFACTION FRACTION: " .. pops.home_province.name .. " " .. pops.name)
+		for need_index, cases in pairs (statisfaction_fraction) do
+			print("  " .. NEED_NAME[need_index])
+			for case, value in pairs(cases) do
+				print("    " .. case .. " " .. value)
+			end
+		end
+--		economic_effects.add_to_pops_savings(pops, -total_expenses * percentage, economic_effects.WEIGHT_MODE.WEALTH, economic_effects.reasons.BasicNeeds)
+		pops:distribute_satsisfaction(statisfaction_fraction)
 	end
 	PROFILER:end_timer("consumption-pops-loop")
 
