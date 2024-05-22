@@ -42,7 +42,7 @@ function inspector.draw(gam)
 
     ut.integer_entry("Population:", province:local_population(), population_data_rect)
     population_data_rect.x = population_data_rect.x + population_data_rect.width + base_unit
-    ut.integer_entry("Groups:", require "engine.table".size(province.characters), population_data_rect)
+    ut.integer_entry("Groups:", require "engine.table".size(province:get_pop_groups()), population_data_rect)
     population_data_rect.x = population_data_rect.x + population_data_rect.width + base_unit
     ut.integer_entry("Families:", require "engine.table".size(province.characters), population_data_rect)
     population_data_rect.x = population_data_rect.x + population_data_rect.width + base_unit

@@ -234,9 +234,9 @@ end
 			containers = pop.need_satisfaction[NEED.TOOLS]['containers'] and pop.need_satisfaction[NEED.TOOLS]['containers'].demanded or 0
 		end
 		pop:recalcualte_foraging_tools(pop.need_satisfaction)
-	print("  " .. pop.name .. " " .. pop.savings .. " / " .. self.savings .. "(".. pop.savings / self.savings .. ")")
+--print("  " .. pop.name .. " " .. pop.savings .. " / " .. self.savings .. "(".. pop.savings / self.savings .. ")")
 		tabb.accumulate(pop.need_satisfaction, nil, function(_, need_index, cases)
-print("    " .. NEED_NAME[need_index])
+--print("    " .. NEED_NAME[need_index])
 			tabb.accumulate(cases, nil, function (_, case, values)
 				local demanded = values.demanded
 				if need_index == NEED.TOOLS then
@@ -252,7 +252,7 @@ print("    " .. NEED_NAME[need_index])
 					local pops_consumed = self.need_satisfaction[need_index][case].consumed / self.need_satisfaction[need_index][case].demanded
 					local pop_consumed = percentage * (satsifaction[need_index] and satsifaction[need_index][case] or 0)
 					pop.need_satisfaction[need_index][case].consumed = pops_consumed * values.demanded + pop_consumed
-print("      " .. case .. " " .. pop.need_satisfaction[need_index][case].consumed)
+--print("      " .. case .. " " .. pop.need_satisfaction[need_index][case].consumed)
 					if NEEDS[need_index].life_need then
 						pop_life_need = pop_life_need + values.demanded
 						pop_life_satisfaction = pop_life_satisfaction + pop.need_satisfaction[need_index][case].consumed
@@ -267,7 +267,7 @@ print("      " .. case .. " " .. pop.need_satisfaction[need_index][case].consume
 		pop_basic_satisfaction = pop_basic_satisfaction + pop_life_satisfaction
 		pop.life_needs_satisfaction = pop_life_satisfaction / pop_life_need
 		pop.basic_needs_satisfaction = pop_basic_satisfaction / pop_basic_need
-print("  LIFE: " .. pop.life_needs_satisfaction .. " BASIC: " .. pop.basic_needs_satisfaction)
+--print("  LIFE: " .. pop.life_needs_satisfaction .. " BASIC: " .. pop.basic_needs_satisfaction)
 		total_life_need = total_life_need + pop_life_need
 		total_life_satisfaction = total_life_satisfaction + pop_life_satisfaction
 		total_basic_need = total_basic_need + pop_basic_need
@@ -297,14 +297,14 @@ print("  LIFE: " .. pop.life_needs_satisfaction .. " BASIC: " .. pop.basic_needs
 --		self.forage_ratio = math.max(0.01, self.forage_ratio * 0.9)
 --		self.work_ratio = math.max(0.01, 1 - self.forage_ratio)
 --	end
-print("  NEW SATISFACTION: ")
-for need_index, cases in pairs (self.need_satisfaction) do
-	print("    " .. NEED_NAME[need_index])
-	for case, value in pairs(cases) do
-		print("      " .. case .. " " .. value.consumed .. " / " .. value.demanded)
-	end
-end
-print("    LIFE: " .. self.life_needs_satisfaction .. " BASIC: " .. self.basic_needs_satisfaction)
+--print("  NEW SATISFACTION: ")
+--for need_index, cases in pairs (self.need_satisfaction) do
+--	print("    " .. NEED_NAME[need_index])
+--	for case, value in pairs(cases) do
+--		print("      " .. case .. " " .. value.consumed .. " / " .. value.demanded)
+--	end
+--end
+--print("    LIFE: " .. self.life_needs_satisfaction .. " BASIC: " .. self.basic_needs_satisfaction)
 end
 
 ---@return number pop_group_weight
