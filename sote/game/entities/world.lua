@@ -619,6 +619,7 @@ function world.World:tick()
 			local status = DATA.warband_get_current_status(item)
 			local status_ratio = DATA.warband_status_get_time_used(status)
 			DATA.warband_inc_current_time_used_ratio(item,status_ratio/30)
+
 			-- check if traveling at all for the day
 			local current_path = DATA.warband_get_current_path(item)
 			if current_path == nil or #current_path == 0 then
@@ -626,6 +627,7 @@ function world.World:tick()
 				-- add possible daily foraging?
 				return
 			end
+
 			--- counted in hours
 			local progress = DATA.warband_get_movement_progress(item)
 			--- consume day worth of supplies
@@ -634,8 +636,27 @@ function world.World:tick()
 				1
 			)
 
+			-- count needs satisfaction of warband members:
+			local count = 0
+			local total_satisfaction = 0
+			DATA.for_each_warband_unit_from_warband(item, function (warband_unit)
+				local unit = DATA.warband_unit_get_unit(warband_unit)
+				local satisfaction = DATA.pop_get_basic_needs_satisfaction(unit)
+
+				count = count + 1
+				total_satisfaction = total_satisfaction + satisfaction
+			end)
+
+			local base = 1
+			if (count > 0) then
+				base = total_satisfaction / count
+			end
+
+			-- refund travelling time based on lacking supplies:
+			DATA.warband_inc_current_time_used_ratio(item,-status_ratio/30 * supplies_availability)
+
 			--- depending on amount of available supplies, move the party
-			progress = progress - supplies_availability * TRAVEL_DAY_HOURS
+			progress = progress - (base + supplies_availability) * TRAVEL_DAY_HOURS
 			while progress <= 0 and #current_path > 0 do
 				local last_tile = table.remove(current_path, #current_path)
 				travel_effects.move_party(item, last_tile)

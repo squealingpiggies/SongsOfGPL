@@ -10,6 +10,7 @@ local ai_values = require "game.raws.values.ai"
 local realm_utils = require "game.entities.realm".Realm
 local province_utils = require "game.entities.province".Province
 local travel_effects = require "game.raws.effects.travel"
+local economy_effects = require "game.raws.effects.economy"
 
 local traveling = {}
 
@@ -25,6 +26,8 @@ function traveling.run()
 				goto continue
 			end
 			if DATA.warband_get_current_path(warband) ~= nil then
+				-- maybe constantly send some supplies to the warband to keep moving?
+				-- economy_effects.pop_transfer_use_to_party(leader, warband, CALORIES_USE_CASE, 0.1)
 				goto continue
 			end
 			--- update them with a certain probability
