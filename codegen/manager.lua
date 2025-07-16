@@ -122,7 +122,7 @@ ffi.cdef[[
 
 
 DATA = require "codegen.output.generated"
-require "codegen.output.helpers"
+require "codegen.helpers"
 
 local state_save_path = love.filesystem.getSaveDirectory() .. "_sote_save.binbeaver"
 function SAVE_GAME_STATE()
