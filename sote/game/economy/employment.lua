@@ -2,12 +2,11 @@ local emp = {}
 local demography_effects = require "game.raws.effects.demography"
 
 ---Update pops employment in the province.
----@param province province_id
-function emp.run(province)
+function emp.run()
 	--- check if some contracts are expired
 	---@type pop_id[]
 	local fire_list = {}
-	DATA.for_each_estate_location_from_province(province, function (location)
+	DATA.for_each_estate_location(function (location)
 		local estate = DATA.estate_location_get_estate(location)
 		DATA.for_each_building_estate_from_estate(estate, function (item)
 			local building = DATA.building_estate_get_building(item)

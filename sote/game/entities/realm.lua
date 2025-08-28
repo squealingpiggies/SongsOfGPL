@@ -177,13 +177,19 @@ end
 function realm_utils.Realm.get_average_needs_satisfaction(realm)
 	local sum = 0
 	local total_population = 1
-	DATA.for_each_realm_provinces_from_realm(realm, function (location)
-		local province = DATA.realm_provinces_get_province(location)
-		DATA.for_each_pop_location_from_location(province, function (item)
-			local pop = DATA.pop_location_get_pop(item)
-			local fat = DATA.fatten_pop(pop)
-			sum = sum + fat.basic_needs_satisfaction + fat.life_needs_satisfaction
-			total_population = total_population + 1
+	DATA.for_each_realm_provinces_from_realm(realm, function (provinces)
+		local province = DATA.realm_provinces_get_province(provinces)
+		DATA.for_each_tile_province_membership_from_province(province, function (membership)
+			local tile = DATA.tile_province_membership_get_tile(membership)
+			DATA.for_each_estate_location_from_tile(tile, function (location)
+				local estate = DATA.estate_location_get_estate(location)
+				DATA.for_each_pop_location_from_estate(estate, function (item)
+					local pop = DATA.pop_location_get_pop(item)
+					local fat = DATA.fatten_pop(pop)
+					sum = sum + fat.basic_needs_satisfaction + fat.life_needs_satisfaction
+					total_population = total_population + 1
+				end)
+			end)
 		end)
 	end)
 	return sum / total_population
@@ -195,7 +201,7 @@ function realm_utils.Realm.get_realm_population(realm)
 	local total = 0
 	DATA.for_each_realm_provinces_from_realm(realm, function (location)
 		local province = DATA.realm_provinces_get_province(location)
-		total = total + province_utils.home_population(province)
+		total = total + province_utils.all_home_population(province)
 	end)
 	return total
 end

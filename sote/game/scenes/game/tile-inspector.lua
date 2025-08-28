@@ -107,11 +107,7 @@ local function header_panel(gam, tile_id, panel)
 	character_panel.y = character_panel.y - character_panel.height
 	character_panel.x = character_panel.x + character_panel.width
 
-	local characters_count = 0
-
-	DATA.for_each_character_location_from_location(province_id, function (item)
-		characters_count = characters_count + 1
-	end)
+	local characters_count = province_utils.local_characters(province_id)
 
 	uit.generic_number_field(
 		"inner-self.png",
@@ -845,21 +841,24 @@ local function buildings_view_tab(gam, tile_id, rect)
 	rect.y = rect.y + base_unit
 
 	if re.building_stacks then
-		-- Show buildings at stacks
+		-- Show buildings as stacks
 		---@type table<building_type_id, number>
 		local stacks = {}
 		local size = 0
-		DATA.for_each_estate_location_from_province(province_id, function (item)
-			local estate = DATA.estate_location_get_estate(item)
-			DATA.for_each_building_estate_from_estate(estate, function (building_estate)
-				local building = DATA.building_estate_get_building(building_estate)
-				local building_type = DATA.building_get_current_type(building)
-				if stacks[building_type] == nil then
-					stacks[building_type] = 1
-					size = size + 1
-				else
-					stacks[building_type] = stacks[building_type] + 1
-				end
+		DATA.for_each_tile_province_membership_from_province(province_id, function (membership)
+			local tile = DATA.tile_province_membership_get_tile(membership)
+			DATA.for_each_estate_location_from_tile(tile, function (item)
+				local estate = DATA.estate_location_get_estate(item)
+				DATA.for_each_building_estate_from_estate(estate, function (building_estate)
+					local building = DATA.building_estate_get_building(building_estate)
+					local building_type = DATA.building_get_current_type(building)
+					if stacks[building_type] == nil then
+						stacks[building_type] = 1
+						size = size + 1
+					else
+						stacks[building_type] = stacks[building_type] + 1
+					end
+				end)
 			end)
 		end)
 
@@ -889,10 +888,15 @@ local function buildings_view_tab(gam, tile_id, rect)
 		-- Show individual buildings
 		re.buildings_scrollbar = re.buildings_scrollbar or 0
 		local amount = 0
-		local estates = DATA.filter_estate_location_from_province(province_id, function (item)
-			amount = amount + 1
-			return true
-		end)
+		local estates = DATA.filter_estate_location(
+			function (item)
+				local location = DATA.estate_location_get_tile(item)
+				if TILE_PROVINCE(location) == province_id then
+					amount = amount + 1
+					return true
+				end
+				return false
+			end)
 
 		re.buildings_scrollbar = uit.scrollview(rect, function(number, rect)
 			if number > 0 and number <= amount then
@@ -1181,11 +1185,12 @@ function re.draw(gam)
 								gam,
 								tab_content,
 								tabb.map_array(
-									DATA.filter_array_pop_location_from_location(
-										province,
-										function (item) return true end
+									DATA.filter_pop_location(
+										function (item)
+											return province == ESTATE_PROVINCE(DATA.pop_location_get_estate(item))
+										end
 									),
-									DATA.character_location_get_character
+									DATA.pop_location_get_pop
 								),
 								re.cached_character_local_state
 							)()
@@ -1199,13 +1204,12 @@ function re.draw(gam)
 								gam,
 								tab_content,
 								tabb.map_array(
-									DATA.filter_array_home_from_home(
-										province,
+									DATA.filter_home(
 										function (item)
-											return true
+											return province == ESTATE_PROVINCE(DATA.home_get_estate(item))
 										end
 									),
-									DATA.pop_location_get_pop
+									DATA.home_get_pop
 								),
 								re.cached_pop_home_state
 							)()
@@ -1215,19 +1219,18 @@ function re.draw(gam)
 						text = "CHAR",
 						tooltip = "Notable characters present in " .. PROVINCE_NAME(province) .. ".",
 						closure = function()
-							re.cached_pop_guest_state = require "game.scenes.game.widgets.character-list" (
+							re.cached_pop_char_state = require "game.scenes.game.widgets.character-list" (
 								gam,
 								tab_content,
 								tabb.map_array(
-									DATA.filter_array_character_location_from_location(
-										province,
+									DATA.filter_character_location(
 										function (item)
-											return true
+											return province == ESTATE_PROVINCE(DATA.character_location_get_estate(item))
 										end
 									),
 									DATA.character_location_get_character
 								),
-								re.cached_pop_guest_state
+								re.cached_pop_char_state
 							)()
 						end
 					},
@@ -1239,16 +1242,14 @@ function re.draw(gam)
 								gam,
 								tab_content,
 								tabb.map_array(
-									DATA.filter_array_pop_location_from_location(
-										province,
+									DATA.filter_pop_location(
 										function (item)
-											local character = DATA.pop_location_get_pop(item)
-											local home_location = DATA.get_home_from_pop(character)
-											local home_province = DATA.home_get_home(home_location)
-											return home_province ~= province
+											local pop = DATA.pop_location_get_pop(item)
+											return province ~= ESTATE_PROVINCE(HOME(pop))
+												and province == PROVINCE(pop)
 										end
 									),
-									DATA.character_location_get_character
+									DATA.pop_location_get_pop
 								),
 								re.cached_pop_guest_state
 							)()

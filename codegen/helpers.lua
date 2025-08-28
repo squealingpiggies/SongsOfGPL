@@ -1,6 +1,6 @@
 --- Helper functions to reduce key presses to type names of common wrappers
 
-CLICK_STRING = "\nClick here to learn more!"
+CLICK_STRING = "\nClick here to open inspector view!"
 OBSERVER_BUTTON_TOOLTIP = "Observers cannot interact with the world!"
 
 ---@enum AI_GOAL
@@ -211,30 +211,39 @@ function JOB_EFFICIENCY(pop, jobtype)
 	return DCON.job_efficiency(pop,jobtype)
 end
 
--- TODO UNIFY LOCATION STORAGE
----Returns province of a pop
+---Returns estate of a pop
+---@param pop_id pop_id
+---@return estate_id
+function POP_ESTATE(pop_id)
+	return DATA.pop_location_get_estate(DATA.get_pop_location_from_pop(pop_id))
+end
+
+---Returns current tile of a pop
+---@param pop_id pop_id
+---@return province_id
+function POP_TILE(pop_id)
+	return ESTATE_TILE(POP_ESTATE(pop_id))
+end
+
+---Returns current province of a pop
 ---@param pop_id pop_id
 ---@return province_id
 function PROVINCE(pop_id)
-	-- assume that pop has location?
-	local location_pop = DATA.pop_location_get_location(DATA.get_pop_location_from_pop(pop_id))
-	local location_character = DATA.character_location_get_location(DATA.get_character_location_from_character(pop_id))
-
-	if location_character ~= INVALID_ID then
-		return location_character
-	end
-	if location_pop ~= INVALID_ID then
-		return location_pop
-	end
-
-	return INVALID_ID
+	return TILE_PROVINCE(POP_TILE(pop_id))
 end
 
----commenting
+---returns current tile of estate
+---@param estate_id estate_id
+---@return province_id
+function ESTATE_TILE(estate_id)
+	return DATA.estate_location_get_tile(DATA.get_estate_location_from_estate(estate_id))
+end
+
+---returns current province of estate
 ---@param estate_id estate_id
 ---@return province_id
 function ESTATE_PROVINCE(estate_id)
-	return DATA.estate_location_get_province(DATA.get_estate_location_from_estate(estate_id))
+	return TILE_PROVINCE(ESTATE_TILE(estate_id))
 end
 
 ---commenting
@@ -292,11 +301,11 @@ end
 
 ---Returns province of a pop
 ---@param pop_id pop_id
----@return province_id
+---@return estate_id
 function HOME(pop_id)
 	-- assume that pop has location?
 	local location_pop = DATA.get_home_from_pop(pop_id)
-	return DATA.home_get_home(location_pop)
+	return DATA.home_get_estate(location_pop)
 end
 
 ---Returns parent of a pop

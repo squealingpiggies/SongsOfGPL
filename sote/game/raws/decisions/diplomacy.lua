@@ -406,15 +406,15 @@ local function load()
 			return 1
 		end
 	)
-
+--[[
 	local colonisation_cost = 10 -- base 10 per family unit transfered
 
 	---collect colonization information
-	---@param province Province
+	---@param estate estate_id
 	---@return table<POP, POP> valid_family_units
 	---@return integer  valid_family_count
-	local function valid_home_family_units(province)
-		local all_pops = tabb.map_array(DATA.get_pop_location_from_location(province), DATA.pop_location_get_pop)
+	local function valid_home_family_units(estate)
+		local all_pops = tabb.map_array(DATA.get_pop_location_from_estate(estate), DATA.pop_location_get_pop)
 		local family_units = tabb.filter_array(all_pops, function (item)
 			local race = DATA.fatten_race(RACE(item))
 			local home_location = DATA.get_home_from_pop(item)
@@ -803,6 +803,7 @@ local function load()
 			end
 		end
 	}
+	--]]
 end
 
 return load

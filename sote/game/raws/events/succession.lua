@@ -110,8 +110,9 @@ local function load()
 
 				-- find most popular noble which lives here and currently stays in the province:
 				if successor == INVALID_ID then
-					DATA.for_each_character_location_from_location(capitol, function (character_location)
+					DATA.for_each_character_location(function (character_location)
 						local noble = DATA.character_location_get_character(character_location)
+						if PROVINCE(noble) ~= capitol then return end
 						if noble == character then
 							return
 						end
@@ -132,8 +133,9 @@ local function load()
 
 				-- find noble again but remove restriction of being in capitol
 				if successor == INVALID_ID then
-					DATA.for_each_home_from_home(capitol, function (character_location)
+					DATA.for_each_home(function (character_location)
 						local noble = DATA.home_get_pop(character_location)
+						if ESTATE_PROVINCE(HOME(noble)) ~= capitol then return end
 						if not IS_CHARACTER(noble) then
 							return
 						end
@@ -155,7 +157,9 @@ local function load()
 				--- it means that there everyone else is a pop
 				--- try to find the oldest local pop to turn into character
 				if successor == INVALID_ID then
-					DATA.for_each_home_from_home(capitol, function (character_location)
+					DATA.for_each_home(function (character_location)
+						local estate = DATA.home_get_estate(character_location)
+						if ESTATE_PROVINCE(estate) ~= capitol then return end
 						local pop = DATA.home_get_pop(character_location)
 						if pop == character then
 							return
@@ -173,7 +177,9 @@ local function load()
 
 				--- if there is no pop which could become a leader: try to find at least some character here:
 				if successor == INVALID_ID then
-					DATA.for_each_character_location_from_location(capitol, function (character_location)
+					DATA.for_each_character_location(function (character_location)
+						local estate = DATA.character_location_get_estate(character_location)
+						if ESTATE_PROVINCE(estate) ~= capitol then return end
 						local noble = DATA.character_location_get_character(character_location)
 						if noble == character then
 							return

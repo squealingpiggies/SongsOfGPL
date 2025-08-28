@@ -132,6 +132,29 @@ function ib.text_button_to_estate(gamescene, estate, building, rect, text, toolt
     end
 end
 
+---@param gamescene GameScene
+---@param estate estate_id
+---@param building building_id
+---@param rect Rect
+---@param tooltip string?
+function ib.icon_button_to_estate(gamescene, estate, building, rect, tooltip)
+    local player = WORLD.player_character
+    local potential = true
+    if estate ~= INVALID_ID then
+        local province = ESTATE_PROVINCE(estate)
+        if player ~= INVALID_ID and not ib.is_visible_to_player(province,player) then
+            potential = false
+        end
+        if ut.icon_button(ASSETS.icons["village.png"], rect, tooltip .. CLICK_STRING, potential) then
+            gamescene.selected.building = building
+            gamescene.selected.estate = estate
+            gamescene.inspector = "building"
+        end
+    else
+        ut.icon_button(ASSETS.icon["uncertainty.png"],rect,tooltip,false)
+    end
+end
+
 function ib.icon_button_to_building(gamescene,building_id,rect,tooltip,potential,active)
     local player = WORLD.player_character
     local potential = true

@@ -112,8 +112,8 @@ function inspector.draw(gamescene)
 	local local_estate = INVALID_ID
 	DATA.for_each_ownership_from_owner(player, function (item)
 		local estate = DATA.ownership_get_estate(item)
-		local estate_location = DATA.get_estate_location_from_estate(estate)
-		local estate_province = DATA.estate_location_get_province(estate_location)
+		local estate_tile = ESTATE_TILE(estate)
+		local estate_province = TILE_PROVINCE(estate_tile)
 		if estate_province == province then
 			local_estate = estate
 		end

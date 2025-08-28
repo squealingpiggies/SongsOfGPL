@@ -56,8 +56,21 @@ local function make_new_realm(capitol_id, race_id, culture, faith)
 	-- Mark the province as settled for processing...
 	WORLD:set_settled_province(capitol_id)
 
-	--calculate average ratial foraging_efficiency from males per 100 females
+	--calculate average racial foraging_efficiency from males per 100 females
 	local male_percentage = race.males_per_hundred_females / (100 + race.males_per_hundred_females)
+
+	-- create initial estate
+	local center = DATA.province_get_center(capitol_id)
+	local estate = DATA.create_estate()
+	DATA.force_create_estate_location(center, estate)
+
+	-- spawn leader
+	local elite_character = pe.generate_new_noble(r, estate, race_id, faith, culture)
+	local popularity = DATA.force_create_popularity(elite_character, r)
+	local fat_popularity = DATA.fatten_popularity(popularity)
+	fat_popularity.value = AGE_YEARS(elite_character) / 10
+	pe.transfer_power(r, elite_character, POLITICS_REASON.INITIALRULER)
+	DATA.force_create_ownership(estate, elite_character)
 
 	-- We also need to spawn in some population...
 	local pop_to_spawn = math.max(20, capitol.foragers_limit / race.carrying_capacity_weight * race.fecundity * 0.5)
@@ -71,23 +84,13 @@ local function make_new_realm(capitol_id, race_id, culture, faith)
 			-age,
 			love.math.random(1,WORLD.ticks_per_year)
 		)
-		province_utils.add_pop(capitol_id, new_pop)
-		province_utils.set_home(capitol_id, new_pop)
+		province_utils.add_pop(estate, new_pop)
+		province_utils.set_home(estate, new_pop)
 	end
 
-	-- spawn leader
-
-	do
-		local elite_character = pe.generate_new_noble(r, capitol_id, race_id, faith, culture)
-		local popularity = DATA.force_create_popularity(elite_character, r)
-		local fat_popularity = DATA.fatten_popularity(popularity)
-		fat_popularity.value = AGE_YEARS(elite_character) / 10
-		pe.transfer_power(r, elite_character, POLITICS_REASON.INITIALRULER)
-	end
-
-	-- spawn nobles
+	-- spawn some nobles
 	for i = 1, pop_to_spawn / 10 do
-		local contender = pe.generate_new_noble(r, capitol_id, race_id, faith, culture)
+		local contender = pe.generate_new_noble(r, estate, race_id, faith, culture)
 		local popularity = DATA.force_create_popularity(contender, r)
 		local fat_popularity = DATA.fatten_popularity(popularity)
 		fat_popularity.value = AGE_YEARS(contender) / 15
@@ -128,7 +131,7 @@ local function make_new_realm(capitol_id, race_id, culture, faith)
 	end
 
 	-- match children pop to some possible parent
-	DATA.for_each_pop_location_from_location(capitol_id, function (item)
+	DATA.for_each_pop_location_from_estate(estate, function (item)
 		local child = DATA.pop_location_get_pop(item)
 		local child_age = AGE_YEARS(child)
 
@@ -140,14 +143,17 @@ local function make_new_realm(capitol_id, race_id, culture, faith)
 		---@type pop_id[]
 		local parents = {}
 
-		DATA.for_each_pop_location_from_location(capitol_id, function (parent_location)
+		DATA.for_each_pop_location_from_estate(estate, function (parent_location)
 			local potential_parent_id = DATA.pop_location_get_pop(parent_location)
 			local age = AGE_YEARS(potential_parent_id)
 			local rank = IS_CHARACTER(potential_parent_id)
+			-- keep characters and pop families seperate
 			if rank ~= child_rank then
 				return
-			elseif age <= child_age + race.adult_age then
+			-- make sure parent is old enough to have had this child
+			elseif age <= child_age + race.teen_age then
 				return
+			-- make sure parent isn't too old to have had this child
 			elseif age >= child_age + race.elder_age then
 				return
 			end

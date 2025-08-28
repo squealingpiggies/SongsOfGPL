@@ -121,54 +121,109 @@ function prov.Province.military(province)
 end
 
 
----Returns the total population of the province, not including characters.
+---Returns the local population of the province, including characters.
 ---Doesn't include outlaws and active armies.
 ---@param province province_id
 ---@return number
 function prov.Province.local_population(province)
 	local result = 0
-	DATA.for_each_pop_location_from_location(province, function (item)
-		result = result + 1
+	DATA.for_each_tile_province_membership_from_province(province, function (membership)
+		local tile = DATA.tile_province_membership_get_tile(membership)
+		DATA.for_each_estate_location_from_tile(tile, function (location)
+			local estate = DATA.estate_location_get_estate(location)
+			DATA.for_each_pop_location_from_estate(estate, function (item)
+				result = result + 1
+			end)
+		end)
 	end)
 	return result
 end
 
----Returns the total amount of characters of the province, not including characters.
+---Returns the amount of local characters of the province.
 ---Doesn't include outlaws and active armies.
 ---@param province province_id
 ---@return number
 function prov.Province.local_characters(province)
-	return tabb.size(DATA.get_character_location_from_location(province))
+	local result = 0
+	DATA.for_each_tile_province_membership_from_province(province, function (membership)
+		local tile = DATA.tile_province_membership_get_tile(membership)
+		DATA.for_each_estate_location_from_tile(tile, function (location)
+			local estate = DATA.estate_location_get_estate(location)
+			DATA.for_each_character_location_from_estate(estate, function (item)
+				result = result + 1
+			end)
+		end)
+	end)
+	return result
 end
 
----Returns the total count of all pops who consider this province home, not including characters.
+---Returns the count of all local pops who consider this province home, including characters.
 ---Doesn't include outlaws and active armies.
 ---@param province province_id
 ---@return number
-function prov.Province.home_population(province)
-	return tabb.size(tabb.filter_array(DATA.get_home_from_home(province), function (a)
-		return not IS_CHARACTER(DATA.home_get_pop(a))
-	end))
+function prov.Province.all_home_population(province)
+	local result = 0
+	DATA.for_each_tile_province_membership_from_province(province, function (membership)
+		local tile = DATA.tile_province_membership_get_tile(membership)
+		DATA.for_each_estate_location_from_tile(tile, function (location)
+			local estate = DATA.estate_location_get_estate(location)
+			DATA.for_each_home_from_estate(estate, function (item)
+				result = result + 1
+			end)
+		end)
+	end)
+	return result
 end
 
----Returns the total count of all pops who consider this province home, not including characters.
+---Returns the count of all local pops who consider this province home, including characters.
 ---Doesn't include outlaws and active armies.
 ---@param province province_id
 ---@return number
-function prov.Province.home_characters(province)
-	return tabb.size(tabb.filter_array(DATA.get_home_from_home(province), function (a)
-		return IS_CHARACTER(DATA.home_get_pop(a))
-	end))
+function prov.Province.local_home_population(province)
+	local result = 0
+	DATA.for_each_tile_province_membership_from_province(province, function (membership)
+		local tile = DATA.tile_province_membership_get_tile(membership)
+		DATA.for_each_estate_location_from_tile(tile, function (location)
+			local estate = DATA.estate_location_get_estate(location)
+			DATA.for_each_pop_location_from_estate(estate, function (item)
+				local pop = DATA.pop_location_get_pop(item)
+				local home = DATA.home_get_home(DATA.pop_get_home(pop))
+				local home_tile = DATA.estate_location_get_tile(DATA.estate_get_location(home))
+				-- is same tile as home estate
+				if home == estate or home_tile == tile then
+					result = result + 1
+				end
+			end)
+		end)
+	end)
+	return result
 end
 
----Returns the total count of all pops who consider this province home, including characters.
+---Returns the total count of all local characters who consider this province home.
 ---Doesn't include outlaws and active armies.
 ---@param province province_id
 ---@return number
-function prov.Province.total_home_population(province)
-	return tabb.size(DATA.get_home_from_home(province))
+function prov.Province.local_home_characters(province)
+	local result = 0
+	DATA.for_each_tile_province_membership_from_province(province, function (membership)
+		local tile = DATA.tile_province_membership_get_tile(membership)
+		DATA.for_each_estate_location_from_tile(tile, function (location)
+			local estate = DATA.estate_location_get_estate(location)
+			DATA.for_each_pop_location_from_estate(estate, function (item)
+				local pop = DATA.pop_location_get_pop(item)
+				local home = DATA.home_get_home(DATA.pop_get_home(pop))
+				local home_tile = DATA.estate_location_get_tile(DATA.estate_get_location(home))
+				-- is same tile as home estate
+				if IS_CHARACTER(pop) and (home == estate or home_tile == tile) then
+					result = result + 1
+				end
+			end)
+		end)
+	end)
+	return result
 end
 
+--[[
 ---@param province province_id
 function prov.Province.validate_population(province)
 	for _, pop_location in pairs(DATA.get_pop_location_from_location(province)) do
@@ -204,23 +259,31 @@ function prov.Province.validate_population(province)
 		end
 	end
 end
+--]]
 
 ---Returns the total population weight of the province.
 ---@param province province_id
 ---@return number
 function prov.Province.population_weight(province)
 	local total = 0
-	for _, pop_location in pairs(DATA.get_pop_location_from_location(province)) do
-		local pop = DATA.pop_location_get_pop(pop_location)
-		-- weight is dependent on food needs, which are age dependent
-		local race = DATA.pop_get_race(pop)
-		local age_multiplier = AGE_MULTIPLIER(pop)
+	DATA.for_each_tile_province_membership_from_province(province, function (membership)
+		local tile = DATA.tile_province_membership_get_tile(membership)
+		DATA.for_each_estate_location_from_tile(tile, function (location)
+			local estate = DATA.estate_location_get_estate(location)
+			DATA.for_each_pop_location_from_estate(estate, function (item)
+				local pop = DATA.pop_location_get_pop(item)
+				-- weight is dependent on food needs, which are age dependent
+				local race = DATA.pop_get_race(pop)
+				local age_multiplier = AGE_MULTIPLIER(pop)
 
-		total = total + DATA.race_get_carrying_capacity_weight(race) * age_multiplier
-	end
+				total = total + DATA.race_get_carrying_capacity_weight(race) * age_multiplier
+			end)
+		end)
+	end)
 	return total
 end
 
+--- TODO remove
 --- Transfers a pop to the target province
 ---@param pop pop_id
 ---@param target province_id
@@ -269,6 +332,7 @@ function prov.Province.transfer_pop(pop, target)
 	end
 end
 
+--- TODO remove
 --- Changes home province of a pop/character to the target province
 ---@param origin province_id
 ---@param pop Character
@@ -342,12 +406,6 @@ function prov.Province.take_away_pop(province, pop)
 	local location = DATA.get_pop_location_from_pop(pop)
 	assert(DATA.pop_location_get_location(location) == province, "INVALID STATE")
 	DATA.delete_pop_location(location)
-end
-
----@param province province_id
----@param pop pop_id
-function prov.Province.return_pop_from_army(province, pop)
-	prov.Province.add_pop(province, pop)
 end
 
 
@@ -751,34 +809,44 @@ function prov.Province.realm(province)
 	return PROVINCE_REALM(province)
 end
 
----Adds pop as a guest of this province. Preserves old home of a pop.
----@param province province_id
+---links pop location to estate. Preserves home of a pop.
+---@param estate estate_id
 ---@param pop pop_id
-function prov.Province.add_pop(province, pop)
-	DATA.force_create_pop_location(province, pop)
+function prov.Province.add_pop(estate, pop)
+	local location = DATA.get_pop_location_from_pop(pop)
+	if location ~= INVALID_ID then
+		DATA.pop_location_set_estate(location,estate)
+	else
+		DATA.force_create_pop_location(estate, pop)
+	end
 end
 
----Adds a character to the province
----@param province province_id
+---links pop and character location to estate. Preserves home of a pop.
+---@param estate estate_id
 ---@param character Character
-function prov.Province.add_character(province, character)
-	DATA.force_create_character_location(province, character)
-	DATA.force_create_pop_location(province, character)
+function prov.Province.add_character(estate, character)
+	prov.Province.add_pop(estate, character)
+	local location = DATA.get_character_location_from_character(character)
+	if location ~= INVALID_ID then
+		DATA.character_location_set_estate(location,estate)
+	else
+		DATA.force_create_character_location(estate, character)
+	end
 end
 
 ---Sets province as pop's home
----@param province province_id
+---@param estate estate_id
 ---@param pop pop_id
-function prov.Province.set_home(province, pop)
+function prov.Province.set_home(estate, pop)
 	local home = DATA.get_home_from_pop(pop)
 	if home ~= INVALID_ID then
-		DATA.home_set_home(home, province)
+		DATA.home_set_estate(home, estate)
 	else
-		DATA.force_create_home(province, pop)
+		DATA.force_create_home(estate, pop)
 	end
 
 	-- as this province is your home, you belong to local realm now
-	local realm = prov.Province.realm(province)
+	local realm = PROVINCE_REALM(ESTATE_PROVINCE(estate))
 
 	if realm ~= INVALID_ID then
 		SET_REALM(pop, realm)
@@ -789,10 +857,15 @@ end
 ---@return number
 function prov.Province.get_spotting(province)
 	local s = 0
-
-	DATA.for_each_pop_location_from_location(province, function (p)
-		local pop_id = DATA.pop_location_get_pop(p)
-		s = s + pop_utils.get_spotting(pop_id)
+	DATA.for_each_tile_province_membership_from_province(province, function (membership)
+		local tile = DATA.tile_province_membership_get_tile(membership)
+		DATA.for_each_estate_location_from_tile(tile, function (location)
+			local estate = DATA.estate_location_get_estate(location)
+			DATA.for_each_pop_location_from_estate(estate, function (p)
+				local pop_id = DATA.pop_location_get_pop(p)
+				s = s + pop_utils.get_spotting(pop_id)
+			end)
+		end)
 	end)
 
 	--- TODO:
@@ -878,9 +951,9 @@ function prov.Province.get_job_ratios(province)
 
 	local pop = 0
 
-	for _, p in pairs(DATA.get_pop_location_from_location(province)) do
-		local pop_id = DATA.pop_location_get_pop(p)
-
+	DATA.for_each_pop_location(function (item)
+		local pop_id = DATA.pop_location_get_pop(item)
+		if PROVINCE(pop_id) ~= province then return end
 		local employment = DATA.get_employment_from_worker(pop_id)
 		if DATA.employment_get_building(employment) ~= INVALID_ID then
 			local job = DATA.employment_get_job(employment)
@@ -888,7 +961,7 @@ function prov.Province.get_job_ratios(province)
 			r[job] = old + 1
 		end
 		pop = pop + 1
-	end
+	end)
 
 	for job, am in pairs(r) do
 		r[job] = am / pop
@@ -902,20 +975,25 @@ end
 ---@return integer
 function prov.Province.get_unemployment(province)
 	local u = 0
+	DATA.for_each_tile_province_membership_from_province(province, function (membership)
+		local tile = DATA.tile_province_membership_get_tile(membership)
+		DATA.for_each_estate_location_from_tile(tile, function (item)
+			local estate = DATA.estate_location_get_estate(item)
+			for _, p in pairs(DATA.get_pop_location_from_estate(estate)) do
+				local pop_id = DATA.pop_location_get_pop(p)
 
-	for _, p in pairs(DATA.get_pop_location_from_location(province)) do
-		local pop_id = DATA.pop_location_get_pop(p)
+				local unit_of = DATA.get_warband_unit_from_unit(pop_id)
+				local employment = DATA.get_employment_from_worker(pop_id)
+				if DATA.employment_get_building(employment) ~= INVALID_ID then
 
-		local unit_of = DATA.get_warband_unit_from_unit(pop_id)
-		local employment = DATA.get_employment_from_worker(pop_id)
-		if DATA.employment_get_building(employment) ~= INVALID_ID then
+				elseif DATA.warband_unit_get_warband(unit_of) ~= INVALID_ID then
 
-		elseif DATA.warband_unit_get_warband(unit_of) ~= INVALID_ID then
-
-		else
-			u = u + 1
-		end
-	end
+				else
+					u = u + 1
+				end
+			end
+		end)
+	end)
 
 	return u
 end

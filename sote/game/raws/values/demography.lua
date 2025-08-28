@@ -6,7 +6,9 @@ local values = {}
 ---@return pop_id[]
 function values.unemployed_pops(province)
 	return tabb.filter_array(
-		tabb.map_array(DATA.get_pop_location_from_location(province), DATA.pop_location_get_pop),
+		tabb.map_array(DATA.filter_pop_location(function (item)
+			return PROVINCE(DATA.pop_location_get_pop(item)) == province
+		end), DATA.pop_location_get_pop),
 		function (pop)
 			local employment = DATA.get_employment_from_worker(pop)
 			local building = DATA.employment_get_building(employment)
@@ -25,10 +27,10 @@ end
 ---@return building_id[]
 function values.vacant_buildings_owned_by_locally_present_pops(province)
 	local result = {}
-	DATA.for_each_estate_location_from_province(province, function (estate_location)
+	DATA.for_each_estate_location(function (estate_location)
 		local estate = DATA.estate_location_get_estate(estate_location)
 		local owner = OWNER(estate)
-		if PROVINCE(owner) ~= province then
+		if ESTATE_PROVINCE(estate) ~= province or PROVINCE(owner) ~= province then
 			return
 		end
 		DATA.for_each_building_estate_from_estate(estate, function (building_location)
@@ -49,7 +51,9 @@ end
 ---@return Character|nil
 function values.sample_character_from_province(province_id)
 	local characters = tabb.map_array(
-		DATA.filter_array_character_location_from_location(province_id, ACCEPT_ALL),
+		DATA.filter_character_location(function (item)
+			return PROVINCE(DATA.character_location_get_character(item)) == province_id
+		end),
 		DATA.character_location_get_character
 	)
 
@@ -68,7 +72,9 @@ end
 ---@return pop_id|nil
 function values.sample_pop_from_province(province_id)
 	local pops = tabb.map_array(
-		DATA.filter_array_pop_location_from_location(province_id, ACCEPT_ALL),
+		DATA.filter_pop_location(function (item)
+			return PROVINCE(DATA.pop_location_get_pop(item)) == province_id
+		end),
 		DATA.pop_location_get_pop
 	)
 
@@ -86,12 +92,12 @@ end
 ---@return pop_id|nil
 function values.sample_non_character_pop_from_province(province_id)
 	local pops = tabb.map_array(
-		DATA.filter_array_pop_location_from_location(province_id, function (item)
+		DATA.filter_pop_location(function (item)
 			local pop = DATA.pop_location_get_pop(item)
 			if IS_CHARACTER(pop) then
 				return false
 			end
-			return true
+			return PROVINCE(pop) == province_id
 		end),
 		DATA.pop_location_get_pop
 	)

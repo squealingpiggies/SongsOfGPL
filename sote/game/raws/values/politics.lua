@@ -31,8 +31,9 @@ end
 ---@return number
 function PoliticalValues.power_base(character, province)
     local total = 0
-    for k, character_location in pairs(DATA.get_character_location_from_location(province)) do
-        local test_character = DATA.character_location_get_character(character_location)
+    DATA.for_each_character_location(function (item)
+        local test_character = DATA.character_location_get_character(item)
+        if PROVINCE(test_character) ~= province then return end
         local loyal_to = LOYAL_TO(test_character)
         if (loyal_to == character) or (test_character == character) then
             local realm = PROVINCE_REALM(province)
@@ -40,7 +41,7 @@ function PoliticalValues.power_base(character, province)
                 total = total + PoliticalValues.popularity(test_character, realm)
             end
         end
-    end
+    end)
 
     return total
 end

@@ -80,8 +80,9 @@ function AiPreferences.best_successor(character)
 	local best_candidate = nil
 	local best_score = 0
 
-	DATA.for_each_character_location_from_location(PROVINCE(character), function (item)
+	DATA.for_each_character_location(function (item)
 		local candidate = DATA.character_location_get_character(item)
+		if PROVINCE(character) ~= PROVINCE(candidate) then return end
 		if best_candidate == nil then
 			best_candidate = candidate
 		else

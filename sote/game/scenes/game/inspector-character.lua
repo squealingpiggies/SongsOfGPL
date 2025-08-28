@@ -318,7 +318,7 @@ local function draw_ast_tab(game,rect,pop_id)
             end
         },
         {
-            text = "BUILDINGS",
+            text = "ESTATES",
             tooltip = NAME(pop_id) .. "'s owned estates.",
             closure = function()
                 property_buildings_state = require "game.scenes.game.widgets.estates-list" (

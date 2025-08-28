@@ -284,6 +284,8 @@ function EconomicEffects.construct_building(building_type, province, owner)
 	---@type estate_id
 	local estate = INVALID_ID
 
+	local location = owner ~= INVALID_ID and POP_TILE(owner) or DATA.province_get_center(province)
+
 	DATA.for_each_ownership_from_owner(owner, function (item)
 		local owned_estate = DATA.ownership_get_estate(item)
 		if ESTATE_PROVINCE(owned_estate) == province then
@@ -293,7 +295,7 @@ function EconomicEffects.construct_building(building_type, province, owner)
 
 	if estate == INVALID_ID then
 		estate = DATA.create_estate()
-		DATA.force_create_estate_location(province, estate)
+		DATA.force_create_estate_location(location, estate)
 		if (owner ~= INVALID_ID) then
 			DATA.force_create_ownership(estate, owner)
 		end
@@ -1667,8 +1669,9 @@ function EconomicEffects.collect_tax(character)
 		end
 	end
 
-	DATA.for_each_pop_location_from_location(LOCAL_PROVINCE(character), function (item)
+	DATA.for_each_pop_location(function (item)
 		local pop = DATA.pop_location_get_pop(item)
+		if PROVINCE(character) ~= PROVINCE(pop) then return end
 		local savings = DATA.pop_get_savings(pop)
 		if savings > 0 then
 			total_tax = total_tax + savings * tax_collection_ability
