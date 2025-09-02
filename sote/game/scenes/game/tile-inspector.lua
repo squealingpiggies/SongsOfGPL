@@ -63,7 +63,7 @@ local function header_panel(gam, tile_id, panel)
 	local infra_panel = panel:subrect(0, base_unit, base_unit * 3, base_unit, "left", "up")
 	uit.generic_number_field(
 		"horizon-road.png",
-		province_utils.get_infrastructure_efficiency(province_id),
+		province_utils.get_infrastructure_efficiency(tile_id),
 		infra_panel,
 		"Local infrastructure efficiency",
 		uit.NUMBER_MODE.PERCENTAGE,
@@ -197,7 +197,7 @@ local function infrastructure_widget(gam, tile_id, panel)
 			function(rect)
 				uit.money_entry(
 					"Inf.: ",
-					province.infrastructure,
+					DATA.tile_get_infrastructure(tile_id),
 					rect,
 					"Local infrastructure"
 				)
@@ -205,7 +205,7 @@ local function infrastructure_widget(gam, tile_id, panel)
 			function(rect)
 				uit.money_entry(
 					"Inf. inv: ",
-					province.infrastructure_investment,
+					DATA.tile_get_infrastructure_investment(tile_id),
 					rect,
 					"Infrastructure investment"
 				)
@@ -213,15 +213,15 @@ local function infrastructure_widget(gam, tile_id, panel)
 			function(rect)
 				uit.money_entry(
 					"Req inf.: ",
-					province.infrastructure_needed,
+					DATA.tile_get_infrastructure_needed(tile_id),
 					rect,
 					"Required infrastructure"
 				)
 			end,
 			function(rect)
 				local sat = 0
-				if province.infrastructure_needed > 0 then
-					sat = province.infrastructure / province.infrastructure_needed
+				if DATA.tile_get_infrastructure_needed(tile_id) > 0 then
+					sat = DATA.tile_get_infrastructure(tile_id) / DATA.tile_get_infrastructure_needed(tile_id)
 				end
 				uit.data_entry_percentage(
 					"Inf. sat: ",
@@ -388,15 +388,15 @@ local function trade_widget(gam, tile_id, panel)
 		:grid(4)
 		:build()
 
-	local province_id = tile_utils.province(tile_id)
+	local province_id = TILE_PROVINCE(tile_id)
 	local province = DATA.fatten_province(province_id)
 
 	uit.generic_number_field(
 		"fruit-bowl.png",
-		province.foragers_limit,
+		DATA.tile_get_foragers_limit(tile_id),
 		layout:next(unit * 3.5, unit * 1),
-		"The carrying capacity of this province is determined by the amount of energy foragable. The total calories avialable in this province can support about " .. uit.to_fixed_point2(province.foragers_limit)
-			.." adult humans from foraging " .. province.size .." tiles.",
+		"The carrying capacity of this province is determined by the amount of energy foragable. The total calories avialable in this province can support about "
+			.. uit.to_fixed_point2(DATA.tile_get_foragers_limit(tile_id)) .." adult humans from foraging this tile.",
 		uit.NUMBER_MODE.BALANCE,
 		uit.NAME_MODE.ICON
 	)
@@ -412,26 +412,14 @@ local function trade_widget(gam, tile_id, panel)
 		uit.NAME_MODE.ICON
 	)
 
-	local foraging_efficiency = dbm.foraging_efficiency(province.foragers_limit, province.foragers)
+	local foraging_efficiency = dbm.foraging_efficiency(DATA.tile_get_foragers_limit(tile_id), DATA.tile_get_foragers(tile_id))
 	uit.generic_number_field(
 		"basket.png",
 		foraging_efficiency,
 		layout:next(unit * 3.5, unit * 1),
-		"There are currently the equivalent of " .. uit.to_fixed_point2(province.foragers)
+		"There are currently the equivalent of " .. uit.to_fixed_point2(DATA.tile_get_foragers(tile_id))
 			.. " adult human foragers collecting food full-time, pulling "
-			.. uit.to_fixed_point2(province.foragers / (province.foragers_limit > 0 and province.foragers_limit or 1) * 100).. "% of avaialable resources.",
-		uit.NUMBER_MODE.PERCENTAGE,
-		uit.NAME_MODE.ICON
-	)
-
-	local hydration_efficiency = dbm.foraging_efficiency(province.hydration * 0.5, province.foragers_water)
-	uit.generic_number_field(
-		"full-wood-bucket.png",
-		hydration_efficiency,
-		layout:next(unit * 3.5, unit * 1),
-		"There are currently the equivalent of " .. uit.to_fixed_point2(province.foragers_water)
-			.. " adult human foragers collecting water full-time, pulling "
-			.. uit.to_fixed_point2(province.foragers_water / province.hydration * 100).. "% of avaialable water.",
+			.. uit.to_fixed_point2(DATA.tile_get_foragers(tile_id) / (DATA.tile_get_foragers_limit(tile_id) > 0 and DATA.tile_get_foragers_limit(tile_id) or 1) * 100).. "% of avaialable resources.",
 		uit.NUMBER_MODE.PERCENTAGE,
 		uit.NAME_MODE.ICON
 	)
@@ -439,45 +427,26 @@ local function trade_widget(gam, tile_id, panel)
 	local province_size = DATA.province_get_size(province_id)
 
 	for i = 1, MAX_RESOURCES_IN_PROVINCE_INDEX - 1 do
-		local forage_case = DATA.province_get_foragers_targets_forage(province_id, i)
+		local forage_case = DATA.tile_get_foragers_targets_resource(province_id, i)
 
 		if forage_case == FORAGE_RESOURCE.INVALID then
 			break
 		end
 
-		local required_job =  DATA.forage_resource_get_handle(forage_case)
-		local amount = DATA.province_get_foragers_targets_amount(province_id, i)
-		local output_good = DATA.province_get_foragers_targets_output_good(province_id, i)
-
-		if output_good == INVALID_ID then
-			break
-		end
-
-		local output_value = DATA.province_get_foragers_targets_output_value(province_id, i)
-
-		---@type number
-		local search_time = province_size / amount / 10
-		local efficiency = dbm.mean_race_job_efficiency(HUMAN, required_job)
-		local handle_time = 1 / efficiency
-
-		local total_time = search_time + handle_time
-
+		local amount = DATA.tile_get_foragers_targets_amount(tile_id, i)
+		local limit = DATA.tile_get_foragers_targets_limit(tile_id, i)
 		local name = DATA.forage_resource_get_name(forage_case)
-		local action = DATA.forage_resource_get_handle(forage_case)
-
-		local output_good_name = DATA.trade_good_get_name(output_good)
+		local efficiency = dbm.foraging_efficiency(limit,amount)
 
 		uit.generic_number_field(
 			DATA.forage_resource_get_icon(forage_case),
-			amount,
+			limit,
 			layout:next(unit * 3.5, unit * 1),
-			"The average adult human can expect to collect " .. uit.to_fixed_point2(1 / total_time) .. " units of "
-				.. name .. " " .. action
-				.. " for it full time from the total " .. uit.to_fixed_point2(amount)
-				.. " spread over of the province's " .. uit.to_fixed_point2(province.size)
-				.. " tiles.\n · Foraging one unit of " .. name
-				.. " produces:\n  · " .. output_good_name .. " (" .. uit.to_fixed_point2(output_value) .. ")" .. "\n · The output of " .. action .. " " .. name
-				.. " is further modified by a pop's racial job efficiencies, age, and needs satisfactions.",
+			"The average adult human can expect to collect from " .. name
+				.. " at " .. uit.to_fixed_point2(efficiency*100) .. "% efficiency."
+				.. "\nThis comes from a total of " .. uit.to_fixed_point2(limit)
+				.. " units being harvested by the equivalent of "
+				.. uit.to_fixed_point2(amount) .. " adult human foragers",
 			uit.NUMBER_MODE.BALANCE,
 			uit.NAME_MODE.ICON
 		)

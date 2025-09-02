@@ -58,7 +58,7 @@ DATA.culture_name= {}
 
 DATA.culture_size = 10000
 DCON.dcon_culture_resize_traditional_units(6)
-DCON.dcon_culture_resize_traditional_forager_targets(11)
+DCON.dcon_culture_resize_traditional_forager_targets(8)
 ---@return culture_id
 function DATA.create_culture()
     ---@type culture_id

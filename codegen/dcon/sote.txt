@@ -225,6 +225,51 @@ object {
         type { biome_id }
         tag { scenario }
     }
+    property{
+        name { foragers }
+        type { float }
+        tag { scenario }
+    }
+    property{
+        name { foragers_water }
+        type { float }
+        tag { scenario }
+    }
+    property{
+        name { foragers_limit }
+        type { float }
+        tag { scenario }
+    }
+    property{
+        name { forage_efficiency }
+        type { float }
+        tag { scenario }
+    }
+    property{
+        name { foragers_targets }
+        type { array{uint32_t}{base_types::forage_container} }
+        tag { scenario }
+    }
+    property{
+        name { infrastructure_needed }
+        type { float }
+        tag { scenario }
+    }
+    property{
+        name { infrastructure }
+        type { float }
+        tag { scenario }
+    }
+    property{
+        name { infrastructure_investment }
+        type { float }
+        tag { scenario }
+    }
+    property{
+        name { infrastructure_efficiency }
+        type { float }
+        tag { scenario }
+    }
 }
 object {
     name { plate }
@@ -575,11 +620,6 @@ object {
         tag { scenario }
     }
     property{
-        name { hydration }
-        type { float }
-        tag { scenario }
-    }
-    property{
         name { movement_cost }
         type { float }
         tag { scenario }
@@ -587,26 +627,6 @@ object {
     property{
         name { center }
         type { tile_id }
-        tag { scenario }
-    }
-    property{
-        name { infrastructure_needed }
-        type { float }
-        tag { scenario }
-    }
-    property{
-        name { infrastructure }
-        type { float }
-        tag { scenario }
-    }
-    property{
-        name { infrastructure_investment }
-        type { float }
-        tag { scenario }
-    }
-    property{
-        name { infrastructure_efficiency }
-        type { float }
         tag { scenario }
     }
     property{
@@ -715,31 +735,6 @@ object {
         tag { scenario }
     }
     property{
-        name { foragers }
-        type { float }
-        tag { scenario }
-    }
-    property{
-        name { foragers_water }
-        type { float }
-        tag { scenario }
-    }
-    property{
-        name { foragers_limit }
-        type { float }
-        tag { scenario }
-    }
-    property{
-        name { forage_efficiency }
-        type { float }
-        tag { scenario }
-    }
-    property{
-        name { foragers_targets }
-        type { array{uint32_t}{base_types::forage_container} }
-        tag { scenario }
-    }
-    property{
         name { local_resources }
         type { array{uint32_t}{base_types::resource_location} }
         tag { scenario }
@@ -762,26 +757,6 @@ object {
     property{
         name { unit_types }
         type { array{unit_type_id}{uint8_t} }
-        tag { scenario }
-    }
-    property{
-        name { throughput_boosts }
-        type { array{production_method_id}{float} }
-        tag { scenario }
-    }
-    property{
-        name { input_efficiency_boosts }
-        type { array{production_method_id}{float} }
-        tag { scenario }
-    }
-    property{
-        name { local_efficiency_boosts }
-        type { array{production_method_id}{float} }
-        tag { scenario }
-    }
-    property{
-        name { output_efficiency_boosts }
-        type { array{production_method_id}{float} }
         tag { scenario }
     }
     property{
@@ -1176,6 +1151,26 @@ object {
         type { float }
         tag { scenario }
     }
+    property{
+        name { throughput_boosts }
+        type { array{production_method_id}{float} }
+        tag { scenario }
+    }
+    property{
+        name { input_efficiency_boosts }
+        type { array{production_method_id}{float} }
+        tag { scenario }
+    }
+    property{
+        name { local_efficiency_boosts }
+        type { array{production_method_id}{float} }
+        tag { scenario }
+    }
+    property{
+        name { output_efficiency_boosts }
+        type { array{production_method_id}{float} }
+        tag { scenario }
+    }
 }
 relationship {
     name { ownership }
@@ -1231,8 +1226,8 @@ relationship {
     size { 300000 }
     tag {scenario}
     link {
-        object { province }
-        name { province }
+        object { tile }
+        name { tile }
         type { many }
         index_storage{array}
     }
@@ -1352,8 +1347,8 @@ relationship {
     size { 100000 }
     tag {scenario}
     link {
-        object { province }
-        name { location }
+        object { estate }
+        name { estate }
         type { many }
         index_storage{array}
     }
@@ -1369,8 +1364,8 @@ relationship {
     size { 300000 }
     tag {scenario}
     link {
-        object { province }
-        name { home }
+        object { estate }
+        name { estate }
         type { many }
         index_storage{array}
     }
@@ -1386,8 +1381,8 @@ relationship {
     size { 300000 }
     tag {scenario}
     link {
-        object { province }
-        name { location }
+        object { estate }
+        name { estate }
         type { many }
         index_storage{array}
     }
@@ -1805,13 +1800,8 @@ object {
 object {
     name { forage_resource }
     storage_type { contiguous }
-    size { 10 }
+    size { 7 }
     tag {scenario}
-    property{
-        name { handle }
-        type { uint8_t }
-        tag { scenario }
-    }
 }
 object {
     name { budget_category }

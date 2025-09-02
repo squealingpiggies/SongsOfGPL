@@ -81,13 +81,10 @@ enum class BUILDING_ARCHETYPE : uint8_t {
 enum class FORAGE_RESOURCE : uint8_t {
     INVALID = 0,
     WATER = 1,
-    FRUIT = 2,
-    GRAIN = 3,
-    GAME = 4,
-    FUNGI = 5,
-    SHELL = 6,
-    FISH = 7,
-    WOOD = 8,
+    PLANT = 2,
+    GAME = 3,
+    FISH = 4,
+    WOOD = 5,
 };
 
 enum class BUDGET_CATEGORY : uint8_t {
@@ -190,10 +187,9 @@ enum class LAW_BUILDING : uint8_t {
     };
 
     struct forage_container {
-        int32_t output_good;
-        float output_value;
+        FORAGE_RESOURCE resource;
+        float limit;
         float amount;
-        FORAGE_RESOURCE forage;
     };
 
     struct resource_location {

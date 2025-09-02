@@ -371,7 +371,7 @@ function tb.draw(gam)
 	end
 
 	if DATA.pop_get_rank(character) == CHARACTER_RANK.CHIEF then
-		if province_utils.get_infrastructure_efficiency(PROVINCE(character)) < 0.9 then
+		if province_utils.get_infrastructure_efficiency(POP_TILE(character)) < 0.9 then
 			table.insert(alerts, {
 				["icon"] = "horizon-road.png",
 				["tooltip"] =

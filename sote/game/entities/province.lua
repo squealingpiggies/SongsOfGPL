@@ -708,12 +708,12 @@ function prov.Province.can_build(province, funds, building, overseer, public)
 	end
 end
 
----@param province province_id
+---@param tile tile_id
 ---@return number
-function prov.Province.get_infrastructure_efficiency(province)
+function prov.Province.get_infrastructure_efficiency(tile)
 	local inf = 0
-	local needed = DATA.province_get_infrastructure_needed(province)
-	local provided = DATA.province_get_infrastructure(province)
+	local needed = DATA.tile_get_infrastructure_needed(tile)
+	local provided = DATA.tile_get_infrastructure(tile)
 	if needed > 0 then
 		inf = 2 * provided / (provided + needed)
 	end

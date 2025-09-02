@@ -891,9 +891,9 @@ void record_use_demand(dcon::province_id province, dcon::use_case_id use_case, f
 	auto current = state.province_get_local_use_buffer_demand(province, use_case);
 	state.province_set_local_use_buffer_demand(province, use_case, current + amount);
 }
-
-void pop_forage_update(dcon::pop_id pop, dcon::province_id province) {
-	auto size = state.province_get_size(province);
+/*
+void pop_forage_update(dcon::pop_id pop, dcon::tile_id tile) {
+	auto size = 10.0;
 	auto free_time = pop_free_time(pop);
 	auto warband_time = pop_warband_time(pop,free_time);
 	auto forage_time = pop_forage_time(pop,free_time,warband_time);
@@ -903,7 +903,7 @@ void pop_forage_update(dcon::pop_id pop, dcon::province_id province) {
 
 	auto estimated_profit = 0.f;
 
-	for (uint32_t i = 0; i < state.province_get_foragers_targets_size(); i++){
+	for (uint32_t i = 0; i < state.tile_get_foragers_targets_size(); i++){
 		base_types::forage_container& forage_case = state.province_get_foragers_targets(province, i);
 
 		auto output = dcon::trade_good_id{dcon::trade_good_id::value_base_t(int32_t(forage_case.output_good - 1))};
@@ -1904,6 +1904,7 @@ void update_economy() {
 	});
 	pops_update_stats();
 }
+*/
 
 float estimate_province_use_price(dcon::province_id province, dcon::use_case_id use) {
 	auto min_adjusted_price = std::numeric_limits<float>::max();
@@ -1946,8 +1947,9 @@ float estimate_province_use_price(uint32_t province_lua_id, uint32_t use_lua_id)
 	return estimate_province_use_price(province, use);
 }
 
-float estimate_building_type_income(int32_t province_lua, int32_t building_type_lua, int32_t race_lua, bool female) {
+float estimate_building_type_income(int32_t province_lua, int32_t estate_lua, int32_t building_type_lua, int32_t race_lua, bool female) {
 	dcon::province_id province {dcon::province_id::value_base_t(province_lua - 1)};
+	dcon::estate_id estate {dcon::estate_id::value_base_t(estate_lua - 1)};
 	dcon::building_type_id building_type {dcon::building_type_id::value_base_t(building_type_lua - 1)};
 	dcon::race_id race {dcon::race_id::value_base_t(race_lua - 1)};
 	auto method = state.building_type_get_production_method(building_type);
@@ -1955,11 +1957,11 @@ float estimate_building_type_income(int32_t province_lua, int32_t building_type_
 	auto efficiency = job_efficiency(race, female, associated_job);
 
 	float throughput_boost =
-		(1 + state.province_get_throughput_boosts(province, method))
+		(1 + state.estate_get_throughput_boosts(estate, method))
 		* efficiency;
-	float input_modifier = std::max(0.f, 1 - state.province_get_input_efficiency_boosts(province, method));
+	float input_modifier = std::max(0.f, 1 - state.estate_get_input_efficiency_boosts(estate, method));
 	float output_modifier =
-		(1 + state.province_get_output_efficiency_boosts(province, method))
+		(1 + state.estate_get_output_efficiency_boosts(estate, method))
 		* efficiency;
 
 	float income = 0;
@@ -1984,131 +1986,103 @@ float estimate_building_type_income(int32_t province_lua, int32_t building_type_
     return income * throughput_boost;
 }
 
+void set_tile_forage_data(dcon::tile_id tile, uint8_t index, base_types::FORAGE_RESOURCE resource, float available){
 
-void set_province_data(dcon::province_id province, uint8_t index, base_types::FORAGE_RESOURCE forage, int32_t output_raw_id, float output_value, float available_amount){
+	base_types::forage_container& forage_data = state.tile_get_foragers_targets(tile, index - 1);
 
-	base_types::forage_container& forage_data = state.province_get_foragers_targets(province, index - 1);
-
-	forage_data.forage = forage;
-	forage_data.amount = available_amount;
-	forage_data.output_good = output_raw_id;
-	forage_data.output_value = output_value * 4;
+	forage_data.resource = resource;
+	forage_data.limit = available;
+	forage_data.amount = 0.f;
 }
 
+void update_foraging_data(uint32_t world_size) {
 
-void update_foraging_data(
-	int32_t province_raw_id,
-	int32_t water_raw_id,
-	int32_t berries_raw_id,
-	int32_t grain_raw_id,
-	int32_t bark_raw_id,
-	int32_t timber_raw_id,
-	int32_t meat_raw_id,
-	int32_t hide_raw_id,
-	int32_t mushroom_raw_id,
-	int32_t shellfish_raw_id,
-	int32_t seaweed_raw_id,
-	int32_t fish_raw_id,
-	int32_t world_size
-) {
-	auto province = dcon::province_id { dcon::province_id::value_base_t(province_raw_id - 1)};
+	state.for_each_tile([&](auto tile_id) {
 
-	auto hydration = state.province_get_hydration(province);
-	float fruit = 0.f;
-	float seeds = 0.f;
-	float shell = 0.f;
-	float fish = 0.f;
-	float game = 0.f;
-	float wood = 0.f;
+		auto edible_production = 0.f;
+		auto game_production = 0.f;
+		auto marine_production = 0.f;
+		auto timber_production = 0.f;
 
+		//TODO find rough estimate of shift between jan and jul?
+		//auto day = get_world_current_tick() / get_world_ticks_per_day();
+		//auto jan_mod, jul_mod = cos(deg(day))^2, sin(deg(day))^2;
+		//jan_mod *= jan_mod;
+		//jul_mod *= jul_mod;
+		auto jan_mod = 0.5f;
+		auto jul_mod = 0.5f;
 
-	state.province_for_each_tile_province_membership_as_province(province, [&](auto membership) {
+		// hydration from season rainfall and waterflow?
+		auto jan_rain = state.tile_get_january_rain(tile_id);
+		auto jul_rain = state.tile_get_july_rain(tile_id);
+		auto jan_flow = state.tile_get_january_waterflow(tile_id);
+		auto jul_flow = state.tile_get_july_waterflow(tile_id);
+		auto hydration = ((jan_rain + jan_flow) * jan_mod + (jul_rain + jul_flow) * jul_mod) / 30;
 
-		dcon::tile_id tile_id = state.tile_province_membership_get_tile(membership);
-
-		float warmest = state.tile_get_january_temperature(tile_id);
-		float coldest = state.tile_get_july_temperature(tile_id);
+		//TODO replace average yearly effective temperatures with seasonal or temporal estimate
+		auto warmest = state.tile_get_january_temperature(tile_id);
+		auto coldest = state.tile_get_july_temperature(tile_id);
 		if (coldest > warmest) {
 			std::swap(warmest, coldest);
 		}
+		// weight by temperature, warm vs cold
+		auto effective_temperature = (18.f * warmest - 10.f * coldest) / (warmest - coldest + 8.f);
+		auto flora_temperature_weight = 1.f / (1.f + expf(-0.15f * (effective_temperature - 10.f))); // (0.f,1.f)
+		auto fauna_temperature_weight = 1.f - flora_temperature_weight; // inverse
 
-		float grass = state.tile_get_grass(tile_id);
-		float shrub = state.tile_get_shrub(tile_id);
-		float broadleaf = state.tile_get_broadleaf(tile_id);
-		float conifer = state.tile_get_conifer(tile_id);
+		if (state.tile_get_is_land(tile_id)) {
+			//land tiles have plants
+			auto grass = state.tile_get_grass(tile_id);
+			auto shrub = state.tile_get_shrub(tile_id);
+			auto broadleaf = state.tile_get_broadleaf(tile_id);
+			auto conifer = state.tile_get_conifer(tile_id);
 
-		float effective_temperature = (18.f * warmest - 10.f * coldest) / (warmest - coldest + 8.f);
-		float temperture_weighting =  1.f / (1.f + expf(-0.2f * (effective_temperature - 10.f)));
+			// plant production split between edible and wood based on types and enviornment
+			edible_production = 2.f * flora_temperature_weight //  [0,10)
+				* (5.f * grass + 4.f * shrub + 2.f * broadleaf + 1.f * conifer);
+			timber_production = (1.f + flora_temperature_weight) //  [0,10)
+				* (0.f * grass + 1.f * shrub + 3.f * broadleaf + 5.f * conifer);
 
-		float primary_production = temperture_weighting * (0.5 * grass + 0.4 * shrub + 0.3 * broadleaf + 0.2 * conifer);
-		float wood_production = temperture_weighting * (0.3 * conifer + 0.2 * broadleaf + 0.1 * shrub);
-
-		// weight net production by 'biomass' assimilation efficiency
-		// some of assimilation efficiency goes towards structural material: timber
-
-		// check for marine resources
-		float marine_production = 0.f;
-
-		if (state.tile_get_has_marsh(tile_id)) {
-			marine_production += 0.5f;
-		}
-		if (state.tile_get_has_river(tile_id)) {
-			marine_production += 0.5f;
-		}
-
-		for (uint32_t i = 1; i <= 4; i++) {
-			auto neighbor = dcon::tile_id{ (dcon::tile_id::value_base_t)(get_neighbor(tile_id.index() + 1, i, world_size) - 1)};
-			if (!state.tile_get_is_land(neighbor)) {
-				marine_production += 0.25f;
+			//check for marine resources [0,10]
+			// reduce land availalbe to vegetation
+			if (state.tile_get_has_marsh(tile_id)) {
+				marine_production += 2.0f;
+				edible_production *= 0.8f;
 			}
-		}
-
-
-		if (primary_production > 0) {
-			// determine animal energy from eating folliage and reduce from plant output
-			game += 0.125 * (primary_production + wood_production);
-			primary_production = primary_production * 0.875;
-			wood_production = wood_production * 0.875;
-
-			// determine plant food from remaining pp
-			auto fruit_plants = shrub + broadleaf;
-			auto seed_plants = conifer + grass;
-			auto flora_total = fruit_plants + seed_plants;
-			if (flora_total > 0.f) {
-				auto fruit_percentage = 0.5f / (1 + expf(-10.f * (fruit_plants / flora_total - 0.5f)));
-				fruit += primary_production * (0.25f + fruit_percentage);
-				seeds += primary_production * (0.75f - fruit_percentage);
+			if (state.tile_get_has_river(tile_id)) {
+				marine_production += 2.0f;
+				edible_production *= 0.8f;
 			}
-		}
-		if (marine_production > 0) {
-			// determine animal energy from marine output
-			game += 0.125f * marine_production;
-			marine_production = marine_production * 0.875f;
-			// determine marine food spread from climate
-			auto temperature_weight = 0.75f / (1.f + expf(-0.125f*(effective_temperature - 16.f)));
-			shell += marine_production * (0.25f + temperature_weight * 0.25f);
-			fish += marine_production * (0.75f - temperature_weight * 0.25f);
+			for (uint32_t i = 1; i <= 4; i++) {
+				auto neighbor = dcon::tile_id{ (dcon::tile_id::value_base_t)(get_neighbor(tile_id.index() + 1, i, world_size) - 1)};
+				// gatherable seafood from neighboring tiles
+				if (!state.tile_get_is_land(neighbor)) {
+					marine_production += 1.0f;
+					edible_production *= 0.9f;
+				}
+				if (state.tile_get_has_river(neighbor)) {
+					marine_production += 0.5f;
+					edible_production *= 0.95f;
+				}
+			}
+
+			// animal as primary, secondary, and tertiary consumers [0,10)
+			game_production =  0.3f * edible_production + 0.2f * timber_production + 0.5f * marine_production;
+
+		} else {
+			// if no plants give fish
+			marine_production = 10.f;// * (0.25f + fauna_temperature_weight); // (6,18)
 		}
 
-		wood += wood_production;
+		set_tile_forage_data(tile_id, 1, base_types::FORAGE_RESOURCE::WATER, hydration);
+		set_tile_forage_data(tile_id, 2, base_types::FORAGE_RESOURCE::PLANT, edible_production);
+		set_tile_forage_data(tile_id, 3, base_types::FORAGE_RESOURCE::GAME, game_production);
+		set_tile_forage_data(tile_id, 4, base_types::FORAGE_RESOURCE::FISH, marine_production);
+		set_tile_forage_data(tile_id, 5, base_types::FORAGE_RESOURCE::WOOD, timber_production);
+		auto net_production = edible_production + game_production + marine_production;
+		state.tile_set_foragers_limit(tile_id, net_production);
+
 	});
-
-	auto net_production = fruit + seeds + shell + fish + game;
-	// determine energy available in decomposers
-	auto fungi = net_production * 0.125f;
-
-	set_province_data(province, 1, base_types::FORAGE_RESOURCE::WATER, water_raw_id, 8, hydration);
-	set_province_data(province, 2, base_types::FORAGE_RESOURCE::FRUIT, berries_raw_id, 1.6, fruit);
-	set_province_data(province, 3, base_types::FORAGE_RESOURCE::GRAIN, grain_raw_id, 2, seeds);
-	set_province_data(province, 4, base_types::FORAGE_RESOURCE::WOOD, bark_raw_id, 1.25, wood);
-	set_province_data(province, 5, base_types::FORAGE_RESOURCE::WOOD, timber_raw_id, 0.25, wood);
-	set_province_data(province, 6, base_types::FORAGE_RESOURCE::GAME, meat_raw_id, 1, game);
-	set_province_data(province, 7, base_types::FORAGE_RESOURCE::GAME, hide_raw_id, 0.25, game);
-	set_province_data(province, 8, base_types::FORAGE_RESOURCE::FUNGI, mushroom_raw_id, 1.25, fungi);
-	set_province_data(province, 9, base_types::FORAGE_RESOURCE::SHELL, shellfish_raw_id, 1, shell);
-	set_province_data(province, 10, base_types::FORAGE_RESOURCE::SHELL, seaweed_raw_id, 2, shell);
-	set_province_data(province, 11, base_types::FORAGE_RESOURCE::FISH, fish_raw_id, 1.25, fish);
-	state.province_set_foragers_limit(province, net_production);
 }
 
 struct image_coord {

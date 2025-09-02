@@ -4,3 +4,7 @@ inventory_sold_last_tick float[trade_good_id]
 inventory_bought_last_tick float[trade_good_id]
 inventory_demanded_last_tick float[trade_good_id]
 balance_last_tick float
+throughput_boosts float[production_method_id]
+input_efficiency_boosts float[production_method_id]
+local_efficiency_boosts float[production_method_id]
+output_efficiency_boosts float[production_method_id]

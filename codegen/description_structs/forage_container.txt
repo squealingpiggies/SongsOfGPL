@@ -1,4 +1,3 @@
-output_good trade_good_id
-output_value float
+resource FORAGE_RESOURCE
+limit float
 amount float
-forage FORAGE_RESOURCE

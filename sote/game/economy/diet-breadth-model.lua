@@ -45,43 +45,17 @@ function dbm.foraging_efficiency(carrying_capacity, foragers)
 end
 
 ---@param tile_id tile_id
+---@return number hydration
 ---@return number primary_production
+---@return number game_production
 ---@return number marine_production
 ---@return number wood_production
----@return number effective_temperature
 function dbm.total_production(tile_id)
-	local  _, warmest, _, coldest = tile.get_climate_data(tile_id)
-	if coldest > warmest then
-		---@type number, number
-		warmest, coldest = coldest, warmest
-	end
-
-	local grass = DATA.tile_get_grass(tile_id)
-	local shrub = DATA.tile_get_shrub(tile_id)
-	local broadleaf = DATA.tile_get_broadleaf(tile_id)
-	local conifer = DATA.tile_get_conifer(tile_id)
-
-
-	local effective_temperature = (18 * warmest - 10 * coldest) / (warmest - coldest + 8)
-	local temperture_weighting =  1 / (1 + math.exp(-0.2 * (effective_temperature - 10)))
-	-- weight net production by 'biomass' assimilation efficiency
-	local primary_production = temperture_weighting * (0.5 * grass + 0.4 * shrub + 0.3 * broadleaf + 0.2 * conifer)
-	-- some of assimilation efficiency goes towards structural material: timber
-	local wood_production = temperture_weighting * (0.3 * conifer + 0.2 * broadleaf + 0.1 * shrub)
-	-- check for marine resources
-	local marine_production = 0
-	if DATA.tile_get_has_marsh(tile_id) then
-		marine_production = marine_production + 0.5
-	end
-	if DATA.tile_get_has_river(tile_id) then
-		marine_production = marine_production + 0.5
-	end
-	for i = 1, 4 do
-		if not DATA.tile_get_is_land(tile.get_neighbor(tile_id, i)) then
-			marine_production = marine_production + 0.25
-		end
-	end
-	return primary_production, marine_production, wood_production, effective_temperature
+	return DATA.tile_get_foragers_limit(tile_id,FORAGE_RESOURCE.WATER),
+		DATA.tile_get_foragers_limit(tile_id,FORAGE_RESOURCE.PLANT),
+		DATA.tile_get_foragers_limit(tile_id,FORAGE_RESOURCE.GAME),
+		DATA.tile_get_foragers_limit(tile_id,FORAGE_RESOURCE.FISH),
+		DATA.tile_get_foragers_limit(tile_id,FORAGE_RESOURCE.WOOD)
 end
 
 ---calculate the net primary production (NPP) of a tile, sums to CC
@@ -171,25 +145,6 @@ function dbm.total_foraging_amounts(province)
 		dbm.accumulate_foraging_production
 	)
 	return accumulate
-end
-
----@param province Province
-function dbm.update_foraging_targets(province)
-	DCON.update_foraging_data(
-		province,
-		retrieve_good("water"),
-		retrieve_good("berries"),
-		retrieve_good("grain"),
-		retrieve_good("bark"),
-		retrieve_good("timber"),
-		retrieve_good("meat"),
-		retrieve_good("hide"),
-		retrieve_good("mushrooms"),
-		retrieve_good("shellfish"),
-		retrieve_good("seaweed"),
-		retrieve_good("fish"),
-		WORLD.world_size
-	)
 end
 
 ---@alias NeedUseCaseAmount {need: NEED, use_case: use_case_id, amount: number}

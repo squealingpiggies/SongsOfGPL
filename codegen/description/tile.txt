@@ -42,3 +42,12 @@ pathfinding_index uint32_t
 resource resource_id
 bedrock bedrock_id
 biome biome_id
+foragers float Keeps track of the number of foragers in the province. Used to calculate yields of independent foraging.
+foragers_water float amount foraged by pops and characters
+foragers_limit float amount of calories foraged by pops and characters
+forage_efficiency float
+foragers_targets forage_container[5]
+infrastructure_needed float
+infrastructure float
+infrastructure_investment float
+infrastructure_efficiency float
