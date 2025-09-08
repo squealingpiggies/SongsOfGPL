@@ -409,18 +409,24 @@ function prov.Province.take_away_pop(province, pop)
 end
 
 
----@param province province_id
+---@param estate estate_id
 ---@param researched_technology Technology
-function prov.Province.research(province, researched_technology)
-	DATA.province_set_technologies_present(province, researched_technology, 1)
-	DATA.province_set_technologies_researchable(province, researched_technology, 0)
+function prov.Province.research(estate, researched_technology)
+	DATA.estate_set_technologies_present(estate, researched_technology, 1)
+	DATA.estate_set_technologies_researchable(estate, researched_technology, 0)
 
 	-- print("unlock " .. DATA.technology_get_name(researched_technology))
+	local tile_id = ESTATE_TILE(estate)
+
+	local estate_races_present = {}
+	DATA.for_each_pop_location_from_estate(estate, function (item)
+		estate_races_present[DATA.pop_get_race(item)] = true
+	end)
 
 	--- update technologies which could be potentially unlocked
 	for _, t in pairs(DATA.get_technology_unlock_from_origin(researched_technology)) do
 		local potential_technology = DATA.technology_unlock_get_unlocked(t)
-		if DATA.province_get_technologies_present(province, potential_technology) == 1 then
+		if DATA.estate_get_technologies_present(estate, potential_technology) == 1 then
 			goto continue
 		end
 
@@ -439,7 +445,7 @@ function prov.Province.research(province, researched_technology)
 			has_required_resource = false
 
 			for j = 1, MAX_RESOURCES_IN_PROVINCE_INDEX - 1 do
-				local resource = DATA.province_get_local_resources_resource(province, j)
+				local resource = DATA.tile_get_resource(tile_id)
 				if resource == INVALID_ID then
 					break
 				end
@@ -466,9 +472,7 @@ function prov.Province.research(province, researched_technology)
 			end
 			has_required_race = false
 
-			local realm = DATA.realm_provinces_get_realm(DATA.get_realm_provinces_from_province(province))
-
-			if DATA.realm_get_primary_race(realm) == required_race then
+			if estate_races_present[required_race] then
 				has_required_race = true
 			end
 
@@ -488,9 +492,7 @@ function prov.Province.research(province, researched_technology)
 			end
 			has_required_biome = false
 
-			local center = DATA.province_get_center(province)
-
-			if DATA.tile_get_biome(center) == required_biome then
+			if DATA.tile_get_biome(tile_id) == required_biome then
 				has_required_biome = true
 			end
 
@@ -501,12 +503,11 @@ function prov.Province.research(province, researched_technology)
 
 		ok = ok and has_required_biome
 
-
-		if #DATA.get_technology_unlock_from_unlocked(potential_technology) > 0 then
+		--if #DATA.get_technology_unlock_from_unlocked(potential_technology) > 0 then
 			local new_ok = true
 			for _, te in pairs(DATA.get_technology_unlock_from_unlocked(potential_technology)) do
 				local required_tech = DATA.technology_unlock_get_origin(te)
-				if DATA.province_get_technologies_present(province, required_tech) == 1 then
+				if DATA.estate_get_technologies_present(estate, required_tech) == 1 then
 					-- nothing to do, tech present
 				else
 					-- tech missing, this tech cannot be unlocked...
@@ -517,12 +518,12 @@ function prov.Province.research(province, researched_technology)
 			if not new_ok then
 				ok = false
 			end
-		end
+		--end
 
 		-- print(ok)
 
 		if ok then
-			DATA.province_set_technologies_researchable(province, potential_technology, 1)
+			DATA.estate_set_technologies_researchable(estate, potential_technology, 1)
 		end
 
 		::continue::
@@ -543,7 +544,7 @@ function prov.Province.research(province, researched_technology)
 
 			ok = false
 
-			if DATA.tile_get_biome(DATA.province_get_center(province)) == required_biome then
+			if DATA.tile_get_biome(DATA.province_get_center(tile_id)) == required_biome then
 				ok = true
 				break
 			end
@@ -559,16 +560,13 @@ function prov.Province.research(province, researched_technology)
 			end
 			has_required_resource = false
 
-			for j = 1, MAX_RESOURCES_IN_PROVINCE_INDEX - 1 do
-				local resource = DATA.province_get_local_resources_resource(province, j)
-				if resource == INVALID_ID then
-					break
-				end
+			local resource = DATA.tile_get_resource(tile_id)
+			if resource == INVALID_ID then
+				break
+			end
 
-				if resource == required_resource then
-					has_required_resource = true
-					break
-				end
+			if resource == required_resource then
+				has_required_resource = true
 			end
 
 			if has_required_resource then
@@ -579,27 +577,27 @@ function prov.Province.research(province, researched_technology)
 		ok = has_required_resource and ok
 
 		if ok then
-			DATA.province_set_buildable_buildings(province, building_type, 1)
+			DATA.estate_set_buildable_buildings(estate, building_type, 1)
 		end
 	end
-
+--[[
 	for _, unit_id in ipairs(DATA.get_technology_unit_from_technology(researched_technology)) do
 		local unit_type = DATA.technology_unit_get_unlocked(unit_id)
 		DATA.province_set_unit_types(province, unit_type, 1)
 	end
-
 	DATA.for_each_production_method(function (i)
 		DATA.province_inc_throughput_boosts(province, i, DATA.technology_get_throughput_boosts(researched_technology, i))
 		DATA.province_inc_input_efficiency_boosts(province, i, DATA.technology_get_input_efficiency_boosts(researched_technology, i))
 		DATA.province_inc_output_efficiency_boosts(province, i, DATA.technology_get_output_efficiency_boosts(researched_technology, i))
 	end)
-
-	local realm = prov.Province.realm(province)
+--]]
+	local realm = PROVINCE_REALM(TILE_PROVINCE(tile_id))
 	if WORLD:does_player_see_realm_news(realm) then
 		WORLD:emit_notification("Technology unlocked: " .. DATA.technology_get_name(researched_technology))
 	end
 end
 
+--TODO fix before implementing
 ---Forget technology
 ---@param province province_id
 ---@param technology Technology
@@ -725,12 +723,18 @@ end
 function prov.Province.get_dominant_culture(province)
 	---@type table<culture_id, number>
 	local e = {}
-	for _, p in pairs(DATA.get_pop_location_from_location(province)) do
-		local pop_id = DATA.pop_location_get_pop(p)
-		local culture = DATA.pop_get_culture(pop_id)
-		local old = e[culture] or 0
-		e[culture] = old + 1
-	end
+	DATA.for_each_tile_province_membership_from_province(province, function (membership)
+		local tile = DATA.tile_province_membership_get_tile(membership)
+		DATA.for_each_estate_location_from_tile(tile, function (location)
+			local estate = DATA.estate_location_get_estate(location)
+			DATA.for_each_pop_location_from_estate(estate,function (item)
+				local pop_id = DATA.pop_location_get_pop(item)
+				local culture = DATA.pop_get_culture(pop_id)
+				local old = e[culture] or 0
+				e[culture] = old + 1
+			end)
+		end)
+	end)
 	local best = nil
 	local max = 0
 	for k, v in pairs(e) do
@@ -747,12 +751,18 @@ end
 function prov.Province.get_dominant_faith(province)
 	---@type table<faith_id, number>
 	local e = {}
-	for _, p in pairs(DATA.get_pop_location_from_location(province)) do
-		local pop_id = DATA.pop_location_get_pop(p)
-		local faith = DATA.pop_get_faith(pop_id)
-		local old = e[faith] or 0
-		e[faith] = old + 1
-	end
+	DATA.for_each_tile_province_membership_from_province(province, function (membership)
+		local tile = DATA.tile_province_membership_get_tile(membership)
+		DATA.for_each_estate_location_from_tile(tile, function (location)
+			local estate = DATA.estate_location_get_estate(location)
+			DATA.for_each_pop_location_from_estate(estate,function (item)
+				local pop_id = DATA.pop_location_get_pop(item)
+				local faith = DATA.pop_get_faith(pop_id)
+				local old = e[faith] or 0
+				e[faith] = old + 1
+			end)
+		end)
+	end)
 	local best = nil
 	local max = 0
 	for k, v in pairs(e) do
@@ -769,13 +779,18 @@ end
 function prov.Province.get_dominant_race(province)
 	---@type table<race_id, number>
 	local e = {}
-	for _, p in pairs(DATA.get_pop_location_from_location(province)) do
-		local pop_id = DATA.pop_location_get_pop(p)
-		local race = DATA.pop_get_race(pop_id)
-
-		local old = e[race] or 0
-		e[race] = old + 1
-	end
+	DATA.for_each_tile_province_membership_from_province(province, function (membership)
+		local tile = DATA.tile_province_membership_get_tile(membership)
+		DATA.for_each_estate_location_from_tile(tile, function (location)
+			local estate = DATA.estate_location_get_estate(location)
+			DATA.for_each_pop_location_from_estate(estate,function (item)
+				local pop_id = DATA.pop_location_get_pop(item)
+				local race = DATA.pop_get_race(pop_id)
+				local old = e[race] or 0
+				e[race] = old + 1
+			end)
+		end)
+	end)
 	local best = INVALID_ID
 	local max = 0
 	for k, v in pairs(e) do

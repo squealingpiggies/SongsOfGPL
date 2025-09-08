@@ -35,9 +35,6 @@ local ffi = require("ffi")
 ---@field size number 
 ---@field movement_cost number 
 ---@field center tile_id The tile which contains this province's settlement, if there is any.
----@field technologies_present table<technology_id, number> 
----@field technologies_researchable table<technology_id, number> 
----@field buildable_buildings table<building_type_id, number> 
 ---@field local_production table<trade_good_id, number> 
 ---@field temp_buffer_0 table<trade_good_id, number> 
 ---@field local_consumption table<trade_good_id, number> 
@@ -82,15 +79,6 @@ void dcon_province_set_movement_cost(int32_t, float);
 float dcon_province_get_movement_cost(int32_t);
 void dcon_province_set_center(int32_t, int32_t);
 int32_t dcon_province_get_center(int32_t);
-void dcon_province_resize_technologies_present(uint32_t);
-void dcon_province_set_technologies_present(int32_t, int32_t, uint8_t);
-uint8_t dcon_province_get_technologies_present(int32_t, int32_t);
-void dcon_province_resize_technologies_researchable(uint32_t);
-void dcon_province_set_technologies_researchable(int32_t, int32_t, uint8_t);
-uint8_t dcon_province_get_technologies_researchable(int32_t, int32_t);
-void dcon_province_resize_buildable_buildings(uint32_t);
-void dcon_province_set_buildable_buildings(int32_t, int32_t, uint8_t);
-uint8_t dcon_province_get_buildable_buildings(int32_t, int32_t);
 void dcon_province_resize_local_production(uint32_t);
 void dcon_province_set_local_production(int32_t, int32_t, float);
 float dcon_province_get_local_production(int32_t, int32_t);
@@ -172,9 +160,6 @@ DATA.province_name= {}
 ---province: LUA bindings---
 
 DATA.province_size = 20000
-DCON.dcon_province_resize_technologies_present(401)
-DCON.dcon_province_resize_technologies_researchable(401)
-DCON.dcon_province_resize_buildable_buildings(251)
 DCON.dcon_province_resize_local_production(101)
 DCON.dcon_province_resize_temp_buffer_0(101)
 DCON.dcon_province_resize_local_consumption(101)
@@ -356,69 +341,6 @@ end
 ---@param value tile_id valid tile_id
 function DATA.province_set_center(province_id, value)
     DCON.dcon_province_set_center(province_id - 1, value - 1)
-end
----@param province_id province_id valid province id
----@param index technology_id valid
----@return number technologies_present 
-function DATA.province_get_technologies_present(province_id, index)
-    assert(index ~= 0)
-    return DCON.dcon_province_get_technologies_present(province_id - 1, index - 1)
-end
----@param province_id province_id valid province id
----@param index technology_id valid index
----@param value number valid number
-function DATA.province_set_technologies_present(province_id, index, value)
-    DCON.dcon_province_set_technologies_present(province_id - 1, index - 1, value)
-end
----@param province_id province_id valid province id
----@param index technology_id valid index
----@param value number valid number
-function DATA.province_inc_technologies_present(province_id, index, value)
-    ---@type number
-    local current = DCON.dcon_province_get_technologies_present(province_id - 1, index - 1)
-    DCON.dcon_province_set_technologies_present(province_id - 1, index - 1, current + value)
-end
----@param province_id province_id valid province id
----@param index technology_id valid
----@return number technologies_researchable 
-function DATA.province_get_technologies_researchable(province_id, index)
-    assert(index ~= 0)
-    return DCON.dcon_province_get_technologies_researchable(province_id - 1, index - 1)
-end
----@param province_id province_id valid province id
----@param index technology_id valid index
----@param value number valid number
-function DATA.province_set_technologies_researchable(province_id, index, value)
-    DCON.dcon_province_set_technologies_researchable(province_id - 1, index - 1, value)
-end
----@param province_id province_id valid province id
----@param index technology_id valid index
----@param value number valid number
-function DATA.province_inc_technologies_researchable(province_id, index, value)
-    ---@type number
-    local current = DCON.dcon_province_get_technologies_researchable(province_id - 1, index - 1)
-    DCON.dcon_province_set_technologies_researchable(province_id - 1, index - 1, current + value)
-end
----@param province_id province_id valid province id
----@param index building_type_id valid
----@return number buildable_buildings 
-function DATA.province_get_buildable_buildings(province_id, index)
-    assert(index ~= 0)
-    return DCON.dcon_province_get_buildable_buildings(province_id - 1, index - 1)
-end
----@param province_id province_id valid province id
----@param index building_type_id valid index
----@param value number valid number
-function DATA.province_set_buildable_buildings(province_id, index, value)
-    DCON.dcon_province_set_buildable_buildings(province_id - 1, index - 1, value)
-end
----@param province_id province_id valid province id
----@param index building_type_id valid index
----@param value number valid number
-function DATA.province_inc_buildable_buildings(province_id, index, value)
-    ---@type number
-    local current = DCON.dcon_province_get_buildable_buildings(province_id - 1, index - 1)
-    DCON.dcon_province_set_buildable_buildings(province_id - 1, index - 1, current + value)
 end
 ---@param province_id province_id valid province id
 ---@param index trade_good_id valid

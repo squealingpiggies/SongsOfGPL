@@ -239,7 +239,8 @@ function ll.load()
 		},
 		male_infrastructure_needs = largest_size,
 		carrying_capacity_weight = largest_size,
-		requires_large_river = true
+		requires_large_river = true,
+		requires_large_forest = true
 	}
 
 	---@type PortraitDescription
@@ -370,8 +371,8 @@ function ll.load()
 		middle_age = 30,
 		elder_age = 50,
 		max_age = 65,
-		minimum_comfortable_temperature = 5,
-		minimum_absolute_temperature = -10,
+		minimum_comfortable_temperature = 0,
+		minimum_absolute_temperature = -15,
 		fecundity = 1.1,
 		spotting = 1.0,
 		visibility = 1.25,
@@ -440,7 +441,6 @@ function ll.load()
 		},
 		male_infrastructure_needs = medium_size,
 		carrying_capacity_weight = large_size,
-		requires_large_forest = true,
 	}
 
 	---@type PortraitDescription

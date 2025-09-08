@@ -62,7 +62,7 @@ function d.load()
 		required_resource = {},
 		required_race = {},
 		throughput_boosts = {
-			[prod("blanks-knapping")] = 0.1,
+			[prod("blanks-knapping")] = 1.1,
 		},
 		input_efficiency_boosts = {
 			[prod("blanks-knapping")] = 0.75,
@@ -158,9 +158,9 @@ function d.load()
 		},
 		unlocked_by = { tec("paleolithic-knowledge") },
 		throughput_boosts = {
-			[prod("gathering-0")] = 0.15,
-			[prod("gathering-1")] = 0.3,
-			[prod("gathering-2")] = 0.6
+			[prod("gathering-0")] = 1.10,
+			[prod("gathering-1")] = 1.10,
+			[prod("gathering-2")] = 1.10
 		},
 		research_cost = 0.15,
 		input_efficiency_boosts = {},
@@ -262,8 +262,8 @@ function d.load()
 		unlocked_by = { tec("basic-fermentation"), },
 		research_cost = 1,
 		throughput_boosts = {
-			[prod("brewing-grain")] = 0.15,
-			[prod("brewing-fruit")] = 0.15
+			[prod("brewing-grain")] = 1.15,
+			[prod("brewing-fruit")] = 1.15
 		},
 		required_biome = {},
 		required_resource = {},

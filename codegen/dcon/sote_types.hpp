@@ -190,6 +190,7 @@ enum class LAW_BUILDING : uint8_t {
         FORAGE_RESOURCE resource;
         float limit;
         float amount;
+        float efficiency;
     };
 
     struct resource_location {

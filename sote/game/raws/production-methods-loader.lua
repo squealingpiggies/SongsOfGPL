@@ -21,15 +21,12 @@ function d.load()
 		outputs = { [retrieve_good("healthcare")] = 1 },
 		job = job("shamans"),
 		job_type = JOBTYPE.CLERK,
-		foraging = true,
 		self_sourcing_fraction = 0.05,
 		nature_yield_dependence = 1,
 	}
 
-	-- FORAGING SPECIALIZATION
-	-- using tools and tools-like to increase foraging output?
-
-	-- 1.5x effciciency as foraging water
+	-- FORAGING METHODS
+	-- WATER
 	ProductionMethod:new {
 		name = "water-carrier",
 		description = "water carrier",
@@ -41,104 +38,138 @@ function d.load()
 		outputs = { [retrieve_good("water")] = 3 },
 		job = job("water-carriers"),
 		job_type = JOBTYPE.HAULING,
-		hydration = true,
+		foraging = FORAGE_RESOURCE.WATER,
 		self_sourcing_fraction = 0.05,
 	}
-	-- same effciciency as foraging berries, grain and timber at 2:2:1 ratios
+	-- PLANT
 	ProductionMethod:new {
 		name = "gathering-0",
-		description = "gathering",
+		description = "gathering-fruit",
 		icon = "berries-bowl.png",
 		r = 0.1,
 		g = 1,
 		b = 0.1,
-		inputs = {},
-		outputs = { [retrieve_good("berries")] = 0.6, [retrieve_good("grain")] = 0.75, [retrieve_good("timber")] = 0.25 },
+		inputs = {[retrieve_use_case("containers")] = 0.125},
+		outputs = { [retrieve_good("berries")] = 1 },
 		job = job("gatherers"),
 		job_type = JOBTYPE.FORAGER,
 		self_sourcing_fraction = 0.05,
-		foraging = true,
-		nature_yield_dependence = 1,
+		foraging = FORAGE_RESOURCE.PLANT,
 	}
-	-- 1.5x effciciency of foraging berries, grain and timber at 2:2:1 ratios
 	ProductionMethod:new {
 		name = "gathering-1",
-		description = "gathering",
-		icon = "fruit-bowl.png",
+		description = "gathering-tubers",
+		icon = "potato.png",
 		r = 0.1,
 		g = 1,
 		b = 0.1,
 		inputs = { [retrieve_use_case("tools-like")] = 0.125 },
-		outputs = { [retrieve_good("berries")] = 0.9, [retrieve_good("grain")] = 1.125, [retrieve_good("timber")] = 0.375 },
+		outputs = { [retrieve_good("tubers")] = 1 },
 		job = job("gatherers"),
-		job_type = JOBTYPE.FORAGER,
+		job_type = JOBTYPE.HAULING,
 		self_sourcing_fraction = 0.05,
-		foraging = true,
-		nature_yield_dependence = 1,
+		foraging = FORAGE_RESOURCE.PLANT,
 	}
-	-- 2x effciciency of foraging berries, grain and timber at 2:2:1 ratios
 	ProductionMethod:new {
 		name = "gathering-2",
-		description = "gathering",
-		icon = "basket.png",
+		description = "gathering-grain",
+		icon = "wheat.png",
 		r = 0.1,
 		g = 1,
 		b = 0.1,
-		inputs = { [retrieve_use_case("tools")] = 0.125 },
-		outputs = { [retrieve_good("berries")] = 1.2, [retrieve_good("grain")] = 1.5, [retrieve_good("timber")] = 0.5 },
+		inputs = {[retrieve_use_case("containers")] = 0.125},
+		outputs = { [retrieve_good("grain")] = 1 },
 		job = job("gatherers"),
 		job_type = JOBTYPE.FORAGER,
 		self_sourcing_fraction = 0.05,
-		foraging = true,
-		nature_yield_dependence = 1,
+		foraging = FORAGE_RESOURCE.PLANT,
 	}
-	-- same effciciency as foraging game
+	-- GAME
 	ProductionMethod:new {
 		name = "hunting-0",
-		description = "hunting",
-		icon = "meat.png",
-		r = 1,
-		g = 0.2,
-		b = 0.3,
-		inputs = {},
-		outputs = { [retrieve_good("meat")] = 1, [retrieve_good("hide")] = 0.25 },
-		job = job("hunters"),
-		job_type = JOBTYPE.HUNTING,
-		self_sourcing_fraction = 0.05,
-		foraging = true,
-		nature_yield_dependence = 1,
-	}
-	-- 1.5x effciciency of foraging game
-	ProductionMethod:new {
-		name = "hunting-1",
-		description = "hunting",
-		icon = "stone-spear.png",
-		r = 1,
-		g = 0.2,
-		b = 0.3,
-		inputs = { [retrieve_use_case("tools-like")] = 0.125 },
-		outputs = { [retrieve_good("meat")] = 1.5, [retrieve_good("hide")] = 0.375 },
-		job = job("hunters"),
-		job_type = JOBTYPE.HUNTING,
-		self_sourcing_fraction = 0.05,
-		foraging = true,
-		nature_yield_dependence = 1,
-	}
-	-- 2x effciciency of foraging game
-	ProductionMethod:new {
-		name = "hunting-2",
 		description = "hunting",
 		icon = "bow-arrow.png",
 		r = 1,
 		g = 0.2,
 		b = 0.3,
-		inputs = { [retrieve_use_case("tools")] = 0.125 },
-		outputs = { [retrieve_good("meat")] = 2, [retrieve_good("hide")] = 0.5 },
+		inputs = { [retrieve_use_case("structural-material")] = 0.125 },
+		outputs = { [retrieve_good("meat")] = 1, [retrieve_good("hide")] = 1 },
 		job = job("hunters"),
 		job_type = JOBTYPE.HUNTING,
 		self_sourcing_fraction = 0.05,
-		foraging = true,
-		nature_yield_dependence = 1,
+		foraging = FORAGE_RESOURCE.GAME,
+	}
+	ProductionMethod:new {
+		name = "hunting-1",
+		description = "trapping",
+		icon = "squirrel.png",
+		r = 1,
+		g = 0.2,
+		b = 0.3,
+		inputs = { [retrieve_use_case("tools-like")] = 0.125 },
+		outputs = { [retrieve_good("meat")] = 1, [retrieve_good("hide")] = 1 },
+		job = job("hunters"),
+		job_type = JOBTYPE.ARTISAN,
+		self_sourcing_fraction = 0.05,
+		foraging = FORAGE_RESOURCE.GAME,
+	}
+	-- FISH
+	ProductionMethod:new {
+		name = "fishing-0",
+		description = "shucking",
+		icon = "oyster.png",
+		r = 0.1,
+		g = 0.1,
+		b = 1,
+		inputs = { [retrieve_use_case("tools-like")] = 0.125 },
+		outputs = { [retrieve_good("shellfish")] = 1, [retrieve_good("shells")] = 1 },
+		job = job("fishers"),
+		job_type = JOBTYPE.LABOURER,
+		self_sourcing_fraction = 0.05,
+		foraging = FORAGE_RESOURCE.FISH,
+	}
+	ProductionMethod:new {
+		name = "fishing-1",
+		description = "spear-fishing",
+		icon = "stone-spear.png",
+		r = 0.1,
+		g = 0.1,
+		b = 1,
+		inputs = { [retrieve_use_case("tools-like")] = 0.125 },
+		outputs = { [retrieve_good("fish")] = 1 },
+		job = job("fishers"),
+		job_type = JOBTYPE.HUNTING,
+		self_sourcing_fraction = 0.05,
+		foraging = FORAGE_RESOURCE.FISH,
+	}
+	-- WOOD
+	ProductionMethod:new {
+		name = "harvest-0",
+		description = "harvest-timber",
+		icon = "wood-pile.png",
+		r = 1,
+		g = 0.2,
+		b = 0.3,
+		inputs = { [retrieve_use_case("tools-like")] = 0.125 },
+		outputs = { [retrieve_good("timber")] = 1 },
+		job = job("woodcutters"),
+		job_type = JOBTYPE.LABOURER,
+		self_sourcing_fraction = 0.05,
+		foraging = FORAGE_RESOURCE.WOOD,
+	}
+	ProductionMethod:new {
+		name = "harvest-1",
+		description = "harvest-bark",
+		icon = "birch-trees.png",
+		r = 1,
+		g = 0.2,
+		b = 0.3,
+		inputs = { [retrieve_use_case("tools-like")] = 0.125 },
+		outputs = { [retrieve_good("bark")] = 1 },
+		job = job("woodcutters"),
+		job_type = JOBTYPE.ARTISAN,
+		self_sourcing_fraction = 0.05,
+		foraging = FORAGE_RESOURCE.WOOD,
 	}
 
 	ProductionMethod:new {

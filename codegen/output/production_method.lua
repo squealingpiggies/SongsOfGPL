@@ -17,10 +17,9 @@ local ffi = require("ffi")
 ---@field b number 
 ---@field job_type JOBTYPE 
 ---@field job job_id 
----@field foraging boolean If true, worktime counts towards the foragers count
----@field hydration boolean If true, worktime counts towards the foragers_water count
+---@field foraging FORAGE_RESOURCE If not invalid, pulls from tile forage_resource
 ---@field nature_yield_dependence number How much does the local flora and fauna impact this buildings yield? Defaults to 0
----@field forest_dependence number Set to 1 if building consumes local forests
+---@field forest_dependence number Consumes local forests at this rate
 ---@field crop boolean If true, the building will periodically change its yield for a season.
 ---@field temperature_ideal_min number 
 ---@field temperature_ideal_max number 
@@ -43,10 +42,9 @@ local ffi = require("ffi")
 ---@field job job_id 
 ---@field inputs table<number, struct_use_case_container> 
 ---@field outputs table<number, struct_trade_good_container> 
----@field foraging boolean If true, worktime counts towards the foragers count
----@field hydration boolean If true, worktime counts towards the foragers_water count
+---@field foraging FORAGE_RESOURCE If not invalid, pulls from tile forage_resource
 ---@field nature_yield_dependence number How much does the local flora and fauna impact this buildings yield? Defaults to 0
----@field forest_dependence number Set to 1 if building consumes local forests
+---@field forest_dependence number Consumes local forests at this rate
 ---@field crop boolean If true, the building will periodically change its yield for a season.
 ---@field temperature_ideal_min number 
 ---@field temperature_ideal_max number 
@@ -70,10 +68,9 @@ local ffi = require("ffi")
 ---@field b number 
 ---@field job_type JOBTYPE 
 ---@field job job_id 
----@field foraging boolean? If true, worktime counts towards the foragers count
----@field hydration boolean? If true, worktime counts towards the foragers_water count
+---@field foraging FORAGE_RESOURCE? If not invalid, pulls from tile forage_resource
 ---@field nature_yield_dependence number? How much does the local flora and fauna impact this buildings yield? Defaults to 0
----@field forest_dependence number? Set to 1 if building consumes local forests
+---@field forest_dependence number? Consumes local forests at this rate
 ---@field crop boolean? If true, the building will periodically change its yield for a season.
 ---@field temperature_ideal_min number? 
 ---@field temperature_ideal_max number? 
@@ -91,8 +88,7 @@ local ffi = require("ffi")
 ---@param id production_method_id
 ---@param data production_method_id_data_blob_definition
 function DATA.setup_production_method(id, data)
-    DATA.production_method_set_foraging(id, false)
-    DATA.production_method_set_hydration(id, false)
+    DATA.production_method_set_foraging(id, 0)
     DATA.production_method_set_nature_yield_dependence(id, 0)
     DATA.production_method_set_forest_dependence(id, 0)
     DATA.production_method_set_crop(id, false)
@@ -118,9 +114,6 @@ function DATA.setup_production_method(id, data)
     DATA.production_method_set_job(id, data.job)
     if data.foraging ~= nil then
         DATA.production_method_set_foraging(id, data.foraging)
-    end
-    if data.hydration ~= nil then
-        DATA.production_method_set_hydration(id, data.hydration)
     end
     if data.nature_yield_dependence ~= nil then
         DATA.production_method_set_nature_yield_dependence(id, data.nature_yield_dependence)
@@ -184,10 +177,8 @@ void dcon_production_method_resize_inputs(uint32_t);
 use_case_container* dcon_production_method_get_inputs(int32_t, int32_t);
 void dcon_production_method_resize_outputs(uint32_t);
 trade_good_container* dcon_production_method_get_outputs(int32_t, int32_t);
-void dcon_production_method_set_foraging(int32_t, bool);
-bool dcon_production_method_get_foraging(int32_t);
-void dcon_production_method_set_hydration(int32_t, bool);
-bool dcon_production_method_get_hydration(int32_t);
+void dcon_production_method_set_foraging(int32_t, uint8_t);
+uint8_t dcon_production_method_get_foraging(int32_t);
 void dcon_production_method_set_nature_yield_dependence(int32_t, float);
 float dcon_production_method_get_nature_yield_dependence(int32_t);
 void dcon_production_method_set_forest_dependence(int32_t, float);
@@ -434,24 +425,14 @@ function DATA.production_method_inc_outputs_amount(production_method_id, index, 
     DCON.dcon_production_method_get_outputs(production_method_id - 1, index - 1)[0].amount = current + value
 end
 ---@param production_method_id production_method_id valid production_method id
----@return boolean foraging If true, worktime counts towards the foragers count
+---@return FORAGE_RESOURCE foraging If not invalid, pulls from tile forage_resource
 function DATA.production_method_get_foraging(production_method_id)
     return DCON.dcon_production_method_get_foraging(production_method_id - 1)
 end
 ---@param production_method_id production_method_id valid production_method id
----@param value boolean valid boolean
+---@param value FORAGE_RESOURCE valid FORAGE_RESOURCE
 function DATA.production_method_set_foraging(production_method_id, value)
     DCON.dcon_production_method_set_foraging(production_method_id - 1, value)
-end
----@param production_method_id production_method_id valid production_method id
----@return boolean hydration If true, worktime counts towards the foragers_water count
-function DATA.production_method_get_hydration(production_method_id)
-    return DCON.dcon_production_method_get_hydration(production_method_id - 1)
-end
----@param production_method_id production_method_id valid production_method id
----@param value boolean valid boolean
-function DATA.production_method_set_hydration(production_method_id, value)
-    DCON.dcon_production_method_set_hydration(production_method_id - 1, value)
 end
 ---@param production_method_id production_method_id valid production_method id
 ---@return number nature_yield_dependence How much does the local flora and fauna impact this buildings yield? Defaults to 0
@@ -471,7 +452,7 @@ function DATA.production_method_inc_nature_yield_dependence(production_method_id
     DCON.dcon_production_method_set_nature_yield_dependence(production_method_id - 1, current + value)
 end
 ---@param production_method_id production_method_id valid production_method id
----@return number forest_dependence Set to 1 if building consumes local forests
+---@return number forest_dependence Consumes local forests at this rate
 function DATA.production_method_get_forest_dependence(production_method_id)
     return DCON.dcon_production_method_get_forest_dependence(production_method_id - 1)
 end
@@ -713,7 +694,6 @@ local fat_production_method_id_metatable = {
         if (k == "job_type") then return DATA.production_method_get_job_type(t.id) end
         if (k == "job") then return DATA.production_method_get_job(t.id) end
         if (k == "foraging") then return DATA.production_method_get_foraging(t.id) end
-        if (k == "hydration") then return DATA.production_method_get_hydration(t.id) end
         if (k == "nature_yield_dependence") then return DATA.production_method_get_nature_yield_dependence(t.id) end
         if (k == "forest_dependence") then return DATA.production_method_get_forest_dependence(t.id) end
         if (k == "crop") then return DATA.production_method_get_crop(t.id) end
@@ -766,10 +746,6 @@ local fat_production_method_id_metatable = {
         end
         if (k == "foraging") then
             DATA.production_method_set_foraging(t.id, v)
-            return
-        end
-        if (k == "hydration") then
-            DATA.production_method_set_hydration(t.id, v)
             return
         end
         if (k == "nature_yield_dependence") then

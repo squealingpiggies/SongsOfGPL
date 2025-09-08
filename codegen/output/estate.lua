@@ -19,10 +19,9 @@ local ffi = require("ffi")
 ---@field inventory_bought_last_tick table<trade_good_id, number> 
 ---@field inventory_demanded_last_tick table<trade_good_id, number> 
 ---@field balance_last_tick number 
----@field throughput_boosts table<production_method_id, number> 
----@field input_efficiency_boosts table<production_method_id, number> 
----@field local_efficiency_boosts table<production_method_id, number> 
----@field output_efficiency_boosts table<production_method_id, number> 
+---@field technologies_present table<technology_id, number> 
+---@field technologies_researchable table<technology_id, number> 
+---@field buildable_buildings table<building_type_id, number> 
 
 
 ffi.cdef[[
@@ -42,18 +41,15 @@ void dcon_estate_set_inventory_demanded_last_tick(int32_t, int32_t, float);
 float dcon_estate_get_inventory_demanded_last_tick(int32_t, int32_t);
 void dcon_estate_set_balance_last_tick(int32_t, float);
 float dcon_estate_get_balance_last_tick(int32_t);
-void dcon_estate_resize_throughput_boosts(uint32_t);
-void dcon_estate_set_throughput_boosts(int32_t, int32_t, float);
-float dcon_estate_get_throughput_boosts(int32_t, int32_t);
-void dcon_estate_resize_input_efficiency_boosts(uint32_t);
-void dcon_estate_set_input_efficiency_boosts(int32_t, int32_t, float);
-float dcon_estate_get_input_efficiency_boosts(int32_t, int32_t);
-void dcon_estate_resize_local_efficiency_boosts(uint32_t);
-void dcon_estate_set_local_efficiency_boosts(int32_t, int32_t, float);
-float dcon_estate_get_local_efficiency_boosts(int32_t, int32_t);
-void dcon_estate_resize_output_efficiency_boosts(uint32_t);
-void dcon_estate_set_output_efficiency_boosts(int32_t, int32_t, float);
-float dcon_estate_get_output_efficiency_boosts(int32_t, int32_t);
+void dcon_estate_resize_technologies_present(uint32_t);
+void dcon_estate_set_technologies_present(int32_t, int32_t, uint8_t);
+uint8_t dcon_estate_get_technologies_present(int32_t, int32_t);
+void dcon_estate_resize_technologies_researchable(uint32_t);
+void dcon_estate_set_technologies_researchable(int32_t, int32_t, uint8_t);
+uint8_t dcon_estate_get_technologies_researchable(int32_t, int32_t);
+void dcon_estate_resize_buildable_buildings(uint32_t);
+void dcon_estate_set_buildable_buildings(int32_t, int32_t, uint8_t);
+uint8_t dcon_estate_get_buildable_buildings(int32_t, int32_t);
 void dcon_delete_estate(int32_t j);
 int32_t dcon_create_estate();
 bool dcon_estate_is_valid(int32_t);
@@ -70,10 +66,9 @@ DCON.dcon_estate_resize_inventory(101)
 DCON.dcon_estate_resize_inventory_sold_last_tick(101)
 DCON.dcon_estate_resize_inventory_bought_last_tick(101)
 DCON.dcon_estate_resize_inventory_demanded_last_tick(101)
-DCON.dcon_estate_resize_throughput_boosts(251)
-DCON.dcon_estate_resize_input_efficiency_boosts(251)
-DCON.dcon_estate_resize_local_efficiency_boosts(251)
-DCON.dcon_estate_resize_output_efficiency_boosts(251)
+DCON.dcon_estate_resize_technologies_present(401)
+DCON.dcon_estate_resize_technologies_researchable(401)
+DCON.dcon_estate_resize_buildable_buildings(251)
 ---@return estate_id
 function DATA.create_estate()
     ---@type estate_id
@@ -225,88 +220,67 @@ function DATA.estate_inc_balance_last_tick(estate_id, value)
     DCON.dcon_estate_set_balance_last_tick(estate_id - 1, current + value)
 end
 ---@param estate_id estate_id valid estate id
----@param index production_method_id valid
----@return number throughput_boosts 
-function DATA.estate_get_throughput_boosts(estate_id, index)
+---@param index technology_id valid
+---@return number technologies_present 
+function DATA.estate_get_technologies_present(estate_id, index)
     assert(index ~= 0)
-    return DCON.dcon_estate_get_throughput_boosts(estate_id - 1, index - 1)
+    return DCON.dcon_estate_get_technologies_present(estate_id - 1, index - 1)
 end
 ---@param estate_id estate_id valid estate id
----@param index production_method_id valid index
+---@param index technology_id valid index
 ---@param value number valid number
-function DATA.estate_set_throughput_boosts(estate_id, index, value)
-    DCON.dcon_estate_set_throughput_boosts(estate_id - 1, index - 1, value)
+function DATA.estate_set_technologies_present(estate_id, index, value)
+    DCON.dcon_estate_set_technologies_present(estate_id - 1, index - 1, value)
 end
 ---@param estate_id estate_id valid estate id
----@param index production_method_id valid index
+---@param index technology_id valid index
 ---@param value number valid number
-function DATA.estate_inc_throughput_boosts(estate_id, index, value)
+function DATA.estate_inc_technologies_present(estate_id, index, value)
     ---@type number
-    local current = DCON.dcon_estate_get_throughput_boosts(estate_id - 1, index - 1)
-    DCON.dcon_estate_set_throughput_boosts(estate_id - 1, index - 1, current + value)
+    local current = DCON.dcon_estate_get_technologies_present(estate_id - 1, index - 1)
+    DCON.dcon_estate_set_technologies_present(estate_id - 1, index - 1, current + value)
 end
 ---@param estate_id estate_id valid estate id
----@param index production_method_id valid
----@return number input_efficiency_boosts 
-function DATA.estate_get_input_efficiency_boosts(estate_id, index)
+---@param index technology_id valid
+---@return number technologies_researchable 
+function DATA.estate_get_technologies_researchable(estate_id, index)
     assert(index ~= 0)
-    return DCON.dcon_estate_get_input_efficiency_boosts(estate_id - 1, index - 1)
+    return DCON.dcon_estate_get_technologies_researchable(estate_id - 1, index - 1)
 end
 ---@param estate_id estate_id valid estate id
----@param index production_method_id valid index
+---@param index technology_id valid index
 ---@param value number valid number
-function DATA.estate_set_input_efficiency_boosts(estate_id, index, value)
-    DCON.dcon_estate_set_input_efficiency_boosts(estate_id - 1, index - 1, value)
+function DATA.estate_set_technologies_researchable(estate_id, index, value)
+    DCON.dcon_estate_set_technologies_researchable(estate_id - 1, index - 1, value)
 end
 ---@param estate_id estate_id valid estate id
----@param index production_method_id valid index
+---@param index technology_id valid index
 ---@param value number valid number
-function DATA.estate_inc_input_efficiency_boosts(estate_id, index, value)
+function DATA.estate_inc_technologies_researchable(estate_id, index, value)
     ---@type number
-    local current = DCON.dcon_estate_get_input_efficiency_boosts(estate_id - 1, index - 1)
-    DCON.dcon_estate_set_input_efficiency_boosts(estate_id - 1, index - 1, current + value)
+    local current = DCON.dcon_estate_get_technologies_researchable(estate_id - 1, index - 1)
+    DCON.dcon_estate_set_technologies_researchable(estate_id - 1, index - 1, current + value)
 end
 ---@param estate_id estate_id valid estate id
----@param index production_method_id valid
----@return number local_efficiency_boosts 
-function DATA.estate_get_local_efficiency_boosts(estate_id, index)
+---@param index building_type_id valid
+---@return number buildable_buildings 
+function DATA.estate_get_buildable_buildings(estate_id, index)
     assert(index ~= 0)
-    return DCON.dcon_estate_get_local_efficiency_boosts(estate_id - 1, index - 1)
+    return DCON.dcon_estate_get_buildable_buildings(estate_id - 1, index - 1)
 end
 ---@param estate_id estate_id valid estate id
----@param index production_method_id valid index
+---@param index building_type_id valid index
 ---@param value number valid number
-function DATA.estate_set_local_efficiency_boosts(estate_id, index, value)
-    DCON.dcon_estate_set_local_efficiency_boosts(estate_id - 1, index - 1, value)
+function DATA.estate_set_buildable_buildings(estate_id, index, value)
+    DCON.dcon_estate_set_buildable_buildings(estate_id - 1, index - 1, value)
 end
 ---@param estate_id estate_id valid estate id
----@param index production_method_id valid index
+---@param index building_type_id valid index
 ---@param value number valid number
-function DATA.estate_inc_local_efficiency_boosts(estate_id, index, value)
+function DATA.estate_inc_buildable_buildings(estate_id, index, value)
     ---@type number
-    local current = DCON.dcon_estate_get_local_efficiency_boosts(estate_id - 1, index - 1)
-    DCON.dcon_estate_set_local_efficiency_boosts(estate_id - 1, index - 1, current + value)
-end
----@param estate_id estate_id valid estate id
----@param index production_method_id valid
----@return number output_efficiency_boosts 
-function DATA.estate_get_output_efficiency_boosts(estate_id, index)
-    assert(index ~= 0)
-    return DCON.dcon_estate_get_output_efficiency_boosts(estate_id - 1, index - 1)
-end
----@param estate_id estate_id valid estate id
----@param index production_method_id valid index
----@param value number valid number
-function DATA.estate_set_output_efficiency_boosts(estate_id, index, value)
-    DCON.dcon_estate_set_output_efficiency_boosts(estate_id - 1, index - 1, value)
-end
----@param estate_id estate_id valid estate id
----@param index production_method_id valid index
----@param value number valid number
-function DATA.estate_inc_output_efficiency_boosts(estate_id, index, value)
-    ---@type number
-    local current = DCON.dcon_estate_get_output_efficiency_boosts(estate_id - 1, index - 1)
-    DCON.dcon_estate_set_output_efficiency_boosts(estate_id - 1, index - 1, current + value)
+    local current = DCON.dcon_estate_get_buildable_buildings(estate_id - 1, index - 1)
+    DCON.dcon_estate_set_buildable_buildings(estate_id - 1, index - 1, current + value)
 end
 
 local fat_estate_id_metatable = {

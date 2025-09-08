@@ -412,18 +412,6 @@ local function trade_widget(gam, tile_id, panel)
 		uit.NAME_MODE.ICON
 	)
 
-	local foraging_efficiency = dbm.foraging_efficiency(DATA.tile_get_foragers_limit(tile_id), DATA.tile_get_foragers(tile_id))
-	uit.generic_number_field(
-		"basket.png",
-		foraging_efficiency,
-		layout:next(unit * 3.5, unit * 1),
-		"There are currently the equivalent of " .. uit.to_fixed_point2(DATA.tile_get_foragers(tile_id))
-			.. " adult human foragers collecting food full-time, pulling "
-			.. uit.to_fixed_point2(DATA.tile_get_foragers(tile_id) / (DATA.tile_get_foragers_limit(tile_id) > 0 and DATA.tile_get_foragers_limit(tile_id) or 1) * 100).. "% of avaialable resources.",
-		uit.NUMBER_MODE.PERCENTAGE,
-		uit.NAME_MODE.ICON
-	)
-
 	local province_size = DATA.province_get_size(province_id)
 
 	for i = 1, MAX_RESOURCES_IN_PROVINCE_INDEX - 1 do
@@ -751,10 +739,13 @@ local function buildings_construction_tab(gam, tile_id, panel)
 	local amount = 0
 
 	DATA.for_each_building_type(function (item)
-		if DATA.province_get_buildable_buildings(province_id, item) == 1 then
-			table.insert(building_types, item)
-			amount = amount + 1
-		end
+		DATA.for_each_estate_location_from_tile(tile_id,function (estate_location)
+			local estate = DATA.estate_location_get_estate(estate_location)
+			if not building_types[item] and DATA.estate_get_buildable_buildings(estate, item) == 1 then
+				table.insert(building_types, item)
+				amount = amount + 1
+			end
+		end)
 	end)
 
 	re.building_construction_scrollbar = uit.scrollview(
@@ -937,22 +928,22 @@ local function technology_tab(gam, tile_id, panel)
 	local technologies = {}
 	local total = 0
 
-	DATA.for_each_technology(function (item)
-		if DATA.province_get_technologies_present(province, item) == 1 then
-			table.insert(technologies, item)
-			total = total + 1
-		end
-	end)
-
 	---@type technology_id[]
 	local technologies_potential = {}
 	local total_potential = 0
 
 	DATA.for_each_technology(function (item)
-		if DATA.province_get_technologies_researchable(province, item) == 1 then
-			table.insert(technologies_potential, item)
-			total_potential = total_potential + 1
-		end
+		DATA.for_each_estate_location_from_tile(tile_id, function (location)
+			local estate = DATA.estate_location_get_estate(location)
+			if DATA.estate_get_technologies_present(estate, item) == 1 then
+				table.insert(technologies, item)
+				total = total + 1
+			end
+			if DATA.estate_get_technologies_researchable(estate, item) == 1 then
+				table.insert(technologies_potential, item)
+				total_potential = total_potential + 1
+			end
+		end)
 	end)
 
 	uit.rows(

@@ -28,6 +28,14 @@ function d.load()
 		b = 0.3,
 	}
 	Job:new {
+		name = 'fishers',
+		icon = 'fish-hook.png',
+		description = 'fishers',
+		r = 1,
+		g = 0.3,
+		b = 0.3,
+	}
+	Job:new {
 		name = 'knappers',
 		icon = 'rock.png',
 		description = 'knappers',

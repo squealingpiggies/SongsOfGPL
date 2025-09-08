@@ -18,9 +18,9 @@ function d.load()
 		belongs_to_category = TRADE_GOOD_CATEGORY.GOOD,
 		decay = 0.01
 	}
-	add_use_case("berries", "calories", 1.25)
+	add_use_case("berries", "calories", 1)
 	add_use_case("berries", "fruit", 1)
-	add_use_case("berries", "tannin", 0.25)
+	add_use_case("berries", "tannin", 1)
 
 	TradeGood:new {
 		name = "grain",
@@ -34,8 +34,20 @@ function d.load()
 		decay = 0.2
 	}
 	add_use_case("grain", "calories", 1)
-	add_use_case("grain", "cambium", 0.5)
 	add_use_case("grain", "grain", 1)
+
+	TradeGood:new {
+		name = "tubers",
+		description = "tubers",
+		icon = "potato.png",
+		r = 180 / 255,
+		g = 146 / 255,
+		b = 113 / 255,
+		base_price = 1,
+		belongs_to_category = TRADE_GOOD_CATEGORY.GOOD,
+		decay = 0.2
+	}
+	add_use_case("tubers", "calories", 1)
 
 	TradeGood:new {
 		name = "mushrooms",
@@ -48,9 +60,9 @@ function d.load()
 		belongs_to_category = TRADE_GOOD_CATEGORY.GOOD,
 		decay = 0.2
 	}
-	add_use_case("mushrooms", "calories", 1.6)
-	add_use_case("mushrooms", "fruit", 0.4)
-	add_use_case("mushrooms", "meat", 0.4)
+	add_use_case("mushrooms", "calories", 1)
+	add_use_case("mushrooms", "fruit", 1)
+	add_use_case("mushrooms", "meat", 1)
 
 	TradeGood:new {
 		name = "shellfish",
@@ -63,8 +75,21 @@ function d.load()
 		belongs_to_category = TRADE_GOOD_CATEGORY.GOOD,
 		decay = 0.1
 	}
-	add_use_case("shellfish", "calories", 1)
-	add_use_case("shellfish", "meat", 0.5)
+	add_use_case("shellfish", "calories", 2)
+	add_use_case("shellfish", "meat", 1)
+
+	TradeGood:new {
+		name = "shells",
+		description = "shells",
+		icon = "oyster.png",
+		r = 0.62,
+		g = 0.56,
+		b = 0.48,
+		base_price = 1.5,
+		belongs_to_category = TRADE_GOOD_CATEGORY.GOOD,
+		decay = 0.1
+	}
+	add_use_case("shells", "tools-like", 0.4)
 
 	TradeGood:new {
 		name = "seaweed",
@@ -77,8 +102,7 @@ function d.load()
 		belongs_to_category = TRADE_GOOD_CATEGORY.GOOD,
 		decay = 0.1
 	}
-	add_use_case("seaweed", "calories", 0.5)
-	add_use_case("seaweed", "cambium", 1)
+	add_use_case("seaweed", "calories", 1)
 
 	TradeGood:new {
 		name = "fish",
@@ -91,8 +115,8 @@ function d.load()
 		belongs_to_category = TRADE_GOOD_CATEGORY.GOOD,
 		decay = 0.05
 	}
-	add_use_case("fish", "calories", 1.6)
-	add_use_case("fish", "meat", 0.8)
+	add_use_case("fish", "calories", 2)
+	add_use_case("fish", "meat", 1)
 
 	TradeGood:new {
 		name = "meat",
@@ -119,8 +143,8 @@ function d.load()
 		belongs_to_category = TRADE_GOOD_CATEGORY.GOOD,
 		decay = 0.4
 	}
-	add_use_case("hide", "clothes", 0.125)
-	add_use_case("hide", "containers", 0.25)
+	add_use_case("hide", "clothes", 0.25)
+	add_use_case("hide", "containers", 0.5)
 	add_use_case("hide", "hide", 1)
 
 	TradeGood:new {
@@ -134,10 +158,10 @@ function d.load()
 		belongs_to_category = TRADE_GOOD_CATEGORY.GOOD,
 		decay = 0.9
 	}
-	add_use_case("timber", "tools-like", 0.25)
+	add_use_case("timber", "tools-like", 0.4)
 	add_use_case("timber", "timber", 1)
 	add_use_case("timber", "tannin", 1)
-	add_use_case("timber", "fuel", 1)
+	add_use_case("timber", "fuel", 2)
 
 	TradeGood:new {
 		name = "bark",
@@ -150,9 +174,9 @@ function d.load()
 		belongs_to_category = TRADE_GOOD_CATEGORY.GOOD,
 		decay = 0.2
 	}
-	add_use_case("bark", "cambium", 2)
+	add_use_case("bark", "cambium", 1)
 	add_use_case("bark", "tannin", 2)
-	add_use_case("bark", "fuel", 0.5)
+	add_use_case("bark", "fuel", 1)
 
 	-- OTHER FOODS
 	TradeGood:new {
@@ -166,7 +190,7 @@ function d.load()
 		belongs_to_category = TRADE_GOOD_CATEGORY.GOOD,
 		decay = 0.99
 	}
-	add_use_case("honey", "calories", 1)
+	add_use_case("honey", "calories", 2)
 	add_use_case("honey", "mead-substrate", 1)
 
 	-- CRUCIAL SETTLEMENT SERVICES

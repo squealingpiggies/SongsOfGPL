@@ -1,10 +1,10 @@
 world_id uint32_t
-is_land bool
-is_fresh bool
-is_border bool
-is_coast bool
-has_river bool
-has_marsh bool
+is_land bool=false
+is_fresh bool=false
+is_border bool=false
+is_coast bool=false
+has_river bool=false
+has_marsh bool=false
 x float
 y float
 z float
@@ -42,10 +42,7 @@ pathfinding_index uint32_t
 resource resource_id
 bedrock bedrock_id
 biome biome_id
-foragers float Keeps track of the number of foragers in the province. Used to calculate yields of independent foraging.
-foragers_water float amount foraged by pops and characters
-foragers_limit float amount of calories foraged by pops and characters
-forage_efficiency float
+foragers_limit float combined plant game and marine foraging limits
 foragers_targets forage_container[5]
 infrastructure_needed float
 infrastructure float

@@ -53,10 +53,7 @@ local ffi = require("ffi")
 ---@field resource resource_id 
 ---@field bedrock bedrock_id 
 ---@field biome biome_id 
----@field foragers number Keeps track of the number of foragers in the province. Used to calculate yields of independent foraging.
----@field foragers_water number amount foraged by pops and characters
----@field foragers_limit number amount of calories foraged by pops and characters
----@field forage_efficiency number 
+---@field foragers_limit number combined plant game and marine foraging limits
 ---@field infrastructure_needed number 
 ---@field infrastructure number 
 ---@field infrastructure_investment number 
@@ -107,10 +104,7 @@ local ffi = require("ffi")
 ---@field resource resource_id 
 ---@field bedrock bedrock_id 
 ---@field biome biome_id 
----@field foragers number Keeps track of the number of foragers in the province. Used to calculate yields of independent foraging.
----@field foragers_water number amount foraged by pops and characters
----@field foragers_limit number amount of calories foraged by pops and characters
----@field forage_efficiency number 
+---@field foragers_limit number combined plant game and marine foraging limits
 ---@field foragers_targets table<number, struct_forage_container> 
 ---@field infrastructure_needed number 
 ---@field infrastructure number 
@@ -207,14 +201,8 @@ void dcon_tile_set_bedrock(int32_t, int32_t);
 int32_t dcon_tile_get_bedrock(int32_t);
 void dcon_tile_set_biome(int32_t, int32_t);
 int32_t dcon_tile_get_biome(int32_t);
-void dcon_tile_set_foragers(int32_t, float);
-float dcon_tile_get_foragers(int32_t);
-void dcon_tile_set_foragers_water(int32_t, float);
-float dcon_tile_get_foragers_water(int32_t);
 void dcon_tile_set_foragers_limit(int32_t, float);
 float dcon_tile_get_foragers_limit(int32_t);
-void dcon_tile_set_forage_efficiency(int32_t, float);
-float dcon_tile_get_forage_efficiency(int32_t);
 void dcon_tile_resize_foragers_targets(uint32_t);
 forage_container* dcon_tile_get_foragers_targets(int32_t, int32_t);
 void dcon_tile_set_infrastructure_needed(int32_t, float);
@@ -950,41 +938,7 @@ function DATA.tile_set_biome(tile_id, value)
     DCON.dcon_tile_set_biome(tile_id - 1, value - 1)
 end
 ---@param tile_id tile_id valid tile id
----@return number foragers Keeps track of the number of foragers in the province. Used to calculate yields of independent foraging.
-function DATA.tile_get_foragers(tile_id)
-    return DCON.dcon_tile_get_foragers(tile_id - 1)
-end
----@param tile_id tile_id valid tile id
----@param value number valid number
-function DATA.tile_set_foragers(tile_id, value)
-    DCON.dcon_tile_set_foragers(tile_id - 1, value)
-end
----@param tile_id tile_id valid tile id
----@param value number valid number
-function DATA.tile_inc_foragers(tile_id, value)
-    ---@type number
-    local current = DCON.dcon_tile_get_foragers(tile_id - 1)
-    DCON.dcon_tile_set_foragers(tile_id - 1, current + value)
-end
----@param tile_id tile_id valid tile id
----@return number foragers_water amount foraged by pops and characters
-function DATA.tile_get_foragers_water(tile_id)
-    return DCON.dcon_tile_get_foragers_water(tile_id - 1)
-end
----@param tile_id tile_id valid tile id
----@param value number valid number
-function DATA.tile_set_foragers_water(tile_id, value)
-    DCON.dcon_tile_set_foragers_water(tile_id - 1, value)
-end
----@param tile_id tile_id valid tile id
----@param value number valid number
-function DATA.tile_inc_foragers_water(tile_id, value)
-    ---@type number
-    local current = DCON.dcon_tile_get_foragers_water(tile_id - 1)
-    DCON.dcon_tile_set_foragers_water(tile_id - 1, current + value)
-end
----@param tile_id tile_id valid tile id
----@return number foragers_limit amount of calories foraged by pops and characters
+---@return number foragers_limit combined plant game and marine foraging limits
 function DATA.tile_get_foragers_limit(tile_id)
     return DCON.dcon_tile_get_foragers_limit(tile_id - 1)
 end
@@ -999,23 +953,6 @@ function DATA.tile_inc_foragers_limit(tile_id, value)
     ---@type number
     local current = DCON.dcon_tile_get_foragers_limit(tile_id - 1)
     DCON.dcon_tile_set_foragers_limit(tile_id - 1, current + value)
-end
----@param tile_id tile_id valid tile id
----@return number forage_efficiency 
-function DATA.tile_get_forage_efficiency(tile_id)
-    return DCON.dcon_tile_get_forage_efficiency(tile_id - 1)
-end
----@param tile_id tile_id valid tile id
----@param value number valid number
-function DATA.tile_set_forage_efficiency(tile_id, value)
-    DCON.dcon_tile_set_forage_efficiency(tile_id - 1, value)
-end
----@param tile_id tile_id valid tile id
----@param value number valid number
-function DATA.tile_inc_forage_efficiency(tile_id, value)
-    ---@type number
-    local current = DCON.dcon_tile_get_forage_efficiency(tile_id - 1)
-    DCON.dcon_tile_set_forage_efficiency(tile_id - 1, current + value)
 end
 ---@param tile_id tile_id valid tile id
 ---@param index number valid
@@ -1037,6 +974,13 @@ end
 function DATA.tile_get_foragers_targets_amount(tile_id, index)
     assert(index ~= 0)
     return DCON.dcon_tile_get_foragers_targets(tile_id - 1, index - 1)[0].amount
+end
+---@param tile_id tile_id valid tile id
+---@param index number valid
+---@return number foragers_targets 
+function DATA.tile_get_foragers_targets_efficiency(tile_id, index)
+    assert(index ~= 0)
+    return DCON.dcon_tile_get_foragers_targets(tile_id - 1, index - 1)[0].efficiency
 end
 ---@param tile_id tile_id valid tile id
 ---@param index number valid index
@@ -1071,6 +1015,20 @@ function DATA.tile_inc_foragers_targets_amount(tile_id, index, value)
     ---@type number
     local current = DCON.dcon_tile_get_foragers_targets(tile_id - 1, index - 1)[0].amount
     DCON.dcon_tile_get_foragers_targets(tile_id - 1, index - 1)[0].amount = current + value
+end
+---@param tile_id tile_id valid tile id
+---@param index number valid index
+---@param value number valid number
+function DATA.tile_set_foragers_targets_efficiency(tile_id, index, value)
+    DCON.dcon_tile_get_foragers_targets(tile_id - 1, index - 1)[0].efficiency = value
+end
+---@param tile_id tile_id valid tile id
+---@param index number valid index
+---@param value number valid number
+function DATA.tile_inc_foragers_targets_efficiency(tile_id, index, value)
+    ---@type number
+    local current = DCON.dcon_tile_get_foragers_targets(tile_id - 1, index - 1)[0].efficiency
+    DCON.dcon_tile_get_foragers_targets(tile_id - 1, index - 1)[0].efficiency = current + value
 end
 ---@param tile_id tile_id valid tile id
 ---@return number infrastructure_needed 
@@ -1187,10 +1145,7 @@ local fat_tile_id_metatable = {
         if (k == "resource") then return DATA.tile_get_resource(t.id) end
         if (k == "bedrock") then return DATA.tile_get_bedrock(t.id) end
         if (k == "biome") then return DATA.tile_get_biome(t.id) end
-        if (k == "foragers") then return DATA.tile_get_foragers(t.id) end
-        if (k == "foragers_water") then return DATA.tile_get_foragers_water(t.id) end
         if (k == "foragers_limit") then return DATA.tile_get_foragers_limit(t.id) end
-        if (k == "forage_efficiency") then return DATA.tile_get_forage_efficiency(t.id) end
         if (k == "infrastructure_needed") then return DATA.tile_get_infrastructure_needed(t.id) end
         if (k == "infrastructure") then return DATA.tile_get_infrastructure(t.id) end
         if (k == "infrastructure_investment") then return DATA.tile_get_infrastructure_investment(t.id) end
@@ -1374,20 +1329,8 @@ local fat_tile_id_metatable = {
             DATA.tile_set_biome(t.id, v)
             return
         end
-        if (k == "foragers") then
-            DATA.tile_set_foragers(t.id, v)
-            return
-        end
-        if (k == "foragers_water") then
-            DATA.tile_set_foragers_water(t.id, v)
-            return
-        end
         if (k == "foragers_limit") then
             DATA.tile_set_foragers_limit(t.id, v)
-            return
-        end
-        if (k == "forage_efficiency") then
-            DATA.tile_set_forage_efficiency(t.id, v)
             return
         end
         if (k == "infrastructure_needed") then

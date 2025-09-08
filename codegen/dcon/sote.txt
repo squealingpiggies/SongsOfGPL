@@ -226,22 +226,7 @@ object {
         tag { scenario }
     }
     property{
-        name { foragers }
-        type { float }
-        tag { scenario }
-    }
-    property{
-        name { foragers_water }
-        type { float }
-        tag { scenario }
-    }
-    property{
         name { foragers_limit }
-        type { float }
-        tag { scenario }
-    }
-    property{
-        name { forage_efficiency }
         type { float }
         tag { scenario }
     }
@@ -367,7 +352,7 @@ object {
     }
     property{
         name { traditional_forager_targets }
-        type { array{uint8_t}{float} }
+        type { array{production_method_id}{float} }
         tag { scenario }
     }
 }
@@ -627,21 +612,6 @@ object {
     property{
         name { center }
         type { tile_id }
-        tag { scenario }
-    }
-    property{
-        name { technologies_present }
-        type { array{technology_id}{uint8_t} }
-        tag { scenario }
-    }
-    property{
-        name { technologies_researchable }
-        type { array{technology_id}{uint8_t} }
-        tag { scenario }
-    }
-    property{
-        name { buildable_buildings }
-        type { array{building_type_id}{uint8_t} }
         tag { scenario }
     }
     property{
@@ -1152,23 +1122,18 @@ object {
         tag { scenario }
     }
     property{
-        name { throughput_boosts }
-        type { array{production_method_id}{float} }
+        name { technologies_present }
+        type { array{technology_id}{uint8_t} }
         tag { scenario }
     }
     property{
-        name { input_efficiency_boosts }
-        type { array{production_method_id}{float} }
+        name { technologies_researchable }
+        type { array{technology_id}{uint8_t} }
         tag { scenario }
     }
     property{
-        name { local_efficiency_boosts }
-        type { array{production_method_id}{float} }
-        tag { scenario }
-    }
-    property{
-        name { output_efficiency_boosts }
-        type { array{production_method_id}{float} }
+        name { buildable_buildings }
+        type { array{building_type_id}{uint8_t} }
         tag { scenario }
     }
 }
@@ -2390,12 +2355,7 @@ object {
     }
     property{
         name { foraging }
-        type { bitfield }
-        tag { scenario }
-    }
-    property{
-        name { hydration }
-        type { bitfield }
+        type { uint8_t }
         tag { scenario }
     }
     property{

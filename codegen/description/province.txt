@@ -7,9 +7,6 @@ province_id float
 size float
 movement_cost float
 center tile_id The tile which contains this province's settlement, if there is any.
-technologies_present uint8_t[technology_id]
-technologies_researchable uint8_t[technology_id]
-buildable_buildings uint8_t[building_type_id]
 local_production float[trade_good_id]
 temp_buffer_0 float[trade_good_id]
 local_consumption float[trade_good_id]
