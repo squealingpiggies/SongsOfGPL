@@ -419,13 +419,15 @@ end
 function dbm.cultural_foragable_targets(tile_id, culture_id)
 	-- get average values from each pop of culture on tile
 	local food_use_cases_needs, local_efficiencies, total_pop = dbm.cultural_food_needs(tile_id,culture_id)
+	-- tabb.deep_print(food_use_cases_needs)
+	-- tabb.deep_print(local_efficiencies)
 	local food_use_cases_data = tabb.map_array(
 		food_use_cases_needs,
 		function (use_case_amount)
 			return forage_targets_for_a_given_use_case(local_efficiencies, tile_id, use_case_amount.use_case, use_case_amount.amount)
 		end
 	)
-	local weights = calculate_weights(food_use_cases_data)
+	-- tabb.deep_print(food_use_cases_data)
 	local weights = calculate_weights(food_use_cases_data)
 	-- tabb.deep_print(weights)
 	return weights_to_forage_time_distribution(food_use_cases_data, weights), total_pop

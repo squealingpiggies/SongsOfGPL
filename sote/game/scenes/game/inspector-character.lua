@@ -214,9 +214,11 @@ local function draw_wrk_tab(game,rect,pop_id)
 
     -- build forager methods table for list call
 	local forager_methods = {}
-    DATA.for_each_forage_resource(function (item)
+    DATA.for_each_production_method(function (item)
 		local ratio = DATA.culture_get_traditional_forager_targets(CULTURE(pop_id), item)
-		forager_methods[item] = ratio
+        if ratio > 0.001 then
+		    forager_methods[item] = ratio
+        end
 	end)
 
     -- build forager methods list columns
@@ -224,8 +226,13 @@ local function draw_wrk_tab(game,rect,pop_id)
         {
             header = ".",
             render_closure = function(rect, k, v)
-                ut.render_icon(rect,DATA.forage_resource_get_icon(k),.8,.8,.8,1,true)
-                ui.tooltip(strings.title(DATA.forage_resource_get_name(k)),rect)
+                ut.render_icon(rect,DATA.production_method_get_icon(k),
+                    DATA.production_method_get_r(k),
+                    DATA.production_method_get_g(k),
+                    DATA.production_method_get_b(k),
+                    1,
+                    true)
+                ui.tooltip(strings.title(DATA.production_method_get_name(k)),rect)
             end,
             width = 1,
             value = function (k, v)
@@ -235,13 +242,13 @@ local function draw_wrk_tab(game,rect,pop_id)
         {
             header = "name",
             render_closure = function(rect, k, v)
-                local name = strings.title(DATA.forage_resource_get_name(k))
+                local name = strings.title(DATA.production_method_get_name(k))
                 ui.text(name,rect,"center","center")
                 ui.tooltip(name,rect)
             end,
             width = 5,
             value = function (k, v)
-                return DATA.forage_resource_get_name(k)
+                return DATA.production_method_get_name(k)
             end
         },
         {
@@ -250,7 +257,7 @@ local function draw_wrk_tab(game,rect,pop_id)
                 local culture_id = CULTURE(pop_id)
                 ut.generic_number_field("chart.png",v,rect,DATA.culture_get_name(culture_id)
                     .. " plans to spend " .. ut.to_fixed_point2(v*100)
-                    .. "% of foraging time harvesting " .. DATA.forage_resource_get_name(k) .. ".",
+                    .. "% of foraging time " .. DATA.production_method_get_description(k) .. ".",
                     ut.NUMBER_MODE.PERCENTAGE,ut.NAME_MODE.ICON)
             end,
             width = 3,
@@ -271,9 +278,9 @@ local function draw_wrk_tab(game,rect,pop_id)
                 local composite_plan = v * DATA.pop_get_forage_ratio(pop_id)
                 ut.generic_number_field("stopwatch.png",composite_time,rect,NAME(pop_id)
                     .. " actually spends " .. ut.to_fixed_point2(composite_time*100)
-                    .. "% of " .. hisher .. " time harvesting " .. DATA.forage_resource_get_name(k) .. "."
+                    .. "% of " .. hisher .. " time " .. DATA.production_method_get_name(k) .. "."
                     .. "\n " .. NAME(pop_id) .. " desires to spend " .. ut.to_fixed_point2(composite_plan*100)
-                    .. "% of " .. hisher .. " time " .. DATA.forage_resource_get_description(k) .. ".",
+                    .. "% of " .. hisher .. " time " .. DATA.production_method_get_description(k) .. ".",
                     ut.NUMBER_MODE.PERCENTAGE,ut.NAME_MODE.ICON)
             end,
             width = 3,

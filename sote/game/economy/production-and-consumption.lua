@@ -10,7 +10,7 @@ function pro.run_fast()
 		DATA.tile_set_infrastructure_efficiency(item, province_utils.get_infrastructure_efficiency(item));
 	end)
 
-	--DCON.update_economy()
+	DCON.update_economy()
 
 	DATA.for_each_pop(function (item)
 		local pending = DATA.pop_get_pending_economy_income(item);

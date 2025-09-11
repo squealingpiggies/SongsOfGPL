@@ -105,7 +105,7 @@ local ffi = require("ffi")
 ---@field bedrock bedrock_id 
 ---@field biome biome_id 
 ---@field foragers_limit number combined plant game and marine foraging limits
----@field foragers_targets table<number, struct_forage_container> 
+---@field foragers_targets table<FORAGE_RESOURCE, struct_forage_container> 
 ---@field infrastructure_needed number 
 ---@field infrastructure number 
 ---@field infrastructure_investment number 
@@ -224,7 +224,7 @@ uint32_t dcon_tile_size();
 ---tile: LUA bindings---
 
 DATA.tile_size = 1500000
-DCON.dcon_tile_resize_foragers_targets(6)
+DCON.dcon_tile_resize_foragers_targets(8)
 ---@return tile_id
 function DATA.create_tile()
     ---@type tile_id
@@ -955,80 +955,80 @@ function DATA.tile_inc_foragers_limit(tile_id, value)
     DCON.dcon_tile_set_foragers_limit(tile_id - 1, current + value)
 end
 ---@param tile_id tile_id valid tile id
----@param index number valid
----@return FORAGE_RESOURCE foragers_targets 
+---@param index FORAGE_RESOURCE valid
+---@return forage_resource_id foragers_targets 
 function DATA.tile_get_foragers_targets_resource(tile_id, index)
     assert(index ~= 0)
-    return DCON.dcon_tile_get_foragers_targets(tile_id - 1, index - 1)[0].resource
+    return DCON.dcon_tile_get_foragers_targets(tile_id - 1, index)[0].resource
 end
 ---@param tile_id tile_id valid tile id
----@param index number valid
+---@param index FORAGE_RESOURCE valid
 ---@return number foragers_targets 
 function DATA.tile_get_foragers_targets_limit(tile_id, index)
     assert(index ~= 0)
-    return DCON.dcon_tile_get_foragers_targets(tile_id - 1, index - 1)[0].limit
+    return DCON.dcon_tile_get_foragers_targets(tile_id - 1, index)[0].limit
 end
 ---@param tile_id tile_id valid tile id
----@param index number valid
+---@param index FORAGE_RESOURCE valid
 ---@return number foragers_targets 
 function DATA.tile_get_foragers_targets_amount(tile_id, index)
     assert(index ~= 0)
-    return DCON.dcon_tile_get_foragers_targets(tile_id - 1, index - 1)[0].amount
+    return DCON.dcon_tile_get_foragers_targets(tile_id - 1, index)[0].amount
 end
 ---@param tile_id tile_id valid tile id
----@param index number valid
+---@param index FORAGE_RESOURCE valid
 ---@return number foragers_targets 
 function DATA.tile_get_foragers_targets_efficiency(tile_id, index)
     assert(index ~= 0)
-    return DCON.dcon_tile_get_foragers_targets(tile_id - 1, index - 1)[0].efficiency
+    return DCON.dcon_tile_get_foragers_targets(tile_id - 1, index)[0].efficiency
 end
 ---@param tile_id tile_id valid tile id
----@param index number valid index
----@param value FORAGE_RESOURCE valid FORAGE_RESOURCE
+---@param index FORAGE_RESOURCE valid index
+---@param value forage_resource_id valid forage_resource_id
 function DATA.tile_set_foragers_targets_resource(tile_id, index, value)
-    DCON.dcon_tile_get_foragers_targets(tile_id - 1, index - 1)[0].resource = value
+    DCON.dcon_tile_get_foragers_targets(tile_id - 1, index)[0].resource = value
 end
 ---@param tile_id tile_id valid tile id
----@param index number valid index
+---@param index FORAGE_RESOURCE valid index
 ---@param value number valid number
 function DATA.tile_set_foragers_targets_limit(tile_id, index, value)
-    DCON.dcon_tile_get_foragers_targets(tile_id - 1, index - 1)[0].limit = value
+    DCON.dcon_tile_get_foragers_targets(tile_id - 1, index)[0].limit = value
 end
 ---@param tile_id tile_id valid tile id
----@param index number valid index
+---@param index FORAGE_RESOURCE valid index
 ---@param value number valid number
 function DATA.tile_inc_foragers_targets_limit(tile_id, index, value)
     ---@type number
-    local current = DCON.dcon_tile_get_foragers_targets(tile_id - 1, index - 1)[0].limit
-    DCON.dcon_tile_get_foragers_targets(tile_id - 1, index - 1)[0].limit = current + value
+    local current = DCON.dcon_tile_get_foragers_targets(tile_id - 1, index)[0].limit
+    DCON.dcon_tile_get_foragers_targets(tile_id - 1, index)[0].limit = current + value
 end
 ---@param tile_id tile_id valid tile id
----@param index number valid index
+---@param index FORAGE_RESOURCE valid index
 ---@param value number valid number
 function DATA.tile_set_foragers_targets_amount(tile_id, index, value)
-    DCON.dcon_tile_get_foragers_targets(tile_id - 1, index - 1)[0].amount = value
+    DCON.dcon_tile_get_foragers_targets(tile_id - 1, index)[0].amount = value
 end
 ---@param tile_id tile_id valid tile id
----@param index number valid index
+---@param index FORAGE_RESOURCE valid index
 ---@param value number valid number
 function DATA.tile_inc_foragers_targets_amount(tile_id, index, value)
     ---@type number
-    local current = DCON.dcon_tile_get_foragers_targets(tile_id - 1, index - 1)[0].amount
-    DCON.dcon_tile_get_foragers_targets(tile_id - 1, index - 1)[0].amount = current + value
+    local current = DCON.dcon_tile_get_foragers_targets(tile_id - 1, index)[0].amount
+    DCON.dcon_tile_get_foragers_targets(tile_id - 1, index)[0].amount = current + value
 end
 ---@param tile_id tile_id valid tile id
----@param index number valid index
+---@param index FORAGE_RESOURCE valid index
 ---@param value number valid number
 function DATA.tile_set_foragers_targets_efficiency(tile_id, index, value)
-    DCON.dcon_tile_get_foragers_targets(tile_id - 1, index - 1)[0].efficiency = value
+    DCON.dcon_tile_get_foragers_targets(tile_id - 1, index)[0].efficiency = value
 end
 ---@param tile_id tile_id valid tile id
----@param index number valid index
+---@param index FORAGE_RESOURCE valid index
 ---@param value number valid number
 function DATA.tile_inc_foragers_targets_efficiency(tile_id, index, value)
     ---@type number
-    local current = DCON.dcon_tile_get_foragers_targets(tile_id - 1, index - 1)[0].efficiency
-    DCON.dcon_tile_get_foragers_targets(tile_id - 1, index - 1)[0].efficiency = current + value
+    local current = DCON.dcon_tile_get_foragers_targets(tile_id - 1, index)[0].efficiency
+    DCON.dcon_tile_get_foragers_targets(tile_id - 1, index)[0].efficiency = current + value
 end
 ---@param tile_id tile_id valid tile id
 ---@return number infrastructure_needed 

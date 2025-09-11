@@ -232,7 +232,7 @@ object {
     }
     property{
         name { foragers_targets }
-        type { array{uint32_t}{base_types::forage_container} }
+        type { array{uint8_t}{base_types::forage_container} }
         tag { scenario }
     }
     property{

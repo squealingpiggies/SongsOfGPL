@@ -461,7 +461,6 @@ function world.World:tick()
 
 	WORLD.pending_player_event_reaction = false
 	local counter = 0
-	PROFILER:start_timer("events")
 	while WORLD.events_queue:length() > 0 do
 		-- print('event queue pop')
 		counter = counter + 1
@@ -477,31 +476,38 @@ function world.World:tick()
 		--end
 		--print("event")
 	end
-	PROFILER:end_timer("events")
 
 	-- print('current events updated')
 
 
 	WORLD.sub_hourly_tick = WORLD.sub_hourly_tick + 1
-	WORLD.sub_daily_tick = WORLD.sub_daily_tick + 1
+	if WORLD.sub_daily_tick then
+		WORLD.sub_daily_tick = WORLD.sub_daily_tick + 1
+	else
+		WORLD.sub_daily_tick = 0
+	end
 	WORLD.current_tick_in_month = WORLD.current_tick_in_month + 1
 	WORLD.current_tick_in_year = WORLD.current_tick_in_year + 1
 	DCON.set_world_current_tick(WORLD.current_tick_in_year)
 
-	if WORLD.current_tick_in_month == 1 then
 
-		-- update tile vegetation and foraging resources
+	if WORLD.current_tick_in_month == 1 then
 		PROFILER:start_timer("vegetation")
+
 		DCON.update_vegetation(VEGETATION_GROWTH)
+
 		PROFILER:end_timer("vegetation")
 
-		-- execute production for pops and estates
 		PROFILER:start_timer("production")
-		production.run_fast()
-		PROFILER:end_timer("production")
 
-		-- update trader prices
+		production.run_fast()
+
+		PROFILER:end_timer("production")
+	end
+
+	if WORLD.current_tick_in_month == 2 then
 		PROFILER:start_timer("traders")
+
 		DATA.for_each_character_location(function (item)
 			local character = DATA.character_location_get_character(item)
 			if (HAS_TRAIT(character, TRAIT.TRADER)) then
@@ -509,158 +515,162 @@ function world.World:tick()
 				DCON.ai_trade(character)
 			end
 		end)
+
 		PROFILER:end_timer("traders")
-
-		-- TODO (un)recruit warriors
-		-- (un)employ pops
-		PROFILER:start_timer("employ")
-		employ.run()
-		PROFILER:end_timer("employ")
-
 	end
 
-	if WORLD.current_tick_in_month == 2 then
+	-- if WORLD.current_tick_in_month == 3 then
+	-- 	PROFILER:start_timer("warband update")
+	-- 	DATA.for_each_warband(function (warband_id)
+	-- 		--reset monthly trackers
+	-- 		DATA.warband_set_current_time_used_ratio(warband_id,0)
+	-- 		--run warband growth
+	-- 		require "game.society.pop-growth".warband(warband_id)
+	-- 		--pay wages
+	-- 		local treasury = DATA.warband_get_treasury(warband_id)
+	-- 		local total_upkeep = DATA.warband_get_total_upkeep(warband_id)
+	-- 		if treasury > total_upkeep then
+	-- 			DATA.warband_inc_treasury(warband_id, -total_upkeep)
+	-- 			DATA.for_each_warband_unit_from_warband(warband_id, function (unit)
+	-- 				local unit_type = DATA.warband_unit_get_type(unit)
+	-- 				local unit_upkeep = DATA.unit_type_get_base_cost(unit_type)
+	-- 				local pop = DATA.warband_unit_get_unit(unit)
+	-- 				economy_effects.add_pop_savings(pop, unit_upkeep, ECONOMY_REASON.UPKEEP)
+	-- 			end)
+	-- 		end
+	-- 	end)
+	-- 	PROFILER:end_timer("warband update")
+	-- end
 
-		-- growth check
-		PROFILER:start_timer("growth")
-		require "game.society.pop-growth".run()
-		PROFILER:end_timer("growth")
+	-- do
+	-- 	PROFILER:start_timer("decisions settled")
+	-- 	--- start with settled down characters:
+	-- 	local index = WORLD.current_tick_in_month
+	-- 	while index < DATA.character_location_size do
+	-- 		---@type character_location_id
+	-- 		local character_location = index + 1
+	-- 		if DCON.dcon_character_location_is_valid(index) then
+	-- 			local character = DATA.character_location_get_character(character_location)
+	-- 			if character ~= WORLD.player_character then
+	-- 				if DCON.dcon_pop_is_valid(character - 1) and IS_CHARACTER(character) then
+	-- 					decide.run_character(character)
+	-- 				end
+	-- 			end
+	-- 		end
+	-- 		index = index + WORLD.ticks_per_month
+	-- 	end
+	-- 	PROFILER:end_timer("decisions settled")
+	-- end
 
-		-- update infrastructure after movement
-		PROFILER:start_timer("prov-infra")
-		-- empty function
-		-- upkeep.run()
-		infrastructure.run()
-		--research.run()
-		--recruit.run()
-		PROFILER:end_timer("prov-infra")
+	-- do
+	-- 	PROFILER:start_timer("decisions travel")
+	-- 	local index = WORLD.current_tick_in_month
+	-- 	while index < DATA.warband_size do
+	-- 		if DCON.dcon_warband_is_valid(index) then
+	-- 			---@type warband_id
+	-- 			local warband = index + 1
+	-- 			local character = WARBAND_LEADER(warband)
+	-- 			if character ~= WORLD.player_character then
+	-- 				decide.run_character(character)
+	-- 			end
+	-- 		end
+	-- 		index = index + WORLD.ticks_per_month
+	-- 	end
+	-- 	PROFILER:end_timer("decisions travel")
+	-- end
 
-		PROFILER:start_timer("decisions")
-		local index = WORLD.current_tick_in_month
-		DATA.for_each_character_location(function (item)
-			if DCON.dcon_character_location_is_valid(index) then
-				local character = DATA.character_location_get_character(index)
-				if character ~= WORLD.player_character then
-					if DCON.dcon_pop_is_valid(character - 1) and IS_CHARACTER(character) then
-						decide.run_character(character)
-					end
-				end
-			end
-		end)
-		PROFILER:end_timer("decisions")
-	end
+	-- PROFILER:start_timer("traveling")
+	-- require "game.ai.travels".run()
+	-- PROFILER:end_timer("traveling")
 
-	if WORLD.current_tick_in_month == 3 then
-		-- first update warband
-		PROFILER:start_timer("warband-update")
-		DATA.for_each_warband(function (warband_id)
-			--reset monthly trackers
-			DATA.warband_set_current_time_used_ratio(warband_id,0)
-			--pay wages
-			local treasury = DATA.warband_get_treasury(warband_id)
-			local total_upkeep = DATA.warband_get_total_upkeep(warband_id)
-			if treasury > total_upkeep then
-				DATA.warband_inc_treasury(warband_id, -total_upkeep)
-				DATA.for_each_warband_unit_from_warband(warband_id, function (unit)
-					local unit_type = DATA.warband_unit_get_type(unit)
-					local unit_upkeep = DATA.unit_type_get_base_cost(unit_type)
-					local pop = DATA.warband_unit_get_unit(unit)
-					economy_effects.add_pop_savings(pop, unit_upkeep, ECONOMY_REASON.UPKEEP)
-				end)
-			end
-		end)
-		PROFILER:end_timer("warband-update")
-		-- then make travel decision
-		PROFILER:start_timer("traveling")
-		require "game.ai.travels".run()
-		PROFILER:end_timer("traveling")
-	end
+	-- do
+	-- 	local index = WORLD.current_tick_in_month
+	-- 	while index < DATA.province_size do
+	-- 		if DCON.dcon_province_is_valid(index) then
+	-- 			---@type province_id
+	-- 			local province = index + 1
+	-- 			employ_ai(province)
+	-- 		end
+	-- 		index = index + WORLD.ticks_per_month
+	-- 	end
+	-- end
 
-	-- movement
+
+
+	--- daily
 	if WORLD.sub_daily_tick == 1 then
-		--first move all warbands
-		PROFILER:start_timer("warband movement")
-		DATA.for_each_warband(function (item)
-			-- add yesterday's stance time to warband monthly tracking
-			local status = DATA.warband_get_current_status(item)
-			local status_ratio = DATA.warband_status_get_time_used(status)
-			DATA.warband_inc_current_time_used_ratio(item,status_ratio/30)
-
-			-- check if traveling at all for the day
-			local current_path = DATA.warband_get_current_path(item)
-			if current_path == nil or #current_path == 0 then
-				DATA.warband_set_current_status(item, WARBAND_STATUS.IDLE)
-				-- add possible daily foraging?
-				return
-			end
-
-			--- counted in hours
-			local progress = DATA.warband_get_movement_progress(item)
-			--- consume day worth of supplies
-			local supplies_availability = economy_effects.consume_supplies(
-				item,
-				1
-			)
-
-			-- count needs satisfaction of warband members:
-			local count = 0
-			local total_satisfaction = 0
-			DATA.for_each_warband_unit_from_warband(item, function (warband_unit)
-				local unit = DATA.warband_unit_get_unit(warband_unit)
-				local satisfaction = DATA.pop_get_basic_needs_satisfaction(unit)
-
-				count = count + 1
-				total_satisfaction = total_satisfaction + satisfaction
-			end)
-
-			local base = 1
-			if (count > 0) then
-				base = total_satisfaction / count
-			end
-
-			-- refund travelling time based on lacking supplies:
-			DATA.warband_inc_current_time_used_ratio(item,-status_ratio/30 * supplies_availability)
-
-			--- depending on amount of available supplies, move the party
-			progress = progress - (base + supplies_availability) * TRAVEL_DAY_HOURS
-			while progress <= 0 and #current_path > 0 do
-				local last_tile = table.remove(current_path, #current_path)
-				travel_effects.move_party(item, last_tile)
-				if #current_path > 0 then
-					progress = progress + pathfinding.tile_distance(last_tile, current_path[#current_path], military_values.warband_speed(item))
-				else
-					progress = 0
-					DATA.warband_set_current_path(item, nil)
-				end
-			end
-			DATA.warband_set_movement_progress(item, math.max(0, progress))
-			DATA.warband_set_current_status(item, WARBAND_STATUS.TRAVELING)
-		end)
-		PROFILER:end_timer("warband movement")
-		-- then update for patrols and check spotting
 		PROFILER:start_timer("patrols")
+
 		DATA.for_each_realm(function (item)
 			military_effects.update_patrol(item)
 		end)
+
 		PROFILER:end_timer("patrols")
 	end
 
+	--- daily
+	-- if WORLD.sub_daily_tick == 2 then
+	-- 	PROFILER:start_timer("warband movement")
 
---[[
-	PROFILER:start_timer("employ-ai")
-	local index = WORLD.current_tick_in_month
-	while index < DATA.province_size do
-		if DCON.dcon_province_is_valid(index) then
-			---@type province_id
-			local province = index + 1
-			employ_ai(province)
-		end
-		index = index + WORLD.ticks_per_month
-	end
-	PROFILER:end_timer("employ-ai")
---]]
+	-- 	DATA.for_each_warband(function (item)
+	-- 		-- add yesterday's stance time to warband monthly tracking
+	-- 		local status = DATA.warband_get_current_status(item)
+	-- 		local status_ratio = DATA.warband_status_get_time_used(status)
+	-- 		DATA.warband_inc_current_time_used_ratio(item,status_ratio/30)
 
+	-- 		-- check if traveling at all for the day
+	-- 		local current_path = DATA.warband_get_current_path(item)
+	-- 		if current_path == nil or #current_path == 0 then
+	-- 			DATA.warband_set_current_status(item, WARBAND_STATUS.IDLE)
+	-- 			-- add possible daily foraging?
+	-- 			return
+	-- 		end
 
+	-- 		--- counted in hours
+	-- 		local progress = DATA.warband_get_movement_progress(item)
+	-- 		--- consume day worth of supplies
+	-- 		local supplies_availability = economy_effects.consume_supplies(
+	-- 			item,
+	-- 			1
+	-- 		)
+
+	-- 		-- count needs satisfaction of warband members:
+	-- 		local count = 0
+	-- 		local total_satisfaction = 0
+	-- 		DATA.for_each_warband_unit_from_warband(item, function (warband_unit)
+	-- 			local unit = DATA.warband_unit_get_unit(warband_unit)
+	-- 			local satisfaction = DATA.pop_get_basic_needs_satisfaction(unit)
+
+	-- 			count = count + 1
+	-- 			total_satisfaction = total_satisfaction + satisfaction
+	-- 		end)
+
+	-- 		local base = 1
+	-- 		if (count > 0) then
+	-- 			base = total_satisfaction / count
+	-- 		end
+
+	-- 		-- refund travelling time based on lacking supplies:
+	-- 		DATA.warband_inc_current_time_used_ratio(item,-status_ratio/30 * supplies_availability)
+
+	-- 		--- depending on amount of available supplies, move the party
+	-- 		progress = progress - (base + supplies_availability) * TRAVEL_DAY_HOURS
+	-- 		while progress <= 0 and #current_path > 0 do
+	-- 			local last_tile = table.remove(current_path, #current_path)
+	-- 			travel_effects.move_party(item, last_tile)
+	-- 			if #current_path > 0 then
+	-- 				progress = progress + pathfinding.tile_distance(last_tile, current_path[#current_path], military_values.warband_speed(item))
+	-- 			else
+	-- 				progress = 0
+	-- 				DATA.warband_set_current_path(item, nil)
+	-- 			end
+	-- 		end
+	-- 		DATA.warband_set_movement_progress(item, math.max(0, progress))
+	-- 		DATA.warband_set_current_status(item, WARBAND_STATUS.TRAVELING)
+	-- 	end)
+
+	-- 	PROFILER:end_timer("warband movement")
+	-- end
 --[[
 	if WORLD.settled_provinces_by_identifier[WORLD.current_tick_in_month] ~= nil then
 		-- Monthly tick per realm
@@ -707,6 +717,36 @@ function world.World:tick()
 		end
 		for _, province in pairs(to_remove) do
 			ta[province] = nil
+		end
+
+		-- "Province" update
+
+		for _, settled_province in pairs(ta) do
+			--print("employ")
+			PROFILER:start_timer("employ")
+			employ.run(settled_province)
+			PROFILER:end_timer("employ")
+			PROFILER:start_timer("buildings")
+			building_update.run(settled_province)
+			PROFILER:end_timer("buildings")
+
+			-- PROFILER:start_timer("production")
+			-- production.run(settled_province)
+			-- PROFILER:end_timer("production")
+
+			PROFILER:start_timer("province")
+			upkeep.run(settled_province)
+			wealth_decay.run(settled_province)
+			infrastructure.run(settled_province)
+			research.run(settled_province)
+			recruit.run(settled_province)
+			PROFILER:end_timer("province")
+
+			PROFILER:start_timer("growth-province")
+			require "game.society.pop-growth".province(settled_province)
+			PROFILER:end_timer("growth-province")
+
+			--print("done")
 		end
 
 

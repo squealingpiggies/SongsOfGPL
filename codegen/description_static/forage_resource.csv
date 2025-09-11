@@ -1,6 +1,6 @@
-name;description;icon;handle
-Water;water;droplets.png;JOBTYPE.HAULING
-Plant;plants;fruit-bowl.png;JOBTYPE.FORAGER
-Game;game;bison.png;JOBTYPE.HUNTING
-Fish;fish;salmon.png;JOBTYPE.ARTISAN
-Wood;timber;pine-tree.png;JOBTYPE.LABOURER
+name;description;icon
+Water;water;droplets.png
+Plant;plants;fruit-bowl.png
+Game;game;bison.png
+Fish;fish;salmon.png
+Wood;timber;pine-tree.png

@@ -431,16 +431,16 @@ function DATA.test_set_get_0()
     fat_id.bedrock = -15
     fat_id.biome = 5
     fat_id.foragers_limit = 20
-    for j = 1, 5 do
-        DATA.tile_set_foragers_targets_resource(id, j, 0)
+    for j = 1, 7 do
+        DATA.tile_set_foragers_targets_resource(id, j, -20)
     end
-    for j = 1, 5 do
+    for j = 1, 7 do
         DATA.tile_set_foragers_targets_limit(id, j, 19)
     end
-    for j = 1, 5 do
+    for j = 1, 7 do
         DATA.tile_set_foragers_targets_amount(id, j, 11)
     end
-    for j = 1, 5 do
+    for j = 1, 7 do
         DATA.tile_set_foragers_targets_efficiency(id, j, 1)
     end
     fat_id.infrastructure_needed = -5
@@ -538,19 +538,19 @@ function DATA.test_set_get_0()
     if not test_passed then print("biome", 5, fat_id.biome) end
     test_passed = test_passed and fat_id.foragers_limit == 20
     if not test_passed then print("foragers_limit", 20, fat_id.foragers_limit) end
-    for j = 1, 5 do
-        test_passed = test_passed and DATA.tile_get_foragers_targets_resource(id, j) == 0
+    for j = 1, 7 do
+        test_passed = test_passed and DATA.tile_get_foragers_targets_resource(id, j) == -20
     end
-    if not test_passed then print("foragers_targets.resource", 0, DATA.tile[id].foragers_targets[0].resource) end
-    for j = 1, 5 do
+    if not test_passed then print("foragers_targets.resource", -20, DATA.tile[id].foragers_targets[0].resource) end
+    for j = 1, 7 do
         test_passed = test_passed and DATA.tile_get_foragers_targets_limit(id, j) == 19
     end
     if not test_passed then print("foragers_targets.limit", 19, DATA.tile[id].foragers_targets[0].limit) end
-    for j = 1, 5 do
+    for j = 1, 7 do
         test_passed = test_passed and DATA.tile_get_foragers_targets_amount(id, j) == 11
     end
     if not test_passed then print("foragers_targets.amount", 11, DATA.tile[id].foragers_targets[0].amount) end
-    for j = 1, 5 do
+    for j = 1, 7 do
         test_passed = test_passed and DATA.tile_get_foragers_targets_efficiency(id, j) == 1
     end
     if not test_passed then print("foragers_targets.efficiency", 1, DATA.tile[id].foragers_targets[0].efficiency) end

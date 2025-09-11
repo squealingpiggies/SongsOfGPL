@@ -414,63 +414,64 @@ local function trade_widget(gam, tile_id, panel)
 
 	local province_size = DATA.province_get_size(province_id)
 
-	for i = 1, MAX_RESOURCES_IN_PROVINCE_INDEX - 1 do
-		local forage_case = DATA.tile_get_foragers_targets_resource(province_id, i)
-
-		if forage_case == FORAGE_RESOURCE.INVALID then
-			break
+	for _, i in pairs(FORAGE_RESOURCE) do
+		if i ~= INVALID_ID then
+			local resource = DATA.tile_get_foragers_targets_resource(tile_id, i)
+			local amount = DATA.tile_get_foragers_targets_amount(tile_id, i)
+			local limit = DATA.tile_get_foragers_targets_limit(tile_id, i)
+			local efficiency = dbm.foraging_efficiency(limit,amount)
+			local name = DATA.forage_resource_get_name(resource)
+			local difference = math.max(0, limit - amount)
+			local tooltip = limit > 0 and "A total of " .. uit.to_fixed_point2(difference) .. " " .. name
+					.. " went unharvested last month from a total of " .. uit.to_fixed_point2(limit)
+					.. " units being harvested by the equivalent of " .. uit.to_fixed_point2(amount)
+					.. " adult human foragers"
+					.. "\n - The average adult human can expect to collect from " .. name
+					.. " at " .. uit.to_fixed_point2(efficiency*100) .. "% efficiency."
+				or "There are no forageable " .. name .. " in this tile."
+			uit.generic_number_field(
+				DATA.forage_resource_get_icon(resource),
+				difference,
+				layout:next(unit * 3.5, unit * 1),
+				tooltip,
+				uit.NUMBER_MODE.BALANCE,
+				uit.NAME_MODE.ICON
+			)
 		end
 
-		local amount = DATA.tile_get_foragers_targets_amount(tile_id, i)
-		local limit = DATA.tile_get_foragers_targets_limit(tile_id, i)
-		local name = DATA.forage_resource_get_name(forage_case)
-		local efficiency = dbm.foraging_efficiency(limit,amount)
-
-		uit.generic_number_field(
-			DATA.forage_resource_get_icon(forage_case),
-			limit,
-			layout:next(unit * 3.5, unit * 1),
-			"The average adult human can expect to collect from " .. name
-				.. " at " .. uit.to_fixed_point2(efficiency*100) .. "% efficiency."
-				.. "\nThis comes from a total of " .. uit.to_fixed_point2(limit)
-				.. " units being harvested by the equivalent of "
-				.. uit.to_fixed_point2(amount) .. " adult human foragers",
-			uit.NUMBER_MODE.BALANCE,
-			uit.NAME_MODE.ICON
-		)
 	end
 
 	---@type string
-	local resource_string = ""
-	local resource_tooltip = "There is no special resource on this tile."
-	local resource_icon = "uncertainty.png"
-	local has_resource = false
-	for i = 1, MAX_RESOURCES_IN_PROVINCE_INDEX - 1 do
-		local resource = DATA.province_get_local_resources_resource(province_id, i)
-		if resource == INVALID_ID then
-			break
-		end
-		local name = DATA.resource_get_name(resource)
-		has_resource = true
+	-- local resource_string = ""
+	-- local resource_tooltip = "There is no special resource on this tile."
+	-- local resource_icon = "uncertainty.png"
+	-- local has_resource = false
+	-- for i = 1, MAX_RESOURCES_IN_PROVINCE_INDEX - 1 do
+	-- 	local resource = DATA.province_get_local_resources_resource(province_id, i)
+	-- 	if resource == INVALID_ID then
+	-- 		break
+	-- 	end
+	-- 	local name = DATA.resource_get_name(resource)
+	-- 	has_resource = true
 
-		---@type string
-		resource_string = resource_string .. name .. ", "
-	end
+	-- 	---@type string
+	-- 	resource_string = resource_string .. name .. ", "
+	-- end
 
-	if has_resource then
-		-- resource_string = resource_string:sub(1, -3)
-		resource_tooltip = "This tile has sources of " .. resource_string .. "."
-	else
-		resource_string = "n/a"
-	end
+	-- if has_resource then
+	-- 	-- resource_string = resource_string:sub(1, -3)
+	-- 	resource_tooltip = "This tile has sources of " .. resource_string .. "."
+	-- else
+	-- 	resource_string = "n/a"
+	-- end
 
-	uit.generic_string_field(
-		"Res.",
-		resource_string,
-		layout:next(unit * 3.5 * 4 + 15, unit * 1),
-		resource_tooltip,
-		uit.NAME_MODE.NAME
-	)
+	-- uit.generic_string_field(
+	-- 	"Res.",
+	-- 	resource_string,
+	-- 	layout:next(unit * 3.5 * 4 + 15, unit * 1),
+	-- 	resource_tooltip,
+	-- 	uit.NAME_MODE.NAME
+	-- )
 end
 
 ---comment

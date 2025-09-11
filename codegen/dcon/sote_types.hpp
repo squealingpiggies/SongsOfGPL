@@ -187,7 +187,7 @@ enum class LAW_BUILDING : uint8_t {
     };
 
     struct forage_container {
-        FORAGE_RESOURCE resource;
+        int32_t resource;
         float limit;
         float amount;
         float efficiency;

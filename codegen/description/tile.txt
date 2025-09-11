@@ -43,7 +43,7 @@ resource resource_id
 bedrock bedrock_id
 biome biome_id
 foragers_limit float combined plant game and marine foraging limits
-foragers_targets forage_container[5]
+foragers_targets forage_container[FORAGE_RESOURCE]
 infrastructure_needed float
 infrastructure float
 infrastructure_investment float

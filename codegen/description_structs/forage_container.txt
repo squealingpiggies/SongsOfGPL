@@ -1,4 +1,4 @@
-resource FORAGE_RESOURCE
+resource forage_resource_id
 limit float
 amount float
 efficiency float

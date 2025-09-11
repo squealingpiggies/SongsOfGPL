@@ -984,6 +984,61 @@ void pop_forage_update(dcon::pop_id pop, dcon::tile_id tile) {
 	}
 }
 */
+
+// can do in parallel over tiles
+void pops_produce(dcon::tile_id tile) {
+	// recalculate desired foraging amount
+	for (auto i = 0; i < state.tile_get_foragers_targets_size(); i++){
+		base_types::forage_container& forage_case = state.tile_get_foragers_targets(tile, i);
+		forage_case.amount = 0.f;
+	}
+	// update tile foraging amount from estate foraging buildings and pops
+	state.tile_for_each_estate_location(tile, [&](auto estate_location) {
+		auto estate = state.estate_location_get_estate(estate_location);
+		state.estate_for_each_building_estate(estate, [&](auto building_location) {
+			auto building = state.building_estate_get_building(building_location);
+			auto btype = state.building_get_current_type(building);
+			auto production_method = state.building_type_get_production_method(btype);
+			auto foraging_target = state.production_method_get_foraging(production_method);
+			if (foraging_target){
+				base_types::forage_container& forage_case = state.tile_get_foragers_targets(tile, foraging_target);
+				forage_case.amount += state.building_get_production_scale(building);
+			}
+		});
+		state.estate_for_each_pop_location_as_estate(estate, [&](auto pop_location){
+			auto pop = state.pop_location_get_pop(pop_location);
+			auto free_time = pop_free_time(pop);
+			auto warband_time = pop_warband_time(pop,free_time);
+			auto forage_time = pop_forage_time(pop,free_time,warband_time);
+			auto culture = state.pop_get_culture(pop);
+			state.for_each_production_method([&](auto production_method){
+				auto ratio = state.culture_get_traditional_forager_targets(culture, production_method);
+				auto foraging_target = state.production_method_get_foraging(production_method);
+				if (ratio > 0.001) {
+					base_types::forage_container& forage_case = state.tile_get_foragers_targets(tile, foraging_target);
+					forage_case.amount += forage_time * ratio * job_efficiency(pop,state.production_method_get_job_type(production_method));
+				}
+			});
+		});
+	});
+
+	// set foraging resource efficiencies for foraging
+	for (auto i=0; i < state.tile_get_foragers_targets_size(); i++){
+		base_types::forage_container& forage_case = state.tile_get_foragers_targets(tile, i);
+		forage_case.efficiency = forage_efficiency(forage_case.amount,forage_case.limit);
+	}
+
+	// TODO move building production here aswell
+	// pop foraging into own inventory
+	// state.tile_for_each_estate_location(tile, [&](auto estate_location) {
+	// 	auto estate = state.estate_location_get_estate(estate_location);
+	// 	state.estate_for_each_pop_location(estate, [&](auto location) {
+	// 		auto pop = state.pop_location_get_pop(location);
+	// 		pop_forage_update(pop, province);
+	// 	});
+	// });
+}
+
 // goes tile to determine efficiency from enviornment
 float local_production_method_efficiency(dcon::tile_id tile, dcon::production_method_id method) {
 	auto total_efficiency = 1.f;
@@ -1052,10 +1107,9 @@ float local_production_method_efficiency(dcon::tile_id tile, dcon::production_me
 		total_efficiency = total_efficiency * soil_efficiency;
 	}
 	auto nature_yield = 1.f;
-	auto foraging = state.production_method_get_foraging(method);
-	if (foraging) {
-		base_types::forage_container& forage_data = state.tile_get_foragers_targets(tile, foraging - 1);
-		auto forager_targets = state.tile_get_foragers_targets(tile,foraging);
+	auto foraging_target = state.production_method_get_foraging(method);
+	if (foraging_target) {
+		base_types::forage_container& forage_data = state.tile_get_foragers_targets(tile, foraging_target);
 		nature_yield *= forage_data.efficiency;
 	}
 	return total_efficiency * nature_yield;
@@ -1098,49 +1152,46 @@ float estate_throughput_boost(dcon::estate_id estate, dcon::production_method_id
 	return base;
 }
 
-void pop_production(dcon::pop_id pop, dcon::production_method_id production_method) {
+void update_building_scale() {
+	state.for_each_building([&](auto building){
+		auto estate = state.building_get_estate_from_building_estate(building);
+		auto tile = state.estate_get_tile_from_estate_location(estate);
+		auto province = state.tile_get_province_from_tile_province_membership(tile);
+		auto btype = state.building_get_current_type(building);
+		auto production_method = state.building_type_get_production_method(btype);
+		auto associated_job = state.production_method_get_job_type(production_method);
+		auto worker = state.building_get_worker_from_employment(building);
+
+		auto worktime = worker != dcon::pop_id{} ? state.pop_get_work_ratio(worker) : 0.f;
+		auto efficiency = ve::apply([&](auto w, auto job_type) {
+			if (w) {
+				return job_efficiency(w, job_type);
+			} else {
+				return 0.f;
+			}
+		}, worker, associated_job) * (2.f - worktime);
+
+		auto scale = worktime * efficiency;
+
+		auto final_production_scale = scale * estate_throughput_boost(estate, production_method);
+		auto final_output_scale = scale
+			* (1 + estate_output_boost(estate, production_method))
+			* (local_production_method_efficiency(tile, production_method));
+		auto final_input_scale = scale * (1 - estate_input_boost(estate, production_method));
+
+		state.building_set_production_scale(building, final_production_scale);
+		state.building_set_output_scale(building, final_output_scale);
+		state.building_set_input_scale(building, final_input_scale);
+	});
 }
 
-// can do in parallel over tiles
-void tile_production(dcon::tile_id tile) {
-	auto province = state.tile_get_province_from_tile_province_membership(tile);
-	// recalculate foragers count
-	state.tile_for_each_estate_location(tile, [&](auto estate_location) {
-		auto estate = state.estate_location_get_estate(estate_location);
-		state.estate_for_each_building_estate(estate, [&](auto building_location) {
-			auto building = state.building_estate_get_building(building_location);
-			auto btype = state.building_get_current_type(building);
-			auto production_method = state.building_type_get_production_method(btype);
-			auto foraging = state.production_method_get_foraging(production_method);
-			if (foraging) {
-				auto worker = state.building_get_worker_from_employment(building);
-				auto jobtype = state.production_method_get_job_type(production_method);
-				base_types::forage_container& forage_data = state.tile_get_foragers_targets(tile, foraging - 1);
-				forage_data.amount += job_efficiency(worker,jobtype) * state.pop_get_work_ratio(worker);
-			}
-		});
-		// TODO get each cultural production method and pull from relevent resource
-		state.estate_for_each_pop_location(estate, [&](auto location) {
-			auto pop = state.pop_location_get_pop(location);
-			//state.tile_get_foragers(tile) += state.pop_get_forage_ratio(pop);
-		});
-	});
-	//set tile foraging efficiencies
-	// state.for_each_forage_resource([&](auto index) {
-	// 	base_types::forage_container& forage_data = state.tile_get_foragers_targets(tile, index);
-	// 	forage_data.efficiency = forage_efficiency(forage_data.amount, forage_data.limit);
-	// });
-	// actual estate and pop production
+// depends on province
+void estates_produce(dcon::tile_id tile) {
 	state.tile_for_each_estate_location(tile, [&](auto id) {
 		auto estate = state.estate_location_get_estate(id);
 
 		auto used_but_not_consumed_goods = state.trade_good_make_vectorizable_float_buffer();
-		// pop working for self
-		state.estate_for_each_pop_location(estate, [&](auto location) {
-			auto pop = state.pop_location_get_pop(location);
-			//pop_forage_update(pop, province);
-		});
-		// pop working for estate
+
 		state.estate_for_each_building_estate(estate, [&](auto building_location) {
 			auto building = state.building_estate_get_building(building_location);
 
@@ -1240,39 +1291,7 @@ void tile_production(dcon::tile_id tile) {
 				stats.good = output.good;
 			}
 		});
-	});
-}
 
-void update_building_scale() {
-	state.for_each_building([&](auto building){
-		auto estate = state.building_get_estate_from_building_estate(building);
-		auto tile = state.estate_get_tile_from_estate_location(estate);
-		auto province = state.tile_get_province_from_tile_province_membership(tile);
-		auto btype = state.building_get_current_type(building);
-		auto production_method = state.building_type_get_production_method(btype);
-		auto associated_job = state.production_method_get_job_type(production_method);
-		auto worker = state.building_get_worker_from_employment(building);
-
-		auto worktime = worker != dcon::pop_id{} ? state.pop_get_work_ratio(worker) : 0.f;
-		auto efficiency = ve::apply([&](auto w, auto job_type) {
-			if (w) {
-				return job_efficiency(w, job_type);
-			} else {
-				return 0.f;
-			}
-		}, worker, associated_job) * (2.f - worktime);
-
-		auto scale = worktime * efficiency;
-
-		auto final_production_scale = scale * estate_throughput_boost(estate, production_method);
-		auto final_output_scale = scale
-			* (1 + estate_output_boost(estate, production_method))
-			* (local_production_method_efficiency(tile, production_method));
-		auto final_input_scale = scale * (1 - estate_input_boost(estate, production_method));
-
-		state.building_set_production_scale(building, final_production_scale);
-		state.building_set_output_scale(building, final_output_scale);
-		state.building_set_input_scale(building, final_input_scale);
 	});
 }
 
@@ -1739,9 +1758,6 @@ void update_economy() {
 	uint32_t trade_goods_count = state.trade_good_size();
 
 	// reset data
-	state.execute_serial_over_estate([&](auto estates) {
-		state.estate_set_balance_last_tick(estates, 0.f);
-	});
 	state.for_each_building([&](auto building) {
 		auto building_type = state.building_get_current_type(building);
 		auto production_method = state.building_type_get_production_method(building_type);
@@ -1755,6 +1771,9 @@ void update_economy() {
 			input.amount = 0.f;
 			input.use = base_input.use;
 		}
+	});
+	state.execute_serial_over_estate([&](auto estates) {
+		state.estate_set_balance_last_tick(estates, 0.f);
 	});
 	concurrency::parallel_for(uint32_t(0), state.trade_good_size(), [&](auto trade_good_raw_id) {
 		dcon::trade_good_id trade_good { dcon::trade_good_id::value_base_t(trade_good_raw_id) };
@@ -1949,9 +1968,9 @@ void update_economy() {
 		});
 	};
 
-	//state.execute_parallel_over_province([&](auto provinces) {
-	//	ve::apply([&](dcon::province_id p) { pops_produce(p); }, provinces);
-	//});
+	state.execute_parallel_over_tile([&](auto tiles) {
+		ve::apply([&](dcon::tile_id t) { pops_produce(t); }, tiles);
+	});
 	// state.for_each_warband([&](auto warband) {
 	// 	if (!state.warband_get_in_settlement(warband)) {
 	// 		auto tile = state.warband_get_location_from_warband_location(warband);
@@ -2094,9 +2113,9 @@ float estimate_building_type_income(int32_t province_lua, int32_t estate_lua, in
 
 void set_tile_forage_data(dcon::tile_id tile, uint8_t index, base_types::FORAGE_RESOURCE resource, float available){
 
-	base_types::forage_container& forage_data = state.tile_get_foragers_targets(tile, index - 1);
+	base_types::forage_container& forage_data = state.tile_get_foragers_targets(tile, index);
 
-	forage_data.resource = resource;
+	forage_data.resource = (int32_t)resource;
 	forage_data.limit = available;
 	forage_data.amount = 0.f;
 }
