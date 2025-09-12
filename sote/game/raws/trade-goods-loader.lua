@@ -115,7 +115,7 @@ function d.load()
 		belongs_to_category = TRADE_GOOD_CATEGORY.GOOD,
 		decay = 0.05
 	}
-	add_use_case("fish", "calories", 2)
+	add_use_case("fish", "calories", 1)
 	add_use_case("fish", "meat", 1)
 
 	TradeGood:new {
@@ -144,7 +144,7 @@ function d.load()
 		decay = 0.4
 	}
 	add_use_case("hide", "clothes", 0.25)
-	add_use_case("hide", "containers", 0.5)
+	add_use_case("hide", "containers", 0.25)
 	add_use_case("hide", "hide", 1)
 
 	TradeGood:new {
@@ -158,7 +158,8 @@ function d.load()
 		belongs_to_category = TRADE_GOOD_CATEGORY.GOOD,
 		decay = 0.9
 	}
-	add_use_case("timber", "tools-like", 0.4)
+	add_use_case("timber", "tools-like", 0.25)
+	add_use_case("timber", "structural-material", 0.25)
 	add_use_case("timber", "timber", 1)
 	add_use_case("timber", "tannin", 1)
 	add_use_case("timber", "fuel", 2)
@@ -316,8 +317,8 @@ function d.load()
 		belongs_to_category = TRADE_GOOD_CATEGORY.GOOD,
 		decay = 0.99
 	}
-	add_use_case("leather", "clothes", 0.25)
-	add_use_case("leather", "containers", 0.25)
+	add_use_case("leather", "clothes", 0.4)
+	add_use_case("leather", "containers", 0.4)
 	add_use_case("leather", "leather", 1)
 
 	TradeGood:new {

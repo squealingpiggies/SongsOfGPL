@@ -35,7 +35,7 @@ function d.load()
 		g = 0.1,
 		b = 1,
 		inputs = { [retrieve_use_case("containers")] = 1 },
-		outputs = { [retrieve_good("water")] = 1 },
+		outputs = { [retrieve_good("water")] = 2 },
 		job = job("water-carriers"),
 		job_type = JOBTYPE.HAULING,
 		foraging = FORAGE_RESOURCE.WATER,
@@ -110,7 +110,7 @@ function d.load()
 		outputs = { [retrieve_good("meat")] = 1, [retrieve_good("hide")] = 1 },
 		job = job("hunters"),
 		job_type = JOBTYPE.ARTISAN,
-		self_sourcing_fraction = 0.25,
+		self_sourcing_fraction = 0.5,
 		foraging = FORAGE_RESOURCE.GAME,
 	}
 	-- FISH
@@ -125,7 +125,7 @@ function d.load()
 		outputs = { [retrieve_good("shellfish")] = 1, [retrieve_good("shells")] = 1 },
 		job = job("fishers"),
 		job_type = JOBTYPE.LABOURER,
-		self_sourcing_fraction = 0.25,
+		self_sourcing_fraction = 0.5,
 		foraging = FORAGE_RESOURCE.FISH,
 	}
 	ProductionMethod:new {
@@ -136,10 +136,10 @@ function d.load()
 		g = 0.1,
 		b = 1,
 		inputs = { [retrieve_use_case("tools-like")] = 1 },
-		outputs = { [retrieve_good("fish")] = 1 },
+		outputs = { [retrieve_good("fish")] = 2 },
 		job = job("fishers"),
 		job_type = JOBTYPE.HUNTING,
-		self_sourcing_fraction = 0.25,
+		self_sourcing_fraction = 0.5,
 		foraging = FORAGE_RESOURCE.FISH,
 	}
 	-- WOOD
@@ -154,7 +154,7 @@ function d.load()
 		outputs = { [retrieve_good("timber")] = 2 },
 		job = job("woodcutters"),
 		job_type = JOBTYPE.LABOURER,
-		self_sourcing_fraction = 0.25,
+		self_sourcing_fraction = 0.5,
 		foraging = FORAGE_RESOURCE.WOOD,
 	}
 	ProductionMethod:new {
@@ -165,10 +165,10 @@ function d.load()
 		g = 0.2,
 		b = 0.3,
 		inputs = { [retrieve_use_case("tools-like")] = 1 },
-		outputs = { [retrieve_good("bark")] = 1, [retrieve_good("timber")] = 1 },
+		outputs = { [retrieve_good("bark")] = 2, },
 		job = job("woodcutters"),
 		job_type = JOBTYPE.ARTISAN,
-		self_sourcing_fraction = 0.25,
+		self_sourcing_fraction = 0.5,
 		foraging = FORAGE_RESOURCE.WOOD,
 	}
 

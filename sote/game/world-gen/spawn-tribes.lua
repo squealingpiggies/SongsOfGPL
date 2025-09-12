@@ -75,7 +75,7 @@ local function make_new_realm(capitol_id, race_id, center_id, culture, faith)
 	DATA.force_create_ownership(estate, elite_character)
 
 	-- We also need to spawn in some population...
-	local pop_to_spawn = math.max(5, math.min(20,
+	local pop_to_spawn = math.min(1, math.max(1,
 		DATA.tile_get_foragers_limit(center_id) / race.carrying_capacity_weight * race.fecundity * 0.5))
 	for _ = 1, pop_to_spawn do
 		local age = math.floor(math.abs(love.math.randomNormal(race.adult_age, race.adult_age)) + 1)
@@ -92,7 +92,7 @@ local function make_new_realm(capitol_id, race_id, center_id, culture, faith)
 	end
 
 	-- spawn some nobles
-	for i = 1, pop_to_spawn / 10 do
+	for i = 1, pop_to_spawn / 5 do
 		local contender = pe.generate_new_noble(r, estate, race_id, faith, culture)
 		local popularity = DATA.force_create_popularity(contender, r)
 		local fat_popularity = DATA.fatten_popularity(popularity)
