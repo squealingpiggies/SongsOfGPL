@@ -8,6 +8,7 @@ job_type JOBTYPE
 job job_id
 inputs use_case_container[8]
 outputs trade_good_container[8]
+self_sourcing_fraction float=0 percentage of work done without input goods
 foraging FORAGE_RESOURCE=0 If not invalid, pulls from tile forage_resource
 nature_yield_dependence float=0 How much does the local flora and fauna impact this buildings yield? Defaults to 0
 forest_dependence float=0 Consumes local forests at this rate

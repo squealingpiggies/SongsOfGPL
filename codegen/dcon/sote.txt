@@ -2354,6 +2354,11 @@ object {
         tag { scenario }
     }
     property{
+        name { self_sourcing_fraction }
+        type { float }
+        tag { scenario }
+    }
+    property{
         name { foraging }
         type { uint8_t }
         tag { scenario }
