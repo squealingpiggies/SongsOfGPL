@@ -4,6 +4,8 @@
 #include <cstdint>
 #include <random>
 #include <iostream>
+#include <map>
+#include <utility>
 #include "objs.hpp"
 #define DCON_LUADLL_EXPORTS
 #include "sote_functions.hpp"
@@ -1004,6 +1006,121 @@ float local_production_method_efficiency(dcon::production_method_id method, floa
 	return total_efficiency;
 }
 
+ve::vectorizable_buffer<float, dcon::use_case_id> pop_forage_inputs(dcon::pop_id pop, dcon::estate_id estate, dcon::tile_id tile) {
+	auto use_case_available = state.use_case_make_vectorizable_float_buffer();
+	auto use_case_demanded = state.use_case_make_vectorizable_float_buffer();
+	auto trade_good_demand = state.trade_good_make_vectorizable_float_buffer();
+
+	// mapping of use case to consumable trade goods use
+	std::map<uint32_t,std::map<uint32_t, std::pair<float,float>>> trade_good_by_use_case;
+
+	auto forage_time = state.pop_get_forage_ratio(pop);
+	auto culture = state.pop_get_culture(pop);
+	std::cout << "pop " << pop.index() << " " << state.pop_get_forage_ratio(pop) << "\n";
+
+	// collect use case demand
+	for (uint32_t t = 0; t < state.culture_get_traditional_forager_targets_size(); t++){
+		dcon::production_method_id production_method = dcon::production_method_id{(dcon::production_method_id::value_base_t)(t)};
+		auto culture_ratio = state.culture_get_traditional_forager_targets(culture,production_method);
+		if (culture_ratio < 0.001) continue;
+
+		float boosts[3] = {1.f,0.f,0.f};
+		technology_production_boosts(estate, production_method, boosts);
+		auto jobtype = state.production_method_get_job_type(production_method);
+		auto throughput_scale = local_production_method_efficiency(production_method, job_efficiency(pop,jobtype)*boosts[0], tile);
+		if (throughput_scale == 0) continue;
+		auto effective_time = throughput_scale * culture_ratio * forage_time;
+		auto input_scale = effective_time * (1 - boosts[2]);
+
+		// std::cout << " m" << t << " " << culture_ratio << " -> " << combine_ratio << "\n";
+
+		for (uint32_t i = 0; i < state.production_method_get_inputs_size(); i++) {
+			base_types::use_case_container input = state.production_method_get_inputs(production_method, i);
+			if (input.use == 0) break;
+
+			auto use_case = dcon::use_case_id{(uint8_t)(input.use - 1)};
+			auto input_required = input.amount * input_scale;
+			// std::cout << "  c" << use_case.index() << ":" << input.amount << "*" << input_scale << "=" << input_required << "\n";
+
+			use_case_demanded.set(use_case, use_case_demanded.get(use_case) + input_required);
+		}
+	}
+
+	// collect available use cases from inventory
+	state.for_each_use_case([&](dcon::use_case_id use_case){
+		auto use_demand = use_case_demanded.get(use_case);
+		if (use_demand > 0) {
+			// std::cout << " c" << use_case.index() << " " << use_demand << "\n";
+			auto use_in_inventory = 0.f;
+
+			state.use_case_for_each_use_weight_as_use_case(use_case, [&](auto weight_id){
+				auto weight = state.use_weight_get_weight(weight_id);
+				auto trade_good = state.use_weight_get_trade_good(weight_id);
+
+				auto inventory = std::max(0.f, state.pop_get_inventory(pop, trade_good));
+				if (inventory > 0){
+					auto good_use_in_inventory = inventory * weight;
+					trade_good_by_use_case[use_case.index()][trade_good.index()] = std::make_pair(weight,inventory);
+					use_in_inventory += good_use_in_inventory;
+					// std::cout << "  g" << trade_good.index() << ": " << inventory << " * " << weight << " = " << good_use_in_inventory << "\n";
+				}
+			});
+
+			use_case_available.set(use_case, use_in_inventory);
+			// std::cout << "   t" << use_in_inventory << "/" << use_demand << "\n";
+		}
+	});
+
+	// output mapping of use cases to trade goods
+	for (auto const &[use, good_list] : trade_good_by_use_case){
+		auto use_case = dcon::use_case_id{(dcon::use_case_id::value_base_t)(use)};
+		auto use_available = use_case_available.get(use_case);
+		auto use_demand = use_case_demanded.get(use_case);
+		// std::cout << " " << use << ":" << use_available << "/" << use_demand << "=" << "\n";
+		for (auto const &[good, weights] : good_list) {
+			auto inventory_use = weights.first * weights.second;
+			auto good_ratio = inventory_use / use_available;
+			auto good_amount = good_ratio * use_demand / weights.first;
+			auto trade_good = dcon::trade_good_id{(dcon::trade_good_id::value_base_t)(good)};
+			trade_good_demand.set(trade_good,trade_good_demand.get(trade_good) + good_amount);
+			// std::cout << "  " << good << ":" << weights.first << "*" << weights.second << "=" << inventory_use << "/" << use_available << "=" << good_ratio << "=" << good_amount << "\n";
+			trade_good_by_use_case[use][good] = std::make_pair(weights.first,good_amount);
+		}
+	}
+
+	// attempt to consume trade goods
+	state.for_each_trade_good([&](auto trade_good){
+		auto demanded = trade_good_demand.get(trade_good);
+		if (demanded > 0) {
+			auto inventory = std::max(0.f, state.pop_get_inventory(pop, trade_good));
+			auto consumed = std::min(demanded, inventory);
+			state.pop_set_inventory(pop, trade_good, std::max(0.f, inventory - consumed));
+			auto satisfaction = consumed / demanded;
+			// std::cout << trade_good.index() << " " << consumed << "/" << demanded << " -> " << satisfaction << "\n";
+			trade_good_demand.set(trade_good,satisfaction);
+		}
+	});
+
+	// calculate use case satisfaction from trade good satisfaction
+	for (auto const &[use, good_list] : trade_good_by_use_case){
+		auto use_case = dcon::use_case_id{(dcon::use_case_id::value_base_t)(use)};
+		auto use_demand = use_case_demanded.get(use_case);
+		auto use_satisfaction = 0.f;
+		// std::cout << " " << use << " - " << use_demand << "\n";;
+		for (auto const &[good, weights] : good_list) {
+			auto trade_good = dcon::trade_good_id{(dcon::trade_good_id::value_base_t)(good)};
+			auto good_satisfaction = weights.first * weights.second * trade_good_demand.get(trade_good);
+			// std::cout << "  " << good << " (" << weights.first << ") " << weights.second << " * " << trade_good_demand.get(trade_good) << " = " << good_satisfaction << "\n";
+			use_satisfaction += good_satisfaction;
+		}
+		auto satisfaction_ratio = use_satisfaction / use_demand;
+		// std::cout << "   " << use << " - " << use_satisfaction << "/" << use_demand << " = " << satisfaction_ratio << "\n";
+		use_case_demanded.set(use_case,satisfaction_ratio);
+	}
+
+	return use_case_demanded;
+}
+
 void pop_forage_update(dcon::pop_id pop, dcon::estate_id estate, dcon::tile_id tile) {
 	auto size = 10.0;
 	auto forage_time = state.pop_get_forage_ratio(pop);
@@ -1011,7 +1128,9 @@ void pop_forage_update(dcon::pop_id pop, dcon::estate_id estate, dcon::tile_id t
 
 	auto estimated_profit = 0.f;
 
-	// for each cultural foraging production method...
+	auto input_satisfaction = pop_forage_inputs(pop,estate,tile);
+
+	// method production
 	for (auto i = 0; i < state.culture_get_traditional_forager_targets_size(); i++){
 		dcon::production_method_id production_method = dcon::production_method_id{(dcon::production_method_id::value_base_t)(i)};
 		auto cultural_ratio = state.culture_get_traditional_forager_targets(culture,production_method);
@@ -1026,83 +1145,22 @@ void pop_forage_update(dcon::pop_id pop, dcon::estate_id estate, dcon::tile_id t
 		if (throughput_scale == 0) continue;
 		auto effective_time = throughput_scale * cultural_ratio * forage_time;
 		auto output_scale = effective_time * (1 + boosts[1]);
-		auto input_scale = effective_time * (1 - boosts[2]);
 
-		auto used_but_not_consumed_goods = state.trade_good_make_vectorizable_float_buffer();
+		std::cout << production_method.index() << ":" << throughput_scale << "*" << cultural_ratio << "*" << forage_time << "\n";
 
-		// TODO use tool needs to calculate percentage available
 		// calculate available inputs in the pop inventory
 		auto min_input = 1.f;
 
 		for (uint32_t i = 0; i < state.production_method_get_inputs_size(); i++) {
-
 			base_types::use_case_container input = state.production_method_get_inputs(production_method, i);
 			if (input.use == 0) break;
-
-			float use_required = input_scale * input.amount;
-
-			// auto have_to_satisfy = input.amount * input_scale;
-			float use_in_inventory = 0.f;
-
-			state.use_case_for_each_use_weight_as_use_case(dcon::use_case_id{(uint8_t)(input.use - 1)}, [&](auto weight_id){
-				auto weight = state.use_weight_get_weight(weight_id);
-				auto trade_good = state.use_weight_get_trade_good(weight_id);
-
-				auto inventory = std::max(0.f, state.pop_get_inventory(pop, trade_good) - used_but_not_consumed_goods.get(trade_good));
-
-				if (use_in_inventory + inventory * weight < use_required) {
-					use_in_inventory += inventory * weight;
-				} else {
-					use_in_inventory = use_required;
-				}
-
-			});
-
-			min_input = std::min(min_input, use_in_inventory / use_required);
-		}
-
-		// TODO have consumption use tool needs fraction to destribute inputs evenly
-		// actual consumption:
-		for (uint32_t i = 0; i < state.production_method_get_inputs_size(); i++) {
-
-			base_types::use_case_container input = state.production_method_get_inputs(production_method, i);
-			if (input.use == 0) break;
-
-			float use_required = input_scale * input.amount;
-
-			// auto have_to_satisfy = input.amount * input_scale;
-			float use_in_inventory = 0.f;
-			auto use = dcon::use_case_id{(uint8_t)(input.use - 1)};
-			auto actual_consumption_effect = state.use_case_get_good_consumption(use);
-
-			state.use_case_for_each_use_weight_as_use_case(use, [&](auto weight_id){
-				auto weight = state.use_weight_get_weight(weight_id);
-				auto trade_good = state.use_weight_get_trade_good(weight_id);
-
-				// try to consume
-				auto inventory = std::max(0.f, state.pop_get_inventory(pop, trade_good) - used_but_not_consumed_goods.get(trade_good));
-
-				if (use_in_inventory + inventory * weight < use_required) {
-					used_but_not_consumed_goods.set(trade_good, used_but_not_consumed_goods.get(trade_good) + inventory);
-					state.pop_set_inventory(pop, trade_good, inventory * (1.f - actual_consumption_effect));
-					use_in_inventory += inventory * weight;
-				} else {
-					used_but_not_consumed_goods.set(trade_good, used_but_not_consumed_goods.get(trade_good) + (use_required - use_in_inventory) / weight);
-					state.pop_set_inventory(pop, trade_good, std::max(0.f, inventory - (use_required - use_in_inventory) / weight * actual_consumption_effect));
-					use_in_inventory = use_required;
-				}
-
-				// std::cout << use_in_inventory << "/" << use_required << "\n";
-			});
-
-			min_input = std::min(min_input, use_in_inventory / use_required);
-
-			// std::cout << min_input << " " << input_scale << " " << input.amount << "\n";
+			min_input = std::min(min_input, input_satisfaction.get(dcon::use_case_id{dcon::use_case_id::value_base_t(input.use - 1)}));
+			std::cout << " " << input_satisfaction.get(dcon::use_case_id{dcon::use_case_id::value_base_t(input.use - 1)}) << "=>" << min_input << "\n";
 		}
 
 		auto self_satisfaction = state.production_method_get_self_sourcing_fraction(production_method);
 		if (self_satisfaction) min_input += (1 - min_input) * self_satisfaction;
-		// std::cout << self_satisfaction << " => " << min_input << "\n";
+		std::cout << self_satisfaction << "=>" << min_input << "\n";
 
 		// actual production
 		for (uint32_t i = 0; i < state.production_method_get_outputs_size(); i++) {
@@ -1114,7 +1172,7 @@ void pop_forage_update(dcon::pop_id pop, dcon::estate_id estate, dcon::tile_id t
 			auto inventory = state.pop_get_inventory(pop, good);
 
 			state.pop_set_inventory(pop, good, inventory + output.amount * output_scale * min_input);
-			// std::cout << inventory << " -> " << state.pop_get_inventory(pop,good) << "\n";
+			std::cout << " " << inventory << " -> " << state.pop_get_inventory(pop,good) << "\n";
 		}
 
 		// std::cout << int(forage_case.forage) << " "
@@ -1169,7 +1227,6 @@ void pops_produce(dcon::tile_id tile) {
 			state.pop_set_forage_ratio(pop,forage_time);
 			state.pop_set_work_ratio(pop,work_time);
 			auto culture = state.pop_get_culture(pop);
-
 			state.for_each_production_method([&](auto production_method){
 				auto cultural_ratio = state.culture_get_traditional_forager_targets(culture, production_method);
 				if (cultural_ratio < 0.001) return;

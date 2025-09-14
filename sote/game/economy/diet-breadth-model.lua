@@ -145,12 +145,13 @@ local function turn_output_to_energy(good, use_case, amount)
 end
 
 ---commenting
+---@param foraging_methods table<production_method_id,number>
 ---@param efficiencies table<production_method_id,number>
 ---@param tile_id tile_id
 ---@param use_case use_case_id
 ---@param needed number
 ---@return TargetNeedsTable
-local function forage_targets_for_a_given_use_case(efficiencies, tile_id, use_case, needed)
+local function forage_targets_for_a_given_use_case(foraging_methods, efficiencies, tile_id, use_case, needed)
 	-- print("USE: " .. DATA.use_case_get_name(use_case) .. ", NEEDED: " .. needed)
 	-- have tile size variable, lat lon calculated?
 	local tile_size = 10
@@ -164,7 +165,6 @@ local function forage_targets_for_a_given_use_case(efficiencies, tile_id, use_ca
 	local data_per_forage_target = {}
 
 	-- for each production method...
-	local foraging_methods = dbm.local_foraging_methods(tile_id)
 	for method, value in pairs(foraging_methods) do
 		local forage_case = DATA.production_method_get_foraging(method)
 		local required_job = DATA.production_method_get_job_type(method)
@@ -222,7 +222,7 @@ local function forage_targets_for_a_given_use_case(efficiencies, tile_id, use_ca
 		average_energy_return_per_unit_of_time = total_energy_output / (total_handle + total_search),
 		data_per_forage_target = data_per_forage_target
 	}
-	-- print(DATA.use_case_get_name(use_case),total_search, total_handle, needed, total_energy_output, total_energy_output / (total_handle + total_search))
+	-- print("",DATA.use_case_get_name(use_case),total_search, total_handle, needed, total_energy_output, total_energy_output / (total_handle + total_search))
 
 	return result
 end
@@ -417,14 +417,19 @@ end
 ---@param tile_id tile_id
 ---@param culture_id culture_id
 function dbm.cultural_foragable_targets(tile_id, culture_id)
-	-- get average values from each pop of culture on tile
+	-- get average values from all pop of culture on tile
 	local food_use_cases_needs, local_efficiencies, total_pop = dbm.cultural_food_needs(tile_id,culture_id)
+	if total_pop == 0 then return {}, 0 end
 	-- tabb.deep_print(food_use_cases_needs)
 	-- tabb.deep_print(local_efficiencies)
+
+	-- get available foraging methods for tile
+	local foraging_methods = dbm.local_foraging_methods(tile_id)
+	-- tabb.deep_print(foraging_methods)
 	local food_use_cases_data = tabb.map_array(
 		food_use_cases_needs,
 		function (use_case_amount)
-			return forage_targets_for_a_given_use_case(local_efficiencies, tile_id, use_case_amount.use_case, use_case_amount.amount)
+			return forage_targets_for_a_given_use_case(foraging_methods, local_efficiencies, tile_id, use_case_amount.use_case, use_case_amount.amount)
 		end
 	)
 	-- tabb.deep_print(food_use_cases_data)

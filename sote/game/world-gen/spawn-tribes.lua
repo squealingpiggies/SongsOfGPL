@@ -74,30 +74,30 @@ local function make_new_realm(capitol_id, race_id, center_id, culture, faith)
 	pe.transfer_power(r, elite_character, POLITICS_REASON.INITIALRULER)
 	DATA.force_create_ownership(estate, elite_character)
 
-	-- We also need to spawn in some population...
-	local pop_to_spawn = math.min(1, math.max(1,
-		DATA.tile_get_foragers_limit(center_id) / race.carrying_capacity_weight * race.fecundity * 0.5))
-	for _ = 1, pop_to_spawn do
-		local age = math.floor(math.abs(love.math.randomNormal(race.adult_age, race.adult_age)) + 1)
-		local new_pop = pop_utils.new(
-			race_id,
-			faith,
-			culture,
-			love.math.random() > male_percentage,
-			-age,
-			love.math.random(1, WORLD.ticks_per_year)
-		)
-		province_utils.add_pop(estate, new_pop)
-		province_utils.set_home(estate, new_pop)
-	end
+	-- -- We also need to spawn in some population...
+	-- local pop_to_spawn = math.min(1, math.max(1,
+	-- 	DATA.tile_get_foragers_limit(center_id) / race.carrying_capacity_weight * race.fecundity * 0.5))
+	-- for _ = 1, pop_to_spawn do
+	-- 	local age = math.floor(math.abs(love.math.randomNormal(race.adult_age, race.adult_age)) + 1)
+	-- 	local new_pop = pop_utils.new(
+	-- 		race_id,
+	-- 		faith,
+	-- 		culture,
+	-- 		love.math.random() > male_percentage,
+	-- 		-age,
+	-- 		love.math.random(1, WORLD.ticks_per_year)
+	-- 	)
+	-- 	province_utils.add_pop(estate, new_pop)
+	-- 	province_utils.set_home(estate, new_pop)
+	-- end
 
-	-- spawn some nobles
-	for i = 1, pop_to_spawn / 5 do
-		local contender = pe.generate_new_noble(r, estate, race_id, faith, culture)
-		local popularity = DATA.force_create_popularity(contender, r)
-		local fat_popularity = DATA.fatten_popularity(popularity)
-		fat_popularity.value = AGE_YEARS(contender) / 15
-	end
+	-- -- spawn some nobles
+	-- for i = 1, pop_to_spawn / 5 do
+	-- 	local contender = pe.generate_new_noble(r, estate, race_id, faith, culture)
+	-- 	local popularity = DATA.force_create_popularity(contender, r)
+	-- 	local fat_popularity = DATA.fatten_popularity(popularity)
+	-- 	fat_popularity.value = AGE_YEARS(contender) / 15
+	-- end
 
 	-- set up capitol
 	capitol.name = language_utils.get_random_province_name(DATA.culture_get_language(culture))
@@ -110,7 +110,7 @@ local function make_new_realm(capitol_id, race_id, center_id, culture, faith)
 	-- give initial research budget
 	DATA.realm_set_budget_budget(r, BUDGET_CATEGORY.EDUCATION, 1)
 	-- starting treasury
-	fat.budget_treasury = love.math.random() * 20 + 20 * pop_to_spawn
+	fat.budget_treasury = love.math.random() * 20 + 20 --* pop_to_spawn
 
 --[[
 	-- give some realms early tech advantage to reduce waiting:
@@ -130,7 +130,7 @@ local function make_new_realm(capitol_id, race_id, center_id, culture, faith)
 			province_utils.research(capitol_id, item)
 		end
 	end
---]]
+
 
 	-- match children pop to some possible parent
 	DATA.for_each_pop_location_from_estate(estate, function(item)
@@ -163,6 +163,7 @@ local function make_new_realm(capitol_id, race_id, center_id, culture, faith)
 			DATA.force_create_parent_child_relation(parent, child)
 		end
 	end)
+--]]
 
 	-- capitol:validate_population()
 
@@ -236,13 +237,13 @@ function st.run()
 
 	---@type Race[]
 	local order = {}
+--[[
 	for _, r in pairs(RAWS_MANAGER.races_by_name) do
 		if DATA.race_get_requires_large_river(r) then
 			table.insert(order, r)
 			spawns_by_race[r] = {}
 		end
 	end
---[[
 	for _, r in pairs(RAWS_MANAGER.races_by_name) do
 		if DATA.race_get_requires_large_forest(r) and not DATA.race_get_requires_large_river(r) then
 			table.insert(order, r)
@@ -257,7 +258,10 @@ function st.run()
 		end
 	end
 --]]
-	local civs = 2 / tabb.size(order) -- one per race...
+	local r = RAWS_MANAGER.races_by_name['high beaver']
+	table.insert(order, r)
+	spawns_by_race[r] = {}
+	local civs = 1 / tabb.size(order) -- one per race...
 
 	-- go through tiles and find possible tile spawns by race
 	-- local total_tiles, land_tiles, forageable_tiles, forest_tiles, river_tiles, river_forest, tiles_alt, tiles_alto = 0, 0, 0, 0, 0, 0, 0, 0

@@ -165,7 +165,7 @@ function d.load()
 		g = 0.2,
 		b = 0.3,
 		inputs = { [retrieve_use_case("tools-like")] = 1 },
-		outputs = { [retrieve_good("bark")] = 2, },
+		outputs = { [retrieve_good("bark")] = 1, [retrieve_good("timber")] = 1 },
 		job = job("woodcutters"),
 		job_type = JOBTYPE.ARTISAN,
 		self_sourcing_fraction = 0.5,
