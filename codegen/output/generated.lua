@@ -1238,7 +1238,13 @@ function DATA.test_set_get_0()
     for j = 1, 400 do
         DATA.estate_set_technologies_researchable(id, j --[[@as technology_id]],  9)    end
     for j = 1, 250 do
-        DATA.estate_set_buildable_buildings(id, j --[[@as building_type_id]],  15)    end
+        DATA.estate_set_technologies_throughput_boosts(id, j --[[@as production_method_id]],  10)    end
+    for j = 1, 250 do
+        DATA.estate_set_technologies_output_boosts(id, j --[[@as production_method_id]],  2)    end
+    for j = 1, 250 do
+        DATA.estate_set_technologies_input_boosts(id, j --[[@as production_method_id]],  17)    end
+    for j = 1, 250 do
+        DATA.estate_set_buildable_buildings(id, j --[[@as building_type_id]],  6)    end
     local test_passed = true
     test_passed = test_passed and fat_id.savings == 4
     if not test_passed then print("savings", 4, fat_id.savings) end
@@ -1269,9 +1275,21 @@ function DATA.test_set_get_0()
     end
     if not test_passed then print("technologies_researchable", 9, DATA.estate[id].technologies_researchable[0]) end
     for j = 1, 250 do
-        test_passed = test_passed and DATA.estate_get_buildable_buildings(id, j --[[@as building_type_id]]) == 15
+        test_passed = test_passed and DATA.estate_get_technologies_throughput_boosts(id, j --[[@as production_method_id]]) == 10
     end
-    if not test_passed then print("buildable_buildings", 15, DATA.estate[id].buildable_buildings[0]) end
+    if not test_passed then print("technologies_throughput_boosts", 10, DATA.estate[id].technologies_throughput_boosts[0]) end
+    for j = 1, 250 do
+        test_passed = test_passed and DATA.estate_get_technologies_output_boosts(id, j --[[@as production_method_id]]) == 2
+    end
+    if not test_passed then print("technologies_output_boosts", 2, DATA.estate[id].technologies_output_boosts[0]) end
+    for j = 1, 250 do
+        test_passed = test_passed and DATA.estate_get_technologies_input_boosts(id, j --[[@as production_method_id]]) == 17
+    end
+    if not test_passed then print("technologies_input_boosts", 17, DATA.estate[id].technologies_input_boosts[0]) end
+    for j = 1, 250 do
+        test_passed = test_passed and DATA.estate_get_buildable_buildings(id, j --[[@as building_type_id]]) == 6
+    end
+    if not test_passed then print("buildable_buildings", 6, DATA.estate[id].buildable_buildings[0]) end
     print("SET_GET_TEST_0_estate:")
     if test_passed then print("PASSED") else print("ERROR") end
 end

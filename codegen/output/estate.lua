@@ -21,6 +21,9 @@ local ffi = require("ffi")
 ---@field balance_last_tick number 
 ---@field technologies_present table<technology_id, number> 
 ---@field technologies_researchable table<technology_id, number> 
+---@field technologies_throughput_boosts table<production_method_id, number> 
+---@field technologies_output_boosts table<production_method_id, number> 
+---@field technologies_input_boosts table<production_method_id, number> 
 ---@field buildable_buildings table<building_type_id, number> 
 
 
@@ -47,6 +50,15 @@ uint8_t dcon_estate_get_technologies_present(int32_t, int32_t);
 void dcon_estate_resize_technologies_researchable(uint32_t);
 void dcon_estate_set_technologies_researchable(int32_t, int32_t, uint8_t);
 uint8_t dcon_estate_get_technologies_researchable(int32_t, int32_t);
+void dcon_estate_resize_technologies_throughput_boosts(uint32_t);
+void dcon_estate_set_technologies_throughput_boosts(int32_t, int32_t, float);
+float dcon_estate_get_technologies_throughput_boosts(int32_t, int32_t);
+void dcon_estate_resize_technologies_output_boosts(uint32_t);
+void dcon_estate_set_technologies_output_boosts(int32_t, int32_t, float);
+float dcon_estate_get_technologies_output_boosts(int32_t, int32_t);
+void dcon_estate_resize_technologies_input_boosts(uint32_t);
+void dcon_estate_set_technologies_input_boosts(int32_t, int32_t, float);
+float dcon_estate_get_technologies_input_boosts(int32_t, int32_t);
 void dcon_estate_resize_buildable_buildings(uint32_t);
 void dcon_estate_set_buildable_buildings(int32_t, int32_t, uint8_t);
 uint8_t dcon_estate_get_buildable_buildings(int32_t, int32_t);
@@ -68,6 +80,9 @@ DCON.dcon_estate_resize_inventory_bought_last_tick(101)
 DCON.dcon_estate_resize_inventory_demanded_last_tick(101)
 DCON.dcon_estate_resize_technologies_present(401)
 DCON.dcon_estate_resize_technologies_researchable(401)
+DCON.dcon_estate_resize_technologies_throughput_boosts(251)
+DCON.dcon_estate_resize_technologies_output_boosts(251)
+DCON.dcon_estate_resize_technologies_input_boosts(251)
 DCON.dcon_estate_resize_buildable_buildings(251)
 ---@return estate_id
 function DATA.create_estate()
@@ -260,6 +275,69 @@ function DATA.estate_inc_technologies_researchable(estate_id, index, value)
     ---@type number
     local current = DCON.dcon_estate_get_technologies_researchable(estate_id - 1, index - 1)
     DCON.dcon_estate_set_technologies_researchable(estate_id - 1, index - 1, current + value)
+end
+---@param estate_id estate_id valid estate id
+---@param index production_method_id valid
+---@return number technologies_throughput_boosts 
+function DATA.estate_get_technologies_throughput_boosts(estate_id, index)
+    assert(index ~= 0)
+    return DCON.dcon_estate_get_technologies_throughput_boosts(estate_id - 1, index - 1)
+end
+---@param estate_id estate_id valid estate id
+---@param index production_method_id valid index
+---@param value number valid number
+function DATA.estate_set_technologies_throughput_boosts(estate_id, index, value)
+    DCON.dcon_estate_set_technologies_throughput_boosts(estate_id - 1, index - 1, value)
+end
+---@param estate_id estate_id valid estate id
+---@param index production_method_id valid index
+---@param value number valid number
+function DATA.estate_inc_technologies_throughput_boosts(estate_id, index, value)
+    ---@type number
+    local current = DCON.dcon_estate_get_technologies_throughput_boosts(estate_id - 1, index - 1)
+    DCON.dcon_estate_set_technologies_throughput_boosts(estate_id - 1, index - 1, current + value)
+end
+---@param estate_id estate_id valid estate id
+---@param index production_method_id valid
+---@return number technologies_output_boosts 
+function DATA.estate_get_technologies_output_boosts(estate_id, index)
+    assert(index ~= 0)
+    return DCON.dcon_estate_get_technologies_output_boosts(estate_id - 1, index - 1)
+end
+---@param estate_id estate_id valid estate id
+---@param index production_method_id valid index
+---@param value number valid number
+function DATA.estate_set_technologies_output_boosts(estate_id, index, value)
+    DCON.dcon_estate_set_technologies_output_boosts(estate_id - 1, index - 1, value)
+end
+---@param estate_id estate_id valid estate id
+---@param index production_method_id valid index
+---@param value number valid number
+function DATA.estate_inc_technologies_output_boosts(estate_id, index, value)
+    ---@type number
+    local current = DCON.dcon_estate_get_technologies_output_boosts(estate_id - 1, index - 1)
+    DCON.dcon_estate_set_technologies_output_boosts(estate_id - 1, index - 1, current + value)
+end
+---@param estate_id estate_id valid estate id
+---@param index production_method_id valid
+---@return number technologies_input_boosts 
+function DATA.estate_get_technologies_input_boosts(estate_id, index)
+    assert(index ~= 0)
+    return DCON.dcon_estate_get_technologies_input_boosts(estate_id - 1, index - 1)
+end
+---@param estate_id estate_id valid estate id
+---@param index production_method_id valid index
+---@param value number valid number
+function DATA.estate_set_technologies_input_boosts(estate_id, index, value)
+    DCON.dcon_estate_set_technologies_input_boosts(estate_id - 1, index - 1, value)
+end
+---@param estate_id estate_id valid estate id
+---@param index production_method_id valid index
+---@param value number valid number
+function DATA.estate_inc_technologies_input_boosts(estate_id, index, value)
+    ---@type number
+    local current = DCON.dcon_estate_get_technologies_input_boosts(estate_id - 1, index - 1)
+    DCON.dcon_estate_set_technologies_input_boosts(estate_id - 1, index - 1, current + value)
 end
 ---@param estate_id estate_id valid estate id
 ---@param index building_type_id valid
