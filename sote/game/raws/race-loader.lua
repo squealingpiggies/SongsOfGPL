@@ -187,9 +187,9 @@ function ll.load()
 		},
 		female_needs = {
 			[NEED.FOOD] = {
-				[WATER_USE_CASE] = large_size / 2,
-				[CALORIES_USE_CASE] = large_size,
-				[retrieve_use_case('cambium')] = large_size / 3,
+				[WATER_USE_CASE] = large_size / 3,
+				[CALORIES_USE_CASE] = large_size / 2,
+				[retrieve_use_case('cambium')] = large_size / 5,
 			},
 			[NEED.CLOTHING] = {
 				[retrieve_use_case('clothes')] = large_size / 4 -- beavers have really nice fur
@@ -219,9 +219,9 @@ function ll.load()
 		},
 		male_needs = {
 			[NEED.FOOD] = {
-				[WATER_USE_CASE] = largest_size / 2,
-				[CALORIES_USE_CASE] = largest_size,
-				[retrieve_use_case('cambium')] = largest_size / 3,
+				[WATER_USE_CASE] = largest_size / 3,
+				[CALORIES_USE_CASE] = largest_size / 2,
+				[retrieve_use_case('cambium')] = largest_size / 5,
 			},
 			[NEED.CLOTHING] = {
 				[retrieve_use_case('clothes')] = largest_size / 4 -- beavers have really nice fur

@@ -29,11 +29,11 @@ function d.load()
 	}
 	Job:new {
 		name = 'fishers',
-		icon = 'fish-hook.png',
+		icon = 'fishing-hook.png',
 		description = 'fishers',
-		r = 1,
-		g = 0.3,
-		b = 0.3,
+		r = 0.2,
+		g = 0.2,
+		b = 1.3,
 	}
 	Job:new {
 		name = 'knappers',
@@ -41,7 +41,7 @@ function d.load()
 		description = 'knappers',
 		r = 0.3,
 		g = 0.3,
-		b = 1,
+		b = 0.3,
 	}
 	Job:new {
 		name = 'shamans',

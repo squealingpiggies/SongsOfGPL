@@ -63,6 +63,7 @@ function inspector.draw(gamescene)
 
 	---@type pop_id
 	local player = WORLD.player_character
+	local tile_id = POP_TILE(player)
 	local province = LOCAL_PROVINCE(player)
 
 	local base = ut.BASE_HEIGHT
@@ -113,8 +114,7 @@ function inspector.draw(gamescene)
 	DATA.for_each_ownership_from_owner(player, function (item)
 		local estate = DATA.ownership_get_estate(item)
 		local estate_tile = ESTATE_TILE(estate)
-		local estate_province = TILE_PROVINCE(estate_tile)
-		if estate_province == province then
+		if estate_tile == tile_id then
 			local_estate = estate
 		end
 	end)

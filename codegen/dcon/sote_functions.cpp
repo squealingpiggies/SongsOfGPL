@@ -267,12 +267,13 @@ constexpr inline float MINIMAL_WORKING_RATIO = 0.2f;
 
 constexpr inline float spending_ratio = 0.1f;
 
-float forage_efficiency(float foragers, float carrying_capacity) {
-	if (foragers > carrying_capacity) {
-		return carrying_capacity / foragers; // if foragers is 0, it will never be greater than CC (min 0)
-	} else {
-		return 2 - expf(-0.7*(carrying_capacity - foragers)/carrying_capacity);
+// foraging production method efficiency based on competition on limited resources
+float forage_efficiency(float foragers_count, float foragers_limit) {
+	if (foragers_limit == 0) return 0.f;
+	if (foragers_count > foragers_limit) {
+		return foragers_limit / foragers_count;
 	}
+	return 1; // 2 - expf(-0.7*(foragers_limit - foragers_count)/foragers_limit);
 }
 
 void load_state(char const* name) {
@@ -961,9 +962,9 @@ float local_production_method_efficiency(dcon::production_method_id method, floa
 		}
 		total_efficiency = total_efficiency * soil_efficiency;
 	}
-	auto forage_target = state.production_method_get_foraging(method);
-	if (forage_target) {
-		base_types::forage_container& forage_case = state.tile_get_foragers_targets(tile, forage_target);
+	auto forager_target = state.production_method_get_foraging(method);
+	if (forager_target) {
+		base_types::forage_container& forage_case = state.tile_get_foragers_targets(tile, forager_target);
 		auto amount = forage_case.limit;
 
 		// TODO add speed from pops and terrain
@@ -979,12 +980,15 @@ float local_production_method_efficiency(dcon::production_method_id method, floa
 		//time required to gather and find one unit of resource
 		auto total_time_per_unit = search_time_per_unit + handle_time_per_unit;
 
-		total_efficiency *= forage_case.efficiency / total_time_per_unit;
+		total_efficiency *= 1 / total_time_per_unit;
 	}
 	return total_efficiency;
 }
 
-ve::vectorizable_buffer<float, dcon::use_case_id> pop_consume_use_cases(dcon::pop_id pop, ve::vectorizable_buffer<float, dcon::use_case_id>& use_case_demanded) {
+ve::vectorizable_buffer<float, dcon::use_case_id> pop_consume_use_cases(
+	dcon::pop_id pop,
+	ve::vectorizable_buffer<float,dcon::use_case_id>& use_case_demanded
+) {
 	auto use_case_available = state.use_case_make_vectorizable_float_buffer();
 	auto trade_good_demand = state.trade_good_make_vectorizable_float_buffer();
 
@@ -1066,6 +1070,92 @@ ve::vectorizable_buffer<float, dcon::use_case_id> pop_consume_use_cases(dcon::po
 	return use_case_available;
 }
 
+ve::vectorizable_buffer<float, dcon::use_case_id> estate_consume_use_cases(
+	dcon::estate_id estate,
+	ve::vectorizable_buffer<float, dcon::use_case_id>& use_case_demanded){
+
+	auto use_case_available = state.use_case_make_vectorizable_float_buffer();
+	auto trade_good_demand = state.trade_good_make_vectorizable_float_buffer();
+
+	// mapping of use case to consumable trade goods use
+	std::map<uint32_t,std::map<uint32_t, std::pair<float,float>>> trade_good_by_use_case;
+
+	// collect available use cases from inventory
+	state.for_each_use_case([&](dcon::use_case_id use_case){
+		auto use_demand = use_case_demanded.get(use_case);
+		if (use_demand > 0) {
+			// std::cout << " c" << use_case.index() << " " << use_demand << "\n";
+			auto use_in_inventory = 0.f;
+
+			state.use_case_for_each_use_weight_as_use_case(use_case, [&](auto weight_id){
+				auto weight = state.use_weight_get_weight(weight_id);
+				auto trade_good = state.use_weight_get_trade_good(weight_id);
+
+				auto inventory = std::max(0.f, state.estate_get_inventory(estate, trade_good));
+				if (inventory > 0){
+					auto good_use_in_inventory = inventory * weight;
+					trade_good_by_use_case[use_case.index()][trade_good.index()] = std::make_pair(weight,inventory);
+					use_in_inventory += good_use_in_inventory;
+					// std::cout << "  g" << trade_good.index() << ": " << inventory << " * " << weight << " = " << good_use_in_inventory << "\n";
+				}
+			});
+
+			use_case_available.set(use_case, use_in_inventory);
+			// std::cout << "   " << use_in_inventory << "/" << use_demand << "\n";
+		}
+	});
+
+	// output mapping of use cases to trade goods
+	for (auto const &[use, good_list] : trade_good_by_use_case){
+		auto use_case = dcon::use_case_id{(dcon::use_case_id::value_base_t)(use)};
+		auto use_available = use_case_available.get(use_case);
+		auto use_demand = use_case_demanded.get(use_case);
+		// std::cout << " " << use << ":" << use_available << "/" << use_demand << "=" << "\n";
+		for (auto const &[good, weights] : good_list) {
+			auto inventory_use = weights.first * weights.second;
+			auto good_ratio = inventory_use / use_available;
+			auto good_amount = good_ratio * use_demand / weights.first;
+			auto trade_good = dcon::trade_good_id{(dcon::trade_good_id::value_base_t)(good)};
+			trade_good_demand.set(trade_good,trade_good_demand.get(trade_good) + good_amount);
+			// std::cout << "  " << good << ":" << weights.first << "*" << weights.second << "=" << inventory_use << "/" << use_available << "=" << good_ratio << "=" << good_amount << "\n";
+			trade_good_by_use_case[use][good] = std::make_pair(weights.first,good_amount);
+		}
+	}
+
+	// attempt to consume trade goods
+	state.for_each_trade_good([&](auto trade_good){
+		auto demanded = trade_good_demand.get(trade_good);
+		state.estate_set_inventory_demanded_last_tick(estate, trade_good, demanded);
+		if (demanded > 0) {
+			auto inventory = std::max(0.f, state.estate_get_inventory(estate, trade_good));
+			auto consumed = std::min(demanded, inventory);
+			state.estate_set_inventory(estate, trade_good, std::max(0.f, inventory - consumed));
+			auto satisfaction = consumed / demanded;
+			// std::cout << trade_good.index() << " " << consumed << "/" << demanded << " -> " << satisfaction << "\n";
+			trade_good_demand.set(trade_good,satisfaction);
+		}
+	});
+
+	// calculate use case satisfaction from trade good satisfaction
+	for (auto const &[use, good_list] : trade_good_by_use_case){
+		auto use_case = dcon::use_case_id{(dcon::use_case_id::value_base_t)(use)};
+		auto use_demand = use_case_demanded.get(use_case);
+		auto use_satisfaction = 0.f;
+		// std::cout << " " << use << " - " << use_demand << "\n";;
+		for (auto const &[good, weights] : good_list) {
+			auto trade_good = dcon::trade_good_id{(dcon::trade_good_id::value_base_t)(good)};
+			auto good_satisfaction = weights.first * weights.second * trade_good_demand.get(trade_good);
+			// std::cout << "  " << good << " (" << weights.first << ") " << weights.second << " * " << trade_good_demand.get(trade_good) << " = " << good_satisfaction << "\n";
+			use_satisfaction += good_satisfaction;
+		}
+		auto satisfaction_ratio = use_satisfaction / use_demand;
+		// std::cout << "   " << use << " - " << use_satisfaction << "/" << use_demand << " = " << satisfaction_ratio << "\n";
+		use_case_available.set(use_case,satisfaction_ratio);
+	}
+
+	return use_case_available;
+}
+
 void pop_forage_update(dcon::pop_id pop, dcon::estate_id estate, dcon::tile_id tile) {
 	auto estimated_profit = 0.f;
 
@@ -1087,7 +1177,9 @@ void pop_forage_update(dcon::pop_id pop, dcon::estate_id estate, dcon::tile_id t
 		if (local_efficiency == 0) continue;
 		auto effective_time = local_efficiency * culture_ratio * forage_time;
 		production_method_efficiency.set(production_method,effective_time);
-		auto input_scale = effective_time * (1 - state.estate_get_technologies_input_boosts(estate,production_method));
+		auto foraging_target = state.production_method_get_foraging(production_method);
+		base_types::forage_container& forage_case = state.tile_get_foragers_targets(tile, foraging_target);
+		auto input_scale = effective_time * (1 - state.estate_get_technologies_input_boosts(estate,production_method)) * forage_case.efficiency;
 
 		// std::cout << " m" << t << " " << throughput_scale << " " << culture_ratio << " -> " << effective_time << "\n";
 
@@ -1112,9 +1204,9 @@ void pop_forage_update(dcon::pop_id pop, dcon::estate_id estate, dcon::tile_id t
 		if (state.culture_get_traditional_forager_targets(culture,production_method) < 0.001) continue;
 
 		auto effective_time = production_method_efficiency.get(production_method);
-		auto output_scale = effective_time * (1 + state.estate_get_technologies_output_boosts(estate,production_method));
-
-		// std::cout << production_method.index() << ":" << effective_time << "\n";
+		auto foraging_target = state.production_method_get_foraging(production_method);
+		base_types::forage_container& forage_case = state.tile_get_foragers_targets(tile, foraging_target);
+		auto output_scale = effective_time * (1 + state.estate_get_technologies_output_boosts(estate,production_method)) * forage_case.efficiency;
 
 		// calculate available inputs in the pop inventory
 		auto min_input = 1.f;
@@ -1136,11 +1228,13 @@ void pop_forage_update(dcon::pop_id pop, dcon::estate_id estate, dcon::tile_id t
 			if(!output.good) {
 				break;
 			}
+
 			auto good = dcon::trade_good_id{dcon::trade_good_id::value_base_t(output.good - 1)};
 			auto inventory = state.pop_get_inventory(pop, good);
+			auto amount = output.amount * output_scale * min_input;
 
-			state.pop_set_inventory(pop, good, inventory + output.amount * output_scale * min_input);
-			// std::cout << "   " << inventory << " -> " << state.pop_get_inventory(pop,good) << "\n";
+			state.pop_set_inventory(pop, good, inventory + amount);
+			// std::cout << "   " << inventory << "->" << state.pop_get_inventory(pop,good) << "\n";
 		}
 
 		// std::cout << int(forage_case.forage) << " "
@@ -1173,6 +1267,96 @@ void pop_forage_update(dcon::pop_id pop, dcon::estate_id estate, dcon::tile_id t
 	// }
 }
 
+void estate_building_production(dcon::estate_id estate, dcon::tile_id tile) {
+	// std::cout << "estate " << estate.index() << "\n";
+
+	// collect use case demand
+	auto use_case_demanded = state.use_case_make_vectorizable_float_buffer();
+	state.estate_for_each_building_estate(estate, [&](auto building_estate){
+		auto building = state.building_estate_get_building(building_estate);
+		auto btype = state.building_get_current_type(building);
+		dcon::production_method_id production_method = state.building_type_get_production_method(btype);
+
+		auto input_scale = state.building_get_input_scale(building);
+		auto foraging_target = state.production_method_get_foraging(production_method);
+		if (foraging_target){
+			base_types::forage_container& forage_case = state.tile_get_foragers_targets(tile, foraging_target);
+			// std::cout << " t(" << (int)foraging_target << ") " << forage_case.efficiency;
+			input_scale *= forage_case.efficiency;
+		}
+		// std::cout << " m(" << production_method.index()  << "):" << input_scale << "\n";
+
+		for (uint32_t i = 0; i < state.production_method_get_inputs_size(); i++) {
+			base_types::use_case_container input = state.production_method_get_inputs(production_method, i);
+			if (input.use == 0) break;
+
+			auto use_case = dcon::use_case_id{(uint8_t)(input.use - 1)};
+			auto input_required = input.amount * input_scale;
+			// std::cout << "  c" << use_case.index() << ":" << input.amount << "*" << input_scale << "=" << input_required << "\n";
+
+			use_case_demanded.set(use_case, use_case_demanded.get(use_case) + input_required);
+		}
+	});
+
+	// percentage of use case demands satisfied
+	auto input_satisfaction = estate_consume_use_cases(estate,use_case_demanded);
+
+	// loop through buildings and produce
+	state.estate_for_each_building_estate(estate, [&](auto building_estate){
+		auto building = state.building_estate_get_building(building_estate);
+		auto btype = state.building_get_current_type(building);
+		dcon::production_method_id production_method = state.building_type_get_production_method(btype);
+
+		auto output_scale = state.building_get_output_scale(building);
+		auto input_scale = state.building_get_input_scale(building);
+		auto foraging_target = state.production_method_get_foraging(production_method);
+		if (foraging_target){
+			base_types::forage_container& forage_case = state.tile_get_foragers_targets(tile, foraging_target);
+			// std::cout << " t: " << forage_case.efficiency << " (" << (int)foraging_target << ")";
+			input_scale *= forage_case.efficiency, output_scale *= forage_case.efficiency;
+		}
+		// std::cout << " m(" << production_method.index()  << "):" << input_scale << "," << output_scale << "\n";
+
+		// actual consumption:
+		auto min_input = 1.f;
+		for (uint32_t i = 0; i < state.production_method_get_inputs_size(); i++) {
+
+			base_types::use_case_container input = state.production_method_get_inputs(production_method, i);
+			if (input.use == 0) break;
+
+			min_input = std::min(min_input, input_satisfaction.get(dcon::use_case_id{dcon::use_case_id::value_base_t(input.use - 1)}));
+			// std::cout << " " << input_satisfaction.get(dcon::use_case_id{dcon::use_case_id::value_base_t(input.use - 1)}) << "=>" << min_input << "\n";
+
+			base_types::use_case_container& stats = state.building_get_amount_of_inputs(building, i);
+			stats.amount = min_input * input_scale * input.amount;
+		}
+
+		auto self_satisfaction = state.production_method_get_self_sourcing_fraction(production_method);
+		if (self_satisfaction) min_input += (1 - min_input) * self_satisfaction;
+		// std::cout << "  " << self_satisfaction << ":" << min_input << "\n";
+
+		// actual production:
+		for (uint32_t i = 0; i < state.production_method_get_outputs_size(); i++) {
+			base_types::trade_good_container& output = state.production_method_get_outputs(production_method, i);
+			if(!output.good) {
+				break;
+			}
+			auto good = dcon::trade_good_id{dcon::trade_good_id::value_base_t(output.good - 1)};
+			auto inventory = state.estate_get_inventory(estate, good);
+			auto amount = output.amount * output_scale * min_input;
+			// std::cout << "   " << output.amount << "*" << output_scale << "*" << min_input << "=" << amount << "\n";
+
+			state.estate_set_inventory(estate, good, inventory + amount);
+
+			base_types::trade_good_container& stats = state.building_get_amount_of_outputs(building, i);
+			stats.amount = amount;
+			stats.good = output.good;
+		}
+
+	});
+
+}
+
 
 // can do in parallel over tiles
 void tile_produce(dcon::tile_id tile) {
@@ -1201,6 +1385,7 @@ void tile_produce(dcon::tile_id tile) {
 			state.estate_set_technologies_input_boosts(estate,production_method,input);
 		});
 
+		// record pop forage competition
 		state.estate_for_each_pop_location_as_estate(estate, [&](auto pop_location){
 			auto pop = state.pop_location_get_pop(pop_location);
 			auto free_time = pop_free_time(pop);
@@ -1216,182 +1401,60 @@ void tile_produce(dcon::tile_id tile) {
 				if (culture_ratio < 0.001) return;
 
 				auto jobtype = state.production_method_get_job_type(production_method);
-				auto efficiency = job_efficiency(pop,jobtype) * state.estate_get_technologies_throughput_boosts(estate,production_method);
-
-				auto throughput_scale = (1 + state.estate_get_technologies_throughput_boosts(estate,production_method));
-				auto local_efficiency = local_production_method_efficiency(production_method, job_efficiency(pop,jobtype) * throughput_scale,tile);
+				auto throughput_scale = job_efficiency(pop,jobtype) * (1 + state.estate_get_technologies_throughput_boosts(estate,production_method));
+				auto local_efficiency = local_production_method_efficiency(production_method, throughput_scale, tile);
 				auto effective_time = local_efficiency * culture_ratio * forage_time;
 
 				auto foraging_target = state.production_method_get_foraging(production_method);
 				base_types::forage_container& forage_case = state.tile_get_foragers_targets(tile, foraging_target);
 				forage_case.amount += effective_time;
+				// std::cout << (int)foraging_target << ":" << effective_time << "->" << forage_case.amount << "\n";
 			});
 		});
-		state.estate_for_each_building_estate(estate, [&](auto building_location) {
-			auto building = state.building_estate_get_building(building_location);
+		// update building production scale and forage competition
+		state.estate_for_each_building_estate(estate, [&](auto building_estate){
+			auto building = state.building_estate_get_building(building_estate);
 			auto btype = state.building_get_current_type(building);
 			auto production_method = state.building_type_get_production_method(btype);
+			auto worker = state.building_get_worker_from_employment(building);
+			auto throughput_scale = (1 + state.estate_get_technologies_throughput_boosts(estate,production_method));
+			if (worker) {
+				auto jobtype = state.production_method_get_job_type(production_method);
+				throughput_scale *= job_efficiency(worker,jobtype);
+			} else throughput_scale = 0.f;
+			// std::cout << building.index() << "\n";
+			auto local_efficiency = local_production_method_efficiency(production_method, throughput_scale, tile);
+			auto effective_time = local_efficiency * state.pop_get_work_ratio(worker);
+			auto output_scale = effective_time * (1 + state.estate_get_technologies_output_boosts(estate,production_method));
+			auto input_scale = effective_time * (1 - state.estate_get_technologies_input_boosts(estate,production_method));
+			// std::cout << " " << throughput_scale << " " << local_efficiency << " " << state.pop_get_work_ratio(worker)
+			state.building_set_production_scale(building, effective_time);
+			state.building_set_output_scale(building, output_scale);
+			state.building_set_input_scale(building, input_scale);
+
+			// record building forage competition
 			auto foraging_target = state.production_method_get_foraging(production_method);
 			if (foraging_target){
 				base_types::forage_container& forage_case = state.tile_get_foragers_targets(tile, foraging_target);
-				forage_case.amount += state.building_get_production_scale(building);
+				forage_case.amount += effective_time;
 			}
 		});
 	});
-
 	// set foraging resource efficiencies for foraging
 	for (auto i=0; i < state.tile_get_foragers_targets_size(); i++){
 		base_types::forage_container& forage_case = state.tile_get_foragers_targets(tile, i);
 		forage_case.efficiency = forage_efficiency(forage_case.amount,forage_case.limit);
 	}
 
-	// pop foraging into own inventory
+	// actual estate production
 	state.tile_for_each_estate_location(tile, [&](auto estate_location) {
 		auto estate = state.estate_location_get_estate(estate_location);
+		// pop forages into own inventory
 		state.estate_for_each_pop_location(estate, [&](auto location) {
 			auto pop = state.pop_location_get_pop(location);
 			pop_forage_update(pop, estate, tile);
 		});
-		// TODO move building production here
-	});
-}
-
-void update_building_scale() {
-	state.for_each_building([&](auto building){
-		auto estate = state.building_get_estate_from_building_estate(building);
-		auto tile = state.estate_get_tile_from_estate_location(estate);
-		auto btype = state.building_get_current_type(building);
-		auto production_method = state.building_type_get_production_method(btype);
-		auto associated_job = state.production_method_get_job_type(production_method);
-		auto worker = state.building_get_worker_from_employment(building);
-
-		auto worktime = worker != dcon::pop_id{} ? state.pop_get_work_ratio(worker) : 0.f;
-		auto efficiency = ve::apply([&](auto w, auto job_type) {
-			if (w) {
-				return job_efficiency(w, job_type);
-			} else {
-				return 0.f;
-			}
-		}, worker, associated_job) * (2.f - worktime);
-
-		auto scale = worktime * efficiency * state.estate_get_technologies_throughput_boosts(estate,production_method);
-		auto final_production_scale = local_production_method_efficiency(production_method, scale, tile);
-		auto final_output_scale = final_production_scale * (1 + state.estate_get_technologies_output_boosts(estate,production_method));
-		auto final_input_scale = final_production_scale * (1 - state.estate_get_technologies_input_boosts(estate,production_method));
-
-		state.building_set_production_scale(building, final_production_scale);
-		state.building_set_output_scale(building, final_output_scale);
-		state.building_set_input_scale(building, final_input_scale);
-	});
-}
-
-// depends on province
-void estates_produce(dcon::tile_id tile) {
-	state.tile_for_each_estate_location(tile, [&](auto id) {
-		auto estate = state.estate_location_get_estate(id);
-
-		auto used_but_not_consumed_goods = state.trade_good_make_vectorizable_float_buffer();
-
-		state.estate_for_each_building_estate(estate, [&](auto building_location) {
-			auto building = state.building_estate_get_building(building_location);
-
-			auto building_type = state.building_get_current_type(building);
-			auto production_method = state.building_type_get_production_method(building_type);
-			auto input_scale = state.building_get_input_scale(building);
-			auto output_scale = state.building_get_output_scale(building);
-
-			// calculate available inputs in the estate stockpile
-			auto min_input = 1.f;
-
-			for (uint32_t i = 0; i < state.production_method_get_inputs_size(); i++) {
-				if (input_scale == 0) break;
-
-				base_types::use_case_container input = state.production_method_get_inputs(production_method, i);
-				if (input.use == 0) break;
-
-				float use_required = input_scale * input.amount;
-
-				// auto have_to_satisfy = input.amount * input_scale;
-				float use_in_inventory = 0.f;
-
-				state.use_case_for_each_use_weight_as_use_case(dcon::use_case_id{(uint8_t)(input.use - 1)}, [&](auto weight_id){
-					auto weight = state.use_weight_get_weight(weight_id);
-					auto trade_good = state.use_weight_get_trade_good(weight_id);
-
-					auto inventory = std::max(0.f, state.estate_get_inventory(estate, trade_good) - used_but_not_consumed_goods.get(trade_good));
-
-					if (use_in_inventory + inventory * weight < use_required) {
-						use_in_inventory += inventory * weight;
-					} else {
-						use_in_inventory = use_required;
-					}
-
-				});
-
-				min_input = std::min(min_input, use_in_inventory / use_required);
-			}
-
-			// actual consumption:
-
-			for (uint32_t i = 0; i < state.production_method_get_inputs_size(); i++) {
-				if (input_scale == 0) break;
-
-				base_types::use_case_container input = state.production_method_get_inputs(production_method, i);
-				if (input.use == 0) break;
-
-				float use_required = input_scale * input.amount;
-
-				// auto have_to_satisfy = input.amount * input_scale;
-				float use_in_inventory = 0.f;
-				auto use = dcon::use_case_id{(uint8_t)(input.use - 1)};
-				auto actual_consumption_effect = state.use_case_get_good_consumption(use);
-
-				state.use_case_for_each_use_weight_as_use_case(use, [&](auto weight_id){
-					auto weight = state.use_weight_get_weight(weight_id);
-					auto trade_good = state.use_weight_get_trade_good(weight_id);
-
-					// try to consume
-					auto inventory = std::max(0.f, state.estate_get_inventory(estate, trade_good) - used_but_not_consumed_goods.get(trade_good));
-
-					if (use_in_inventory + inventory * weight < use_required) {
-						used_but_not_consumed_goods.set(trade_good, used_but_not_consumed_goods.get(trade_good) + inventory);
-						state.estate_set_inventory(estate, trade_good, inventory * (1.f - actual_consumption_effect));
-						use_in_inventory += inventory * weight;
-					} else {
-						used_but_not_consumed_goods.set(trade_good, used_but_not_consumed_goods.get(trade_good) + (use_required - use_in_inventory) / weight);
-						state.estate_set_inventory(estate, trade_good, std::max(0.f, inventory - (use_required - use_in_inventory) / weight * actual_consumption_effect));
-						use_in_inventory = use_required;
-					}
-
-					// std::cout << use_in_inventory << "/" << use_required << "\n";
-				});
-
-				min_input = std::min(min_input, use_in_inventory / use_required);
-
-				// std::cout << min_input << " " << input_scale << " " << input.amount << "\n";
-
-				base_types::use_case_container& stats = state.building_get_amount_of_inputs(building, i);
-				stats.amount = min_input * input_scale * input.amount;
-			}
-
-			// actual production
-
-			for (uint32_t i = 0; i < state.production_method_get_outputs_size(); i++) {
-				base_types::trade_good_container& output = state.production_method_get_outputs(production_method, i);
-				if(!output.good) {
-					break;
-				}
-				auto good = dcon::trade_good_id{dcon::trade_good_id::value_base_t(output.good - 1)};
-				auto inventory = state.estate_get_inventory(estate, good);
-
-				state.estate_set_inventory(estate, good, inventory + output.amount * output_scale * min_input);
-
-				base_types::trade_good_container& stats = state.building_get_amount_of_outputs(building, i);
-				stats.amount = min_input * output_scale * output.amount;
-				stats.good = output.good;
-			}
-		});
-
+		estate_building_production(estate, tile);
 	});
 }
 
@@ -1814,40 +1877,34 @@ constexpr inline float WORKERS_SHARE = 0.01f;
 
 // estates can interact only with local pops
 // can do in parallel over provinces
-void estates_pay(dcon::province_id province) {
-	state.province_for_each_tile_province_membership_as_province(province, [&](auto tile_membership) {
-		auto tile = state.tile_province_membership_get_tile(tile_membership);
-		state.tile_for_each_estate_location(tile, [&](auto id) {
-			auto estate = state.estate_location_get_estate(id);
-			auto savings = state.estate_get_savings(estate);
+void estates_pay(dcon::estate_id estate) {
+	auto savings = state.estate_get_savings(estate);
 
-			auto wage_budget = savings * WORKERS_SHARE;
-			state.estate_get_balance_last_tick(estate) -= wage_budget;
+	auto wage_budget = savings * WORKERS_SHARE;
+	state.estate_get_balance_last_tick(estate) -= wage_budget;
 
-			float total_work_time = 0.f;
-			state.estate_for_each_building_estate(estate, [&](auto building_location) {
-				auto building = state.building_estate_get_building(building_location);
-				auto worker = state.building_get_worker_from_employment(building);
-				if (worker) {
-					total_work_time += state.pop_get_work_ratio(worker);
-				}
-			});
+	float total_work_time = 0.f;
+	state.estate_for_each_building_estate(estate, [&](auto building_location) {
+		auto building = state.building_estate_get_building(building_location);
+		auto worker = state.building_get_worker_from_employment(building);
+		if (worker) {
+			total_work_time += state.pop_get_work_ratio(worker);
+		}
+	});
 
-			if (total_work_time < 0.01f) {
-				return;
-			}
+	if (total_work_time < 0.01f) {
+		return;
+	}
 
-			state.estate_for_each_building_estate(estate, [&](auto building_location) {
-				auto building = state.building_estate_get_building(building_location);
-				auto worker = state.building_get_worker_from_employment(building);
-				if (worker) {
-					auto work_ratio = state.pop_get_work_ratio(worker);
-					auto share = wage_budget * work_ratio / total_work_time;
-					state.pop_get_pending_economy_income(worker) += share;
-					state.building_set_worker_income_from_employment(building, share);
-				}
-			});
-		});
+	state.estate_for_each_building_estate(estate, [&](auto building_location) {
+		auto building = state.building_estate_get_building(building_location);
+		auto worker = state.building_get_worker_from_employment(building);
+		if (worker) {
+			auto work_ratio = state.pop_get_work_ratio(worker);
+			auto share = wage_budget * work_ratio / total_work_time;
+			state.pop_get_pending_economy_income(worker) += share;
+			state.building_set_worker_income_from_employment(building, share);
+		}
 	});
 }
 
@@ -1889,8 +1946,6 @@ void update_economy() {
 	});
 
 	auto eps = 0.001f;
-
-	update_building_scale();
 
 	const float pop_donation = 0.05f;
 	// pop donations
@@ -2081,9 +2136,6 @@ void update_economy() {
 	// });
 
 	pops_consume();
-	// state.execute_parallel_over_province([&](auto provinces) {
-	// 	ve::apply([&](dcon::province_id p) { estates_produce(p); }, provinces);
-	// });
 
 	// now we sum up production and calculate trading balance in savings of local merchants
 
@@ -2122,8 +2174,8 @@ void update_economy() {
 		});
 	});
 
-	state.execute_parallel_over_province([&](auto provinces) {
-		ve::apply([&](dcon::province_id p) { estates_pay(p); }, provinces);
+	state.execute_parallel_over_estate([&](auto estates) {
+		ve::apply([&](dcon::estate_id e) { estates_pay(e); }, estates);
 	});
 	pops_update_stats();
 }
@@ -2168,47 +2220,43 @@ float estimate_province_use_price(uint32_t province_lua_id, uint32_t use_lua_id)
 
 	return estimate_province_use_price(province, use);
 }
-/*
+
 float estimate_building_type_income(int32_t province_lua, int32_t estate_lua, int32_t building_type_lua, int32_t race_lua, bool female) {
 	dcon::province_id province {dcon::province_id::value_base_t(province_lua - 1)};
 	dcon::estate_id estate {dcon::estate_id::value_base_t(estate_lua - 1)};
 	dcon::building_type_id building_type {dcon::building_type_id::value_base_t(building_type_lua - 1)};
 	dcon::race_id race {dcon::race_id::value_base_t(race_lua - 1)};
-	auto method = state.building_type_get_production_method(building_type);
-	auto associated_job = state.production_method_get_job_type(method);
-	auto efficiency = job_efficiency(race, female, associated_job);
+	auto production_method = state.building_type_get_production_method(building_type);
+	auto tile = state.estate_get_tile_from_estate_location(estate);
 
-	float throughput_boost =
-		(1 + estate_throughput_boost(estate, method))
-		* efficiency;
-	float input_modifier = std::max(0.f, 1 - estate_input_boost(estate, method))
-		* efficiency;
-	float output_modifier =
-		(1 + estate_output_boost(estate, method))
-		* efficiency;
+	auto jobtype = state.production_method_get_job_type(production_method);
+	auto throughput_scale = job_efficiency(race, female, jobtype) * (1 + state.estate_get_technologies_throughput_boosts(estate,production_method));
+	auto local_efficiency = local_production_method_efficiency(production_method, throughput_scale, tile);
+	auto output_scale = local_efficiency * (1 + state.estate_get_technologies_output_boosts(estate,production_method));
+	auto input_scale = local_efficiency * (1 - state.estate_get_technologies_input_boosts(estate,production_method));
 
 	float income = 0;
 	for (uint32_t i = 0; i < state.production_method_get_inputs_size(); i++) {
-		base_types::use_case_container& input = state.production_method_get_inputs(method, i);
+		base_types::use_case_container& input = state.production_method_get_inputs(production_method, i);
 		if(!input.use) {
 			break;
 		}
 
 		auto use = dcon::use_case_id {dcon::use_case_id::value_base_t(input.use - 1)};
-		income -= input_modifier * estimate_province_use_price(province, use) * input.amount;
+		income -= input.amount * input_scale * estimate_province_use_price(province, use);
 	}
 	for (uint32_t i = 0; i < state.production_method_get_outputs_size(); i++) {
-		base_types::trade_good_container& output = state.production_method_get_outputs(method, i);
+		base_types::trade_good_container& output = state.production_method_get_outputs(production_method, i);
 		if(!output.good) {
 			break;
 		}
 		auto good = dcon::trade_good_id{dcon::trade_good_id::value_base_t(output.good - 1)};
-		income += output.amount * output_modifier * state.province_get_local_prices(province, good);
+		income += output.amount * output_scale * state.province_get_local_prices(province, good);
 	}
 
-    return income * throughput_boost;
+    return income;
 }
-*/
+
 void set_tile_forage_data(dcon::tile_id tile, uint8_t index, base_types::FORAGE_RESOURCE resource, float available){
 
 	base_types::forage_container& forage_data = state.tile_get_foragers_targets(tile, index);

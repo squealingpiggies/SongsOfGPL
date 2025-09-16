@@ -280,22 +280,12 @@ end
 ---@param province province_id
 ---@param owner POP
 ---@return Building
-function EconomicEffects.construct_building(building_type, province, owner)
-	---@type estate_id
-	local estate = INVALID_ID
-
-	local location = owner ~= INVALID_ID and POP_TILE(owner) or DATA.province_get_center(province)
-
-	DATA.for_each_ownership_from_owner(owner, function (item)
-		local owned_estate = DATA.ownership_get_estate(item)
-		if ESTATE_PROVINCE(owned_estate) == province then
-			estate = owned_estate
-		end
-	end)
+function EconomicEffects.construct_building(building_type, estate, owner)
+	local tile = ESTATE_TILE(estate)
 
 	if estate == INVALID_ID then
 		estate = DATA.create_estate()
-		DATA.force_create_estate_location(location, estate)
+		DATA.force_create_estate_location(POP_TILE(owner), estate)
 		if (owner ~= INVALID_ID) then
 			DATA.force_create_ownership(estate, owner)
 		end
@@ -306,6 +296,7 @@ function EconomicEffects.construct_building(building_type, province, owner)
 	DATA.force_create_building_estate(estate, result_building)
 
 	local name_building = DATA.building_type_get_name(building_type)
+	local province = TILE_PROVINCE(ESTATE_TILE(estate))
 	local province_name = DATA.province_get_name(province)
 
 	if WORLD:does_player_see_province_news(province) then
@@ -343,17 +334,17 @@ end
 
 ---comment
 ---@param building_type BuildingType
----@param province province_id
+---@param estate estate_id
 ---@param owner POP
 ---@param overseer POP
 ---@param public boolean
 ---@return Building
-function EconomicEffects.construct_building_with_payment(building_type, province, owner, overseer, public)
+function EconomicEffects.construct_building_with_payment(building_type, estate, owner, overseer, public)
 	local construction_cost = ev.building_cost(building_type, overseer, public)
-	local building = EconomicEffects.construct_building(building_type, province, owner)
+	local building = EconomicEffects.construct_building(building_type, estate, owner)
 
 	if public or (owner == nil) then
-		EconomicEffects.change_treasury(province_utils.realm(province), -construction_cost, ECONOMY_REASON.BUILDING)
+		EconomicEffects.change_treasury(PROVINCE_REALM(ESTATE_PROVINCE(estate)), -construction_cost, ECONOMY_REASON.BUILDING)
 	else
 		EconomicEffects.add_pop_savings(owner, -construction_cost, ECONOMY_REASON.BUILDING)
 	end
