@@ -1454,79 +1454,79 @@ void tile_produce(dcon::tile_id tile) {
 			auto pop = state.pop_location_get_pop(location);
 			pop_forage_update(pop, estate, tile);
 		});
+		// collective consumption of inputs
 		estate_building_production(estate, tile);
 	});
 }
 
 void pops_consume() {
-	static auto uses_buffer = state.trade_good_category_make_vectorizable_float_buffer();
 
 	state.for_each_pop([&](auto pop){
 		if (is_dependent(pop)) return;
+		// std::cout << pop.index() << "\n";
 
+		auto use_cases_demanded = state.use_case_make_vectorizable_float_buffer();
+
+		// collect use case demands
 		for (uint32_t i = 0; i < state.pop_get_need_satisfaction_size(); i++) {
 			base_types::need_satisfaction& need = state.pop_get_need_satisfaction(pop, i);
-			// std::cout << "need: " << i << " " << need.use_case;
-
 			if (need.use_case == 0)	break;
 
 			auto demanded = need.demanded;
+			// std::cout << " " << i << "(" << need.use_case << ") " << need.demanded << "\n";
 
-			auto use = dcon::use_case_id{dcon::use_case_id::value_base_t(need.use_case - 1)};
+			auto use_case = dcon::use_case_id{dcon::use_case_id::value_base_t(need.use_case - 1)};
+			use_cases_demanded.set(use_case, demanded);
+		}
+		state.pop_for_each_parent_child_relation_as_parent(pop, [&](auto child_rel) {
+			auto child = state.parent_child_relation_get_child(child_rel);
+			if (is_dependent_of(child,pop)) {
+				for (uint32_t i = 0; i < state.pop_get_need_satisfaction_size(); i++) {
+					base_types::need_satisfaction& need = state.pop_get_need_satisfaction(child, i);
+					if (need.use_case == 0)	break;
 
-			state.pop_for_each_parent_child_relation_as_parent(pop, [&](auto child_rel) {
-				auto child = state.parent_child_relation_get_child(child_rel);
-				if (is_dependent_of(pop,child)) {
-					base_types::need_satisfaction& need_child = state.pop_get_need_satisfaction(child, i);
-					demanded += need_child.demanded;
+					auto demanded = need.demanded;
+					// std::cout << " " << i << "(" << need.use_case << ") " << need.demanded << "\n";
+		
+
+					auto use_case = dcon::use_case_id{dcon::use_case_id::value_base_t(need.use_case - 1)};
+					use_cases_demanded.set(use_case,use_cases_demanded.get(use_case) + demanded);
+
 					// transfer half of relevent trade goods for collective satisfaction
-					state.use_case_for_each_use_weight_as_use_case(use, [&](auto weight_id){
+					state.use_case_for_each_use_weight_as_use_case(use_case, [&](auto weight_id){
 						auto trade_good = state.use_weight_get_trade_good(weight_id);
 						auto amount = state.pop_get_inventory(child,trade_good);
 						state.pop_set_inventory(child,trade_good,amount*0.5);
 						state.pop_set_inventory(pop,trade_good,state.pop_get_inventory(pop,trade_good)+amount*0.5);
 					});
 				}
-			});
+			}
+		});
+	
+		auto use_cases_satisfied = pop_consume_use_cases(pop,use_cases_demanded);
 
+		// distribute satisfaction
+		for (uint32_t i = 0; i < state.pop_get_need_satisfaction_size(); i++) {
+			base_types::need_satisfaction& need = state.pop_get_need_satisfaction(pop, i);
+			if (need.use_case == 0)	break;
 
-			auto actual_consumption_rate = state.use_case_get_good_consumption(use);
-			auto satisfied = 0.f;
-
-			state.use_case_for_each_use_weight_as_use_case(use, [&](auto weight_id){
-				auto weight = state.use_weight_get_weight(weight_id);
-				auto trade_good = state.use_weight_get_trade_good(weight_id);
-
-				auto inventory = state.pop_get_inventory(pop, trade_good);
-				auto can_consume = inventory * weight;
-
-				if (satisfied >= demanded) {
-					return;
-				} else if (satisfied + can_consume > demanded) {
-					auto consumed = (demanded - satisfied) / weight * actual_consumption_rate;
-					state.pop_set_inventory(pop, trade_good, std::max(0.f, inventory - consumed));
-					satisfied = demanded;
-					return;
-				} else {
-					satisfied += can_consume;
-					auto consumed = inventory * actual_consumption_rate;
-					state.pop_set_inventory(pop, trade_good, std::max(0.f, inventory - consumed));
-				}
-			});
-
-			auto satisfaction = satisfied / demanded;
-
-			need.consumed = need.demanded * satisfaction;
-			state.pop_for_each_parent_child_relation_as_parent(pop, [&](auto child_rel) {
-				auto child = state.parent_child_relation_get_child(child_rel);
-				auto child_age = age_years(child);
-				auto teen_age = state.race_get_teen_age(state.pop_get_race(child));
-				if (child_age < teen_age) {
-					base_types::need_satisfaction& need_child = state.pop_get_need_satisfaction(child, i);
-					need_child.consumed = need.demanded * satisfaction;
-				}
-			});
+			auto use_case = dcon::use_case_id{dcon::use_case_id::value_base_t(need.use_case - 1)};
+			need.consumed = need.demanded * use_cases_satisfied.get(use_case);
+			// std::cout << "  " << i << "(" << need.use_case << ") " << need.consumed << "/" << need.demanded << " = " << use_cases_satisfied.get(use_case) << "\n";
 		}
+		state.pop_for_each_parent_child_relation_as_parent(pop, [&](auto child_rel) {
+			auto child = state.parent_child_relation_get_child(child_rel);
+			if (is_dependent_of(child,pop)) {
+				for (uint32_t i = 0; i < state.pop_get_need_satisfaction_size(); i++) {
+					base_types::need_satisfaction& need = state.pop_get_need_satisfaction(child, i);
+					if (need.use_case == 0)	break;
+
+					auto use_case = dcon::use_case_id{dcon::use_case_id::value_base_t(need.use_case - 1)};
+					need.consumed = need.demanded * use_cases_satisfied.get(use_case);
+					// std::cout << "  " << i << "(" << need.use_case << ") " << need.consumed << "/" << need.demanded << " = " << use_cases_satisfied.get(use_case) << "\n";
+				}
+			}
+		});
 	});
 }
 
@@ -1831,9 +1831,9 @@ void pops_update_stats() {
 
 		// shift foraging based on life satisfaction
 		auto forage_ratio = state.pop_get_forage_ratio(pop);
-		if (life_satisfaction < 0.5f) {
+		if (life_satisfaction < 0.4f) {
 			forage_ratio *= 1.05f;
-		} else if (life_satisfaction >= 1.f) {
+		} else if (life_satisfaction >= 0.8f) {
 			forage_ratio *= 0.95f;
 		}
 		if (forage_ratio < 0.05f) forage_ratio = 0.05f;

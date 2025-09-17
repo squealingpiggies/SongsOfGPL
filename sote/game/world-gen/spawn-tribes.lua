@@ -130,7 +130,7 @@ local function make_new_realm(capitol_id, race_id, center_id, culture, faith)
 			province_utils.research(capitol_id, item)
 		end
 	end
-
+--]]
 
 	-- match children pop to some possible parent
 	DATA.for_each_pop_location_from_estate(estate, function(item)
@@ -163,7 +163,6 @@ local function make_new_realm(capitol_id, race_id, center_id, culture, faith)
 			DATA.force_create_parent_child_relation(parent, child)
 		end
 	end)
---]]
 
 	-- capitol:validate_population()
 

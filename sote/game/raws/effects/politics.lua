@@ -444,7 +444,7 @@ function PoliticalEffects.generate_new_noble(realm, estate, race, faith, culture
 	local fat = DATA.fatten_pop(character)
 	fat.rank = CHARACTER_RANK.NOBLE
 
-	fat.savings = fat.savings + math.sqrt(AGE_YEARS(character)) * 10 + 100
+	fat.savings = fat.savings + math.sqrt(AGE_YEARS(character)) * 10
 
 	roll_traits(character)
 	SET_REALM(character, realm)
