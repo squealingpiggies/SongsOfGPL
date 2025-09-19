@@ -51,7 +51,7 @@ enum class TRADE_GOOD_CATEGORY : uint8_t {
     CAPACITY = 3,
 };
 
-enum class WARBAND_STATUS : uint8_t {
+enum class ESTATE_STATUS : uint8_t {
     INVALID = 0,
     IDLE = 1,
     RAIDING = 2,
@@ -61,12 +61,18 @@ enum class WARBAND_STATUS : uint8_t {
     ATTACKING = 6,
     TRAVELING = 7,
     OFF_DUTY = 8,
+    HIDE = 9,
+    SNEAK = 10,
+    TRAIN = 11,
+    FORAGE = 12,
 };
 
-enum class WARBAND_STANCE : uint8_t {
+enum class ESTATE_STANCE : uint8_t {
     INVALID = 0,
     WORK = 1,
     FORAGE = 2,
+    HIDE = 3,
+    TRAIN = 4,
 };
 
 enum class BUILDING_ARCHETYPE : uint8_t {

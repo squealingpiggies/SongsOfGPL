@@ -38,7 +38,7 @@ function PoliticalEffects.coup(character)
 	end
 
 	local capitol = DATA.realm_get_capitol(realm)
-	if capitol ~= PROVINCE(character) then
+	if capitol ~= POP_PROVINCE(character) then
 		return false
 	end
 
@@ -408,7 +408,7 @@ function PoliticalEffects.grant_nobility_to_random_pop(estate, realm, reason)
 		if AGE_YEARS(pop) > DATA.race_get_teen_age(RACE(pop)) then
 			return false
 		end
-		if PROVINCE(pop) ~= province then
+		if POP_PROVINCE(pop) ~= province then
 			return false
 		end
 		return true
@@ -448,7 +448,7 @@ function PoliticalEffects.generate_new_noble(realm, estate, race, faith, culture
 
 	roll_traits(character)
 	SET_REALM(character, realm)
-	province_utils.add_character(estate, character)
+	province_utils.add_character(estate, character, UNIT_TYPE.CIVILIAN)
 	province_utils.set_home(estate, character)
 
 	return character

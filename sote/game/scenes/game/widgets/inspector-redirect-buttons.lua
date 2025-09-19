@@ -182,7 +182,7 @@ function ib.icon_button_to_building(gamescene,building_id,rect,tooltip,potential
 end
 
 ---@param gamescene GameScene
----@param party_id warband_id
+---@param party_id estate_id
 ---@param rect Rect
 ---@param tooltip string?
 function ib.text_button_to_party(gamescene, party_id, rect, tooltip)
@@ -190,16 +190,16 @@ function ib.text_button_to_party(gamescene, party_id, rect, tooltip)
     local player = WORLD.player_character
     local potential = true
     if party_id ~= INVALID_ID then
-        local province = TILE_PROVINCE(warband_utils.location(party_id))
+        local province = TILE_PROVINCE(ESTATE_TILE(party_id))
         if player ~= INVALID_ID and not ib.is_visible_to_player(province,player) then
             potential = false
         end
-        if ut.text_button(WARBAND_NAME(party_id),rect,tooltip .. CLICK_STRING,potential) then
-            gamescene.selected.warband = party_id
+        if ut.text_button(ESTATE_NAME(party_id) or party_id,rect,tooltip .. CLICK_STRING,potential) then
+            gamescene.selected.estate = party_id
             gamescene.inspector = "warband"
         end
     else
-        ut.text_button(WARBAND_NAME(party_id),rect,tooltip,false)
+        ut.text_button(ESTATE_NAME(party_id),rect,tooltip,false)
     end
 end
 

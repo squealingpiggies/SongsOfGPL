@@ -17,17 +17,15 @@ local traveling = {}
 function traveling.run()
 	--- ai merchants travel around to sell and buy at good prices
 	local index = WORLD.current_tick_in_month
-	while index < DATA.warband_size do
-		if DCON.dcon_warband_is_valid(index) then
-			---@type warband_id
-			local warband = index + 1
-			local leader = WARBAND_LEADER(warband)
+	while index < DATA.estate_size do
+		if DCON.dcon_estate_is_valid(index) then
+			---@type estate_id
+			local estate = index + 1
+			local leader = ESTATE_LEADER(estate)
 			if DATA.pop_get_is_player(leader) then
 				goto continue
 			end
-			if DATA.warband_get_current_path(warband) ~= nil then
-				-- maybe constantly send some supplies to the warband to keep moving?
-				-- economy_effects.pop_transfer_use_to_party(leader, warband, CALORIES_USE_CASE, 0.1)
+			if DATA.estate_get_current_path(estate) ~= nil then
 				goto continue
 			end
 			--- update them with a certain probability
@@ -142,17 +140,17 @@ function traveling.run()
 				travel_effects.exit_settlement(leader)
 
 				local hours, path = pathfinding.pathfind(
-					WARBAND_TILE(warband),
+					ESTATE_TILE(estate),
 					DATA.province_get_center(final_target),
-					military_values.warband_speed(warband),
+					military_values.estate_speed(estate),
 					DATA.realm_get_known_provinces(REALM(leader))
 				)
 				if path then
-					table.insert(path, WARBAND_TILE(warband))
-					DATA.warband_set_current_path(warband, path)
-					DATA.warband_set_movement_progress(
-						warband,
-						pathfinding.tile_distance(WARBAND_TILE(warband), path[#path], military_values.warband_speed(warband))
+					table.insert(path, ESTATE_TILE(estate))
+					DATA.estate_set_current_path(estate, path)
+					DATA.estate_set_movement_progress(
+						estate,
+						pathfinding.tile_distance(ESTATE_TILE(estate), path[#path], military_values.estate_speed(estate))
 					)
 				end
 			end

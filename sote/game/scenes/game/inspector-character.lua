@@ -181,10 +181,11 @@ local function draw_wrk_tab(game,rect,pop_id)
         require "game.scenes.game.widgets.party-ui-widgets".render_party_overview(
             game,layout:next(rect.width-ut.BASE_HEIGHT,ut.BASE_HEIGHT*4),party_id,
             function(rect)
-				local party_name = WARBAND_NAME(party_id)
-				local party_tooltip = party_name .. " is currently "
-					.. DATA.warband_status_get_action_string(DATA.warband_get_current_status(party_id))
-					.. " in " .. PROVINCE_NAME(TILE_PROVINCE(WARBAND_TILE(party_id))) .. "."
+				local party_name = ESTATE_NAME(party_id)
+                local party_status = DATA.estate_get_current_status(party_id)
+                local action_word = party_status and DATA.estate_status_get_action_string(party_status) or "!"
+				local party_tooltip = party_name .. " is currently " .. action_word
+					.. " in " .. PROVINCE_NAME(TILE_PROVINCE(ESTATE_TILE(party_id))) .. "."
 				ib.text_button_to_party(game,party_id,rect,party_tooltip)
             end)
     else

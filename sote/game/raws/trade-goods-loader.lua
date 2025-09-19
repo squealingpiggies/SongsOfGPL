@@ -94,8 +94,8 @@ function d.load()
 	add_use_case("shellfish", "meat", 1)
 
 	TradeGood:new {
-		name = "seashells",
-		description = "seashells",
+		name = "shells",
+		description = "shells",
 		icon = "scallop.png",
 		r = 0.62,
 		g = 0.56,
@@ -104,7 +104,7 @@ function d.load()
 		belongs_to_category = TRADE_GOOD_CATEGORY.GOOD,
 		decay = 0.999
 	}
-	add_use_case("seashells", "tools-like", 0.4)
+	add_use_case("shells", "tools-like", 0.4)
 
 	TradeGood:new {
 		name = "fish",

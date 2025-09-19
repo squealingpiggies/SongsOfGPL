@@ -97,7 +97,7 @@ ffi.cdef[[
 	float job_efficiency(uint32_t,uint8_t);
     // pop time calculations
 	float pop_free_time(uint32_t pop);
-	float pop_warband_time(uint32_t pop,float free);
+	float pop_travel_time(uint32_t pop,float free);
 	float pop_forage_time(uint32_t pop,float free,float party);
 	float pop_work_time(uint32_t pop,float free,float party,float forage);
 	// misc

@@ -423,26 +423,17 @@ float pop_free_time(dcon::pop_id pop) {
 		return 1.f;
 	}
 }
-float pop_warband_time(dcon::pop_id pop, float free) {
-	auto remaining = free - 0.05f;
-	if (remaining <= 0.f) {
-		return 0.f;
-	}
-	auto unitship = state.pop_get_warband_unit_as_unit(pop);
-	auto warband = state.warband_unit_get_warband(unitship);
-	if (state.warband_is_valid(warband)) {
-		auto time = state.warband_get_current_time_used_ratio(warband);
-		if (remaining < time) {
-			return remaining;
-		} else {
-			return time;
-		}
+float pop_travel_time(dcon::pop_id pop, float free) {
+	auto estate = state.pop_get_estate_from_estate_unit(pop);
+	auto travel = state.estate_get_current_time_used_ratio(estate);
+	if (travel > free ) {
+		return free;
 	} else {
-		return 0.f;
+		return travel;
 	}
 }
-float pop_forage_time(dcon::pop_id pop, float free, float warband) {
-	auto remaining = free - warband;
+float pop_forage_time(dcon::pop_id pop, float free, float travel) {
+	auto remaining = free - travel;
 	auto desire = state.pop_get_forage_ratio(pop);
 	if (remaining < desire) {
 		return remaining;
@@ -474,8 +465,8 @@ float job_efficiency(dcon::pop_id pop, uint8_t jobtype) {
 }
 
 bool pop_same_location(dcon::pop_id a, dcon::pop_id b) {
-	auto a_estate = state.pop_location_get_estate(state.pop_get_pop_location_as_pop(a));
-	auto b_estate = state.pop_location_get_estate(state.pop_get_pop_location_as_pop(a));
+	auto a_estate = state.estate_unit_get_estate(state.pop_get_estate_unit_as_pop(a));
+	auto b_estate = state.estate_unit_get_estate(state.pop_get_estate_unit_as_pop(a));
 	if (state.estate_is_valid(a_estate) && a_estate == b_estate) {
 		return true;
 	} // if not in same estate, check if in same tile
@@ -1386,10 +1377,10 @@ void tile_produce(dcon::tile_id tile) {
 		});
 
 		// record pop forage competition
-		state.estate_for_each_pop_location_as_estate(estate, [&](auto pop_location){
-			auto pop = state.pop_location_get_pop(pop_location);
+		state.estate_for_each_estate_unit_as_estate(estate, [&](auto estate_unit){
+			auto pop = state.estate_unit_get_pop(estate_unit);
 			auto free_time = pop_free_time(pop);
-			auto warband_time = pop_warband_time(pop,free_time);
+			auto warband_time = pop_travel_time(pop,free_time);
 			auto forage_time = pop_forage_time(pop,free_time,warband_time);
 			auto work_time = pop_work_time(pop,free_time,warband_time,forage_time);
 			// set actual work time for production call so as to not recalculate it
@@ -1450,8 +1441,8 @@ void tile_produce(dcon::tile_id tile) {
 	state.tile_for_each_estate_location(tile, [&](auto estate_location) {
 		auto estate = state.estate_location_get_estate(estate_location);
 		// pop forages into own inventory
-		state.estate_for_each_pop_location(estate, [&](auto location) {
-			auto pop = state.pop_location_get_pop(location);
+		state.estate_for_each_estate_unit(estate, [&](auto location) {
+			auto pop = state.estate_unit_get_pop(location);
 			pop_forage_update(pop, estate, tile);
 		});
 		// collective consumption of inputs
@@ -1535,7 +1526,7 @@ void pops_sell() {
 		if (state.pop_get_is_player(pop)) {
 			return;
 		}
-		auto estate = state.pop_get_estate_from_pop_location(pop);
+		auto estate = state.pop_get_estate_from_estate_unit(pop);
 		auto tile = state.estate_get_tile_from_estate_location(estate);
 		auto province = state.tile_get_province_from_tile_province_membership(tile);
 		auto income = 0.f;
@@ -1588,7 +1579,7 @@ void estates_sell(dcon::province_id province) {
 // usefulness dep}s on weight, price and total according need
 void pops_demand() {
 	state.for_each_pop([&](auto pop){
-		auto estate = state.pop_get_estate_from_pop_location(pop);
+		auto estate = state.pop_get_estate_from_estate_unit(pop);
 		auto tile = state.estate_get_tile_from_estate_location(estate);
 		auto province = state.tile_get_province_from_tile_province_membership(tile);
 
@@ -1718,7 +1709,7 @@ void estates_demand(dcon::province_id province) {
 
 void pops_buy() {
 	state.for_each_pop([&](auto pop){
-		auto estate = state.pop_get_estate_from_pop_location(pop);
+		auto estate = state.pop_get_estate_from_estate_unit(pop);
 		auto tile = state.estate_get_tile_from_estate_location(estate);
 		auto province = state.tile_get_province_from_tile_province_membership(tile);
 
@@ -1929,6 +1920,7 @@ void update_economy() {
 	});
 	state.execute_serial_over_estate([&](auto estates) {
 		state.estate_set_balance_last_tick(estates, 0.f);
+		state.estate_set_current_time_used_ratio(estates, 0.f);
 	});
 	concurrency::parallel_for(uint32_t(0), state.trade_good_size(), [&](auto trade_good_raw_id) {
 		dcon::trade_good_id trade_good { dcon::trade_good_id::value_base_t(trade_good_raw_id) };
@@ -1957,8 +1949,8 @@ void update_economy() {
 			auto tile = state.tile_province_membership_get_tile(tile_membership);
 			state.tile_for_each_estate_location(tile, [&](auto id) {
 				auto estate = state.estate_location_get_estate(id);
-				state.estate_for_each_pop_location_as_estate(estate, [&](auto pop_location) {
-					auto pop = state.pop_location_get_pop(pop_location);
+				state.estate_for_each_estate_unit_as_estate(estate, [&](auto estate_unit) {
+					auto pop = state.estate_unit_get_pop(estate_unit);
 					auto character_location = state.pop_get_estate_from_character_location(pop);
 					if (character_location) return;
 
@@ -2124,16 +2116,6 @@ void update_economy() {
 	state.execute_parallel_over_tile([&](auto tiles) {
 		ve::apply([&](dcon::tile_id t) { tile_produce(t); }, tiles);
 	});
-	// state.for_each_warband([&](auto warband) {
-	// 	if (!state.warband_get_in_settlement(warband)) {
-	// 		auto tile = state.warband_get_location_from_warband_location(warband);
-	// 		auto province = state.tile_get_province_from_tile_province_membership(tile);
-	// 		state.warband_for_each_warband_unit(warband, [&](auto warband_unit) {
-	// 			auto pop = state.warband_unit_get_unit(warband_unit);
-	// 			pop_forage_update(pop, province);
-	// 		});
-	// 	}
-	// });
 
 	pops_consume();
 

@@ -45,13 +45,10 @@ local function make_new_realm(capitol_id, race_id, center_id, culture, faith)
 
 	fat.name = language_utils.get_random_realm_name(DATA.culture_get_language(culture))
 
-
-	--[[
-	for _, neigh in pairs(capitol.neighbors) do
-		r:explore(neigh)
-	end
-	]]
-	--
+	-- set neighboring provinces to explored
+	DATA.for_each_province_neighborhood_from_origin(capitol_id, function (item)
+		realm_utils.explore(r, DATA.province_neighborhood_get_target(item))
+	end)
 
 	-- Mark the province as settled for processing...
 	WORLD:set_settled_province(capitol_id)
@@ -59,12 +56,14 @@ local function make_new_realm(capitol_id, race_id, center_id, culture, faith)
 	--calculate average racial foraging_efficiency from males per 100 females
 	local male_percentage = race.males_per_hundred_females / (100 + race.males_per_hundred_females)
 
-	-- set best tile to province center
-	DATA.province_set_center(capitol_id, center_id)
-
 	-- create initial estate
 	local estate = DATA.create_estate()
 	DATA.force_create_estate_location(center_id, estate)
+	DATA.estate_set_name(estate, language_utils.get_random_province_name(DATA.culture_get_language(culture)))
+	DATA.estate_set_current_status(estate, ESTATE_STATUS.IDLE)
+	DATA.tile_set_infrastructure(center_id, (love.math.random() * 0.5 + 0.25) -- 25-75% infrastructure on tile
+		* ((1-male_percentage) * race.female_infrastructure_needs + male_percentage * race.male_infrastructure_needs))
+	province_utils.research(estate, tec('paleolithic-knowledge'))
 
 	-- spawn leader
 	local elite_character = pe.generate_new_noble(r, estate, race_id, faith, culture)
@@ -73,10 +72,21 @@ local function make_new_realm(capitol_id, race_id, center_id, culture, faith)
 	fat_popularity.value = AGE_YEARS(elite_character) / 10
 	pe.transfer_power(r, elite_character, POLITICS_REASON.INITIALRULER)
 	DATA.force_create_ownership(estate, elite_character)
+	require "game.raws.effects.warband".set_leader(estate, elite_character)
 
 	-- -- We also need to spawn in some population...
 	local pop_to_spawn = math.max(5,
 		DATA.tile_get_foragers_limit(center_id) / race.carrying_capacity_weight)
+
+	-- spawn some other nobles
+	for i = 1, pop_to_spawn / 5 do
+		local contender = pe.generate_new_noble(r, estate, race_id, faith, culture)
+		local popularity = DATA.force_create_popularity(contender, r)
+		local fat_popularity = DATA.fatten_popularity(popularity)
+		fat_popularity.value = AGE_YEARS(contender) / 15
+	end
+
+	-- spawn some base pop
 	for _ = 1, pop_to_spawn do
 		local age = math.floor(math.abs(love.math.randomNormal(race.adult_age, race.adult_age)) + 1)
 		local new_pop = pop_utils.new(
@@ -87,24 +97,43 @@ local function make_new_realm(capitol_id, race_id, center_id, culture, faith)
 			-age,
 			love.math.random(1, WORLD.ticks_per_year)
 		)
-		province_utils.add_pop(estate, new_pop)
+		require "game.raws.effects.warband".set_as_unit(estate, new_pop, UNIT_TYPE.CIVILIAN)
 		province_utils.set_home(estate, new_pop)
 	end
 
-	-- -- spawn some nobles
-	-- for i = 1, pop_to_spawn / 5 do
-	-- 	local contender = pe.generate_new_noble(r, estate, race_id, faith, culture)
-	-- 	local popularity = DATA.force_create_popularity(contender, r)
-	-- 	local fat_popularity = DATA.fatten_popularity(popularity)
-	-- 	fat_popularity.value = AGE_YEARS(contender) / 15
-	-- end
-
-	-- set up capitol
-	capitol.name = language_utils.get_random_province_name(DATA.culture_get_language(culture))
-	province_utils.research(estate, tec('paleolithic-knowledge')) -- initialize technology...
+	-- to to find parents for children and babies
+	DATA.for_each_estate_unit_from_estate(estate, function(item)
+		local child = DATA.estate_unit_get_pop(item)
+		local child_age = AGE_YEARS(child)
+		if child_age > race.teen_age then
+			return
+		end
+		local child_rank = IS_CHARACTER(child)
+		---@type pop_id[]
+		local parents = {}
+		DATA.for_each_estate_unit_from_estate(estate, function(parent_location)
+			local potential_parent_id = DATA.estate_unit_get_pop(parent_location)
+			local age = AGE_YEARS(potential_parent_id)
+			local rank = IS_CHARACTER(potential_parent_id)
+			-- keep characters and pop families seperate
+			if rank ~= child_rank then
+				return
+				-- make sure parent is old enough to have had this child
+			elseif age <= child_age + race.teen_age then
+				return
+				-- make sure parent isn't too old to have had this child
+			elseif age >= child_age + race.elder_age then
+				return
+			end
+			table.insert(parents, potential_parent_id)
+		end)
+		local parent = tabb.random_select_from_array(parents)
+		if parent then
+			DATA.force_create_parent_child_relation(parent, child)
+		end
+	end)
 
 	-- give some stuff to capitol
-	DATA.tile_set_infrastructure(center_id, love.math.random() * 10 + 10)
 	capitol.local_wealth = love.math.random() * 10 + 10
 	capitol.trade_wealth = love.math.random() * 10 + 10
 	-- give initial research budget
@@ -131,38 +160,6 @@ local function make_new_realm(capitol_id, race_id, center_id, culture, faith)
 		end
 	end
 --]]
-
-	-- match children pop to some possible parent
-	DATA.for_each_pop_location_from_estate(estate, function(item)
-		local child = DATA.pop_location_get_pop(item)
-		local child_age = AGE_YEARS(child)
-		if child_age > race.adult_age then
-			return
-		end
-		local child_rank = IS_CHARACTER(child)
-		---@type pop_id[]
-		local parents = {}
-		DATA.for_each_pop_location_from_estate(estate, function(parent_location)
-			local potential_parent_id = DATA.pop_location_get_pop(parent_location)
-			local age = AGE_YEARS(potential_parent_id)
-			local rank = IS_CHARACTER(potential_parent_id)
-			-- keep characters and pop families seperate
-			if rank ~= child_rank then
-				return
-				-- make sure parent is old enough to have had this child
-			elseif age <= child_age + race.teen_age then
-				return
-				-- make sure parent isn't too old to have had this child
-			elseif age >= child_age + race.elder_age then
-				return
-			end
-			table.insert(parents, potential_parent_id)
-		end)
-		local parent = tabb.random_select_from_array(parents)
-		if parent then
-			DATA.force_create_parent_child_relation(parent, child)
-		end
-	end)
 
 	-- capitol:validate_population()
 

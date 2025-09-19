@@ -218,7 +218,7 @@ return function(gam, rect, base_unit, province)
         local bottom = rect:subrect(0, base_unit, rect.width, rect.height - base_unit, "left", "up")
         ui.centered_text("Population", top)
         local pops = DATA.filter_pop(function (item)
-            return PROVINCE(item) == province
+            return POP_PROVINCE(item) == province
         end)
 
         ut.table(bottom,pops, columns, state)

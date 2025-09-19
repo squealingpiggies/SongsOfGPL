@@ -19,7 +19,7 @@ function co.run(realm)
 	-- Your court is nobles of your capital
 	DATA.for_each_character_location(function (item)
 		local character = DATA.character_location_get_character(item)
-		if PROVINCE(character) ~= capitol then return end
+		if POP_PROVINCE(character) ~= capitol then return end
 		con = con + values.money_utility(character)
 	end)
 
@@ -63,7 +63,7 @@ function co.run(realm)
 
 	DATA.for_each_character_location(function (item)
 		local character = DATA.character_location_get_character(item)
-		if PROVINCE(character) ~= capitol then return end
+		if POP_PROVINCE(character) ~= capitol then return end
 		ef.add_pop_savings(character, nobles_wage, ECONOMY_REASON.COURT)
 	end)
 	DATA.realm_inc_budget_budget(realm, BUDGET_CATEGORY.COURT, -total_decay)
@@ -88,7 +88,7 @@ function co.run(realm)
 
 		if (p.nobles < NOBLES_RATIO * p.population) and (p.population > 5) and (p.nobles < 15) then
 			local pop = tabb.random_select_from_array(tabb.filter_array(p.elligible, function(a)
-				return PROVINCE(a) == province
+				return POP_PROVINCE(a) == province
 			end))
 
 			if pop then

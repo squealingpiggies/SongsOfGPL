@@ -62,8 +62,8 @@ function dbm.cultural_food_needs(tile_id, culture_id)
 
 	DATA.for_each_estate_location_from_tile(tile_id, function (location)
 		local estate = DATA.estate_location_get_estate(location)
-		DATA.for_each_pop_location_from_estate(estate, function (item)
-			local pop_id = DATA.pop_location_get_pop(item)
+		DATA.for_each_estate_unit_from_estate(estate, function (item)
+			local pop_id = DATA.estate_unit_get_pop(item)
 			if DATA.pop_get_culture(pop_id) == culture_id then
 				total_pop = total_pop + 1
 				-- food needs

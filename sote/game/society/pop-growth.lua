@@ -96,11 +96,12 @@ function pg.add_remove(to_add,to_remove)
 			end
 		end
 		local parent_location = POP_ESTATE(pp)
+		local child_unit_type = parent_home == parent_location and UNIT_TYPE.CIVILIAN or UNIT_TYPE.FOLLOWER
 		if parent_location ~= INVALID_ID then
 			if character then
 				province_utils.add_character(parent_location, newborn)
 			else
-				province_utils.add_pop(parent_location, newborn)
+				require "game.raws.effects.warband".set_as_unit(parent_location, newborn, child_unit_type)
 			end
 		end
 

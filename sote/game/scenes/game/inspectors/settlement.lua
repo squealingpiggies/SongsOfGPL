@@ -31,7 +31,7 @@ local function is_visible()
 	if player == INVALID_ID then
 		return false
 	end
-	local province = PROVINCE(player)
+	local province = POP_PROVINCE(player)
 	if province == INVALID_ID then
 		return false
 	end
@@ -64,7 +64,7 @@ function inspector.draw(gamescene)
 	---@type pop_id
 	local player = WORLD.player_character
 	local tile_id = POP_TILE(player)
-	local province = LOCAL_PROVINCE(player)
+	local province = POP_PROVINCE(player)
 
 	local base = ut.BASE_HEIGHT
 

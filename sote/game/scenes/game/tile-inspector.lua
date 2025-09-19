@@ -123,13 +123,13 @@ local function header_panel(gam, tile_id, panel)
 	uit.generic_number_field(
 		"barbute.png",
 		tabb.accumulate(
-			DATA.filter_warband_location_from_location(DATA.province_get_center(province_id), function (item)
+			DATA.filter_estate_location_from_tile(tile_id, function (item)
 				return true
 			end),
 			0,
 			function (a, k, v)
-				local warband = DATA.warband_location_get_warband(v)
-				return a + warband_utils.war_size(warband)
+				local estate = DATA.estate_location_get_estate(v)
+				return a + warband_utils.war_size(estate)
 			end
 		),
 		population_panel,
@@ -1146,12 +1146,12 @@ function re.draw(gam)
 								gam,
 								tab_content,
 								tabb.map_array(
-									DATA.filter_pop_location(
+									DATA.filter_estate_unit(
 										function (item)
-											return province == ESTATE_PROVINCE(DATA.pop_location_get_estate(item))
+											return province == ESTATE_PROVINCE(DATA.estate_unit_get_estate(item))
 										end
 									),
-									DATA.pop_location_get_pop
+									DATA.estate_unit_get_pop
 								),
 								re.cached_character_local_state
 							)()
@@ -1203,14 +1203,14 @@ function re.draw(gam)
 								gam,
 								tab_content,
 								tabb.map_array(
-									DATA.filter_pop_location(
+									DATA.filter_estate_unit(
 										function (item)
-											local pop = DATA.pop_location_get_pop(item)
+											local pop = DATA.estate_unit_get_pop(item)
 											return province ~= ESTATE_PROVINCE(HOME(pop))
-												and province == PROVINCE(pop)
+												and province == POP_PROVINCE(pop)
 										end
 									),
-									DATA.pop_location_get_pop
+									DATA.estate_unit_get_pop
 								),
 								re.cached_pop_guest_state
 							)()

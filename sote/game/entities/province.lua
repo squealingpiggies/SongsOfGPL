@@ -100,14 +100,13 @@ function prov.Province.update_size(province)
 	DATA.province_set_size(province, tabb.size(DATA.get_tile_province_membership_from_province(province)))
 end
 
----Returns the total amount of potential defenders of the province.
----@param province province_id
+---Returns the total amount of potential defenders of the tile.
+---@param tile tile_id
 ---@return number
-function prov.Province.military(province)
-	local settlement = DATA.province_get_center(province)
+function prov.Province.military(tile)
 	local total = 0
-	DATA.for_each_warband_location_from_location(settlement, function (item)
-		local warband = DATA.warband_location_get_warband(item)
+	DATA.for_each_estate_location_from_tile(tile, function (item)
+		local warband = DATA.estate_location_get_estate(item)
 		if (warband == INVALID_ID) then
 			return
 		end
@@ -120,7 +119,6 @@ function prov.Province.military(province)
 	return total
 end
 
-
 ---Returns the local population of the province, including characters.
 ---Doesn't include outlaws and active armies.
 ---@param province province_id
@@ -131,7 +129,7 @@ function prov.Province.local_population(province)
 		local tile = DATA.tile_province_membership_get_tile(membership)
 		DATA.for_each_estate_location_from_tile(tile, function (location)
 			local estate = DATA.estate_location_get_estate(location)
-			DATA.for_each_pop_location_from_estate(estate, function (item)
+			DATA.for_each_estate_unit_from_estate(estate, function (item)
 				result = result + 1
 			end)
 		end)
@@ -185,8 +183,8 @@ function prov.Province.local_home_population(province)
 		local tile = DATA.tile_province_membership_get_tile(membership)
 		DATA.for_each_estate_location_from_tile(tile, function (location)
 			local estate = DATA.estate_location_get_estate(location)
-			DATA.for_each_pop_location_from_estate(estate, function (item)
-				local pop = DATA.pop_location_get_pop(item)
+			DATA.for_each_estate_unit_from_estate(estate, function (item)
+				local pop = DATA.estate_unit_get_pop(item)
 				local home = DATA.home_get_home(DATA.pop_get_home(pop))
 				local home_tile = DATA.estate_location_get_tile(DATA.estate_get_location(home))
 				-- is same tile as home estate
@@ -209,8 +207,8 @@ function prov.Province.local_home_characters(province)
 		local tile = DATA.tile_province_membership_get_tile(membership)
 		DATA.for_each_estate_location_from_tile(tile, function (location)
 			local estate = DATA.estate_location_get_estate(location)
-			DATA.for_each_pop_location_from_estate(estate, function (item)
-				local pop = DATA.pop_location_get_pop(item)
+			DATA.for_each_estate_unit_from_estate(estate, function (item)
+				local pop = DATA.estate_unit_get_pop(item)
 				local home = DATA.home_get_home(DATA.pop_get_home(pop))
 				local home_tile = DATA.estate_location_get_tile(DATA.estate_get_location(home))
 				-- is same tile as home estate
@@ -226,9 +224,9 @@ end
 --[[
 ---@param province province_id
 function prov.Province.validate_population(province)
-	for _, pop_location in pairs(DATA.get_pop_location_from_location(province)) do
-		local check_province = DATA.pop_location_get_location(pop_location)
-		local pop = DATA.pop_location_get_pop(pop_location)
+	for _, estate_unit in pairs(DATA.get_estate_unit_from_estate(province)) do
+		local check_province = DATA.estate_unit_get_estate(estate_unit)
+		local pop = DATA.estate_unit_get_pop(estate_unit)
 		if check_province == INVALID_ID then
 			error("pop_id " .. DATA.pop_get_name(pop) .. " DOESN'T HAVE PROVINCE")
 		end
@@ -237,9 +235,9 @@ function prov.Province.validate_population(province)
 		end
 	end
 
-	for _, pop_location in pairs(DATA.get_home_from_home(province)) do
-		local home_province = DATA.home_get_home(pop_location)
-		local pop = DATA.home_get_pop(pop_location)
+	for _, home_estate in pairs(DATA.get_home_from_home(province)) do
+		local home_estate = DATA.home_get_estate(home_estate)
+		local pop = DATA.home_get_pop(home_estate)
 		if home_province == INVALID_ID then
 			error("pop_id " .. DATA.pop_get_name(pop) .. " DOESN'T HAVE HOME PROVINCE")
 		end
@@ -270,8 +268,8 @@ function prov.Province.population_weight(province)
 		local tile = DATA.tile_province_membership_get_tile(membership)
 		DATA.for_each_estate_location_from_tile(tile, function (location)
 			local estate = DATA.estate_location_get_estate(location)
-			DATA.for_each_pop_location_from_estate(estate, function (item)
-				local pop = DATA.pop_location_get_pop(item)
+			DATA.for_each_estate_unit_from_estate(estate, function (item)
+				local pop = DATA.estate_unit_get_pop(item)
 				-- weight is dependent on food needs, which are age dependent
 				local race = DATA.pop_get_race(pop)
 				local age_multiplier = AGE_MULTIPLIER(pop)
@@ -293,9 +291,9 @@ function prov.Province.transfer_pop(pop, target)
 		DATA.character_location_set_location(current_location, target)
 	end
 	-- print(pop.name, "pop_id", self.name, "-->", target.name)
-	local current_location = DATA.get_pop_location_from_pop(pop)
-	local origin = DATA.pop_location_get_location(current_location)
-	DATA.pop_location_set_location(current_location, target)
+	local current_location = DATA.get_estate_unit_from_pop(pop)
+	local origin = DATA.estate_unit_get_location(current_location)
+	DATA.estate_unit_set_estate(current_location, target)
 	local relevant_children =
 		tabb.filter_array(
 			tabb.map_array(
@@ -303,18 +301,13 @@ function prov.Province.transfer_pop(pop, target)
 				DATA.parent_child_relation_get_child
 			),
 			function(child)
-				local child_location = DATA.pop_location_get_location(DATA.get_pop_location_from_pop(child))
+				local child_location = DATA.estate_unit_get_estate(DATA.get_estate_unit_from_pop(child))
 				if child_location ~= origin then
 					return false
 				end
 
 				local home_location = DATA.home_get_home(DATA.get_home_from_pop(child))
 				if home_location ~= origin then
-					return false
-				end
-
-				local unit_of = DATA.get_warband_unit_from_unit(child)
-				if unit_of ~= INVALID_ID then
 					return false
 				end
 
@@ -349,7 +342,7 @@ function prov.Province.transfer_home(origin, pop, target)
 				DATA.parent_child_relation_get_child
 			),
 			function(child)
-				local child_location = DATA.pop_location_get_location(DATA.get_pop_location_from_pop(child))
+				local child_location = DATA.estate_unit_get_location(DATA.get_estate_unit_from_pop(child))
 				if child_location ~= origin then
 					return false
 				end
@@ -359,7 +352,7 @@ function prov.Province.transfer_home(origin, pop, target)
 					return false
 				end
 
-				local unit_of = DATA.get_warband_unit_from_unit(child)
+				local unit_of = DATA.get_warband_unit_from_pop(child)
 				if unit_of ~= INVALID_ID then
 					return false
 				end
@@ -390,7 +383,7 @@ function prov.Province.patrol_size(province)
 		end
 
 		local status = DATA.warband_get_current_status(warband)
-		if status == WARBAND_STATUS.PATROL then
+		if status == ESTATE_STATUS.PATROL then
 			---@type number
 			total = total + warband_utils.size(warband)
 		end
@@ -403,9 +396,9 @@ end
 ---@param province province_id
 ---@param pop pop_id
 function prov.Province.take_away_pop(province, pop)
-	local location = DATA.get_pop_location_from_pop(pop)
-	assert(DATA.pop_location_get_location(location) == province, "INVALID STATE")
-	DATA.delete_pop_location(location)
+	local location = DATA.get_estate_unit_from_pop(pop)
+	assert(DATA.estate_unit_get_location(location) == province, "INVALID STATE")
+	DATA.delete_estate_unit(location)
 end
 
 
@@ -419,7 +412,7 @@ function prov.Province.research(estate, researched_technology)
 	local tile_id = ESTATE_TILE(estate)
 
 	local estate_races_present = {}
-	DATA.for_each_pop_location_from_estate(estate, function (item)
+	DATA.for_each_estate_unit_from_estate(estate, function (item)
 		estate_races_present[DATA.pop_get_race(item)] = true
 	end)
 
@@ -727,8 +720,8 @@ function prov.Province.get_dominant_culture(province)
 		local tile = DATA.tile_province_membership_get_tile(membership)
 		DATA.for_each_estate_location_from_tile(tile, function (location)
 			local estate = DATA.estate_location_get_estate(location)
-			DATA.for_each_pop_location_from_estate(estate,function (item)
-				local pop_id = DATA.pop_location_get_pop(item)
+			DATA.for_each_estate_unit_from_estate(estate,function (item)
+				local pop_id = DATA.estate_unit_get_pop(item)
 				local culture = DATA.pop_get_culture(pop_id)
 				local old = e[culture] or 0
 				e[culture] = old + 1
@@ -755,8 +748,8 @@ function prov.Province.get_dominant_faith(province)
 		local tile = DATA.tile_province_membership_get_tile(membership)
 		DATA.for_each_estate_location_from_tile(tile, function (location)
 			local estate = DATA.estate_location_get_estate(location)
-			DATA.for_each_pop_location_from_estate(estate,function (item)
-				local pop_id = DATA.pop_location_get_pop(item)
+			DATA.for_each_estate_unit_from_estate(estate,function (item)
+				local pop_id = DATA.estate_unit_get_pop(item)
 				local faith = DATA.pop_get_faith(pop_id)
 				local old = e[faith] or 0
 				e[faith] = old + 1
@@ -783,8 +776,8 @@ function prov.Province.get_dominant_race(province)
 		local tile = DATA.tile_province_membership_get_tile(membership)
 		DATA.for_each_estate_location_from_tile(tile, function (location)
 			local estate = DATA.estate_location_get_estate(location)
-			DATA.for_each_pop_location_from_estate(estate,function (item)
-				local pop_id = DATA.pop_location_get_pop(item)
+			DATA.for_each_estate_unit_from_estate(estate,function (item)
+				local pop_id = DATA.estate_unit_get_pop(item)
 				local race = DATA.pop_get_race(pop_id)
 				local old = e[race] or 0
 				e[race] = old + 1
@@ -824,23 +817,11 @@ function prov.Province.realm(province)
 	return PROVINCE_REALM(province)
 end
 
----links pop location to estate. Preserves home of a pop.
----@param estate estate_id
----@param pop pop_id
-function prov.Province.add_pop(estate, pop)
-	local location = DATA.get_pop_location_from_pop(pop)
-	if location ~= INVALID_ID then
-		DATA.pop_location_set_estate(location,estate)
-	else
-		DATA.force_create_pop_location(estate, pop)
-	end
-end
-
 ---links pop and character location to estate. Preserves home of a pop.
 ---@param estate estate_id
 ---@param character Character
-function prov.Province.add_character(estate, character)
-	prov.Province.add_pop(estate, character)
+function prov.Province.add_character(estate, character, unit)
+	require "game.raws.effects.warband".set_as_unit(estate, character, unit)
 	local location = DATA.get_character_location_from_character(character)
 	if location ~= INVALID_ID then
 		DATA.character_location_set_estate(location,estate)
@@ -876,8 +857,8 @@ function prov.Province.get_spotting(province)
 		local tile = DATA.tile_province_membership_get_tile(membership)
 		DATA.for_each_estate_location_from_tile(tile, function (location)
 			local estate = DATA.estate_location_get_estate(location)
-			DATA.for_each_pop_location_from_estate(estate, function (p)
-				local pop_id = DATA.pop_location_get_pop(p)
+			DATA.for_each_estate_unit_from_estate(estate, function (p)
+				local pop_id = DATA.estate_unit_get_pop(p)
 				s = s + pop_utils.get_spotting(pop_id)
 			end)
 		end)
@@ -886,15 +867,6 @@ function prov.Province.get_spotting(province)
 	--- TODO:
 	--- buildings should not provide spotting while unmanned:
 	--- figure out good way to handle it later
-
-	DATA.for_each_warband_location_from_location(DATA.province_get_center(province), function (party)
-		local warband = DATA.warband_location_get_warband(party)
-		local status = DATA.warband_get_current_status(warband)
-		if status == WARBAND_STATUS.PATROL then
-			---@type number
-			s = s + warband_utils.spotting(warband)
-		end
-	end)
 
 	return s
 end
@@ -966,9 +938,9 @@ function prov.Province.get_job_ratios(province)
 
 	local pop = 0
 
-	DATA.for_each_pop_location(function (item)
-		local pop_id = DATA.pop_location_get_pop(item)
-		if PROVINCE(pop_id) ~= province then return end
+	DATA.for_each_estate_unit(function (item)
+		local pop_id = DATA.estate_unit_get_pop(item)
+		if POP_PROVINCE(pop_id) ~= province then return end
 		local employment = DATA.get_employment_from_worker(pop_id)
 		if DATA.employment_get_building(employment) ~= INVALID_ID then
 			local job = DATA.employment_get_job(employment)
@@ -994,14 +966,14 @@ function prov.Province.get_unemployment(province)
 		local tile = DATA.tile_province_membership_get_tile(membership)
 		DATA.for_each_estate_location_from_tile(tile, function (item)
 			local estate = DATA.estate_location_get_estate(item)
-			for _, p in pairs(DATA.get_pop_location_from_estate(estate)) do
-				local pop_id = DATA.pop_location_get_pop(p)
+			for _, p in pairs(DATA.get_estate_unit_from_estate(estate)) do
+				local pop_id = DATA.estate_unit_get_pop(p)
 
-				local unit_of = DATA.get_warband_unit_from_unit(pop_id)
+				local unit_of = DATA.get_estate_unit_from_pop(pop_id)
 				local employment = DATA.get_employment_from_worker(pop_id)
 				if DATA.employment_get_building(employment) ~= INVALID_ID then
 
-				elseif DATA.warband_unit_get_warband(unit_of) ~= INVALID_ID then
+				elseif DATA.estate_unit_get_estate(unit_of) ~= INVALID_ID then
 
 				else
 					u = u + 1

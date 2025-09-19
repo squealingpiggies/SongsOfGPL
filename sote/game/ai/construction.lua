@@ -233,7 +233,7 @@ function co.run(realm)
 		-- select random character:
 		local builder_location = tabb.random_select_from_array(DATA.filter_character_location(function (item)
 			local candidate = DATA.character_location_get_character(item)
-			if PROVINCE(candidate) ~= province then return false end
+			if POP_PROVINCE(candidate) ~= province then return false end
 			if ai.construction_funds(candidate) > 150 then
 				return true
 			end

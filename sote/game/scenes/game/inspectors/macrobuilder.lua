@@ -92,7 +92,7 @@ function inspector.draw(gam)
 					seen[item] = true
 				end
 				if province_utils.can_build(
-					PROVINCE(character),
+					POP_PROVINCE(character),
 					funds, item, overseer, public_flag
 				) then
 					buildable[item] = true

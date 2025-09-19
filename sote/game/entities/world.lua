@@ -384,7 +384,7 @@ local function handle_event(event, root, unique_id, associated_data)
 	-- 	"root: " .. NAME(root) .. "(".. tostring(root) .. ")" .. "\n"
 	-- )
 
-	-- assert(PROVINCE(target_realm) ~= INVALID_ID, "INVALID PROVINCE")
+	-- assert(POP_PROVINCE(target_realm) ~= INVALID_ID, "INVALID PROVINCE")
 	if RAWS_MANAGER.events_by_name[event] == nil then
 		error(event .. " is not a valid event!")
 	end
@@ -569,7 +569,7 @@ function world.World:tick()
 	-- 		if DCON.dcon_warband_is_valid(index) then
 	-- 			---@type warband_id
 	-- 			local warband = index + 1
-	-- 			local character = WARBAND_LEADER(warband)
+	-- 			local character = ESTATE_LEADER(warband)
 	-- 			if character ~= WORLD.player_character then
 	-- 				decide.run_character(character)
 	-- 			end
@@ -598,79 +598,78 @@ function world.World:tick()
 
 
 	--- daily
-	if WORLD.sub_daily_tick == 1 then
-		PROFILER:start_timer("patrols")
+	-- if WORLD.sub_daily_tick == 1 then
+	-- 	PROFILER:start_timer("patrols")
 
-		DATA.for_each_realm(function (item)
-			military_effects.update_patrol(item)
-		end)
-
-		PROFILER:end_timer("patrols")
-	end
-
-	--- daily
-	-- if WORLD.sub_daily_tick == 2 then
-	-- 	PROFILER:start_timer("warband movement")
-
-	-- 	DATA.for_each_warband(function (item)
-	-- 		-- add yesterday's stance time to warband monthly tracking
-	-- 		local status = DATA.warband_get_current_status(item)
-	-- 		local status_ratio = DATA.warband_status_get_time_used(status)
-	-- 		DATA.warband_inc_current_time_used_ratio(item,status_ratio/30)
-
-	-- 		-- check if traveling at all for the day
-	-- 		local current_path = DATA.warband_get_current_path(item)
-	-- 		if current_path == nil or #current_path == 0 then
-	-- 			DATA.warband_set_current_status(item, WARBAND_STATUS.IDLE)
-	-- 			-- add possible daily foraging?
-	-- 			return
-	-- 		end
-
-	-- 		--- counted in hours
-	-- 		local progress = DATA.warband_get_movement_progress(item)
-	-- 		--- consume day worth of supplies
-	-- 		local supplies_availability = economy_effects.consume_supplies(
-	-- 			item,
-	-- 			1
-	-- 		)
-
-	-- 		-- count needs satisfaction of warband members:
-	-- 		local count = 0
-	-- 		local total_satisfaction = 0
-	-- 		DATA.for_each_warband_unit_from_warband(item, function (warband_unit)
-	-- 			local unit = DATA.warband_unit_get_unit(warband_unit)
-	-- 			local satisfaction = DATA.pop_get_basic_needs_satisfaction(unit)
-
-	-- 			count = count + 1
-	-- 			total_satisfaction = total_satisfaction + satisfaction
-	-- 		end)
-
-	-- 		local base = 1
-	-- 		if (count > 0) then
-	-- 			base = total_satisfaction / count
-	-- 		end
-
-	-- 		-- refund travelling time based on lacking supplies:
-	-- 		DATA.warband_inc_current_time_used_ratio(item,-status_ratio/30 * supplies_availability)
-
-	-- 		--- depending on amount of available supplies, move the party
-	-- 		progress = progress - (base + supplies_availability) * TRAVEL_DAY_HOURS
-	-- 		while progress <= 0 and #current_path > 0 do
-	-- 			local last_tile = table.remove(current_path, #current_path)
-	-- 			travel_effects.move_party(item, last_tile)
-	-- 			if #current_path > 0 then
-	-- 				progress = progress + pathfinding.tile_distance(last_tile, current_path[#current_path], military_values.warband_speed(item))
-	-- 			else
-	-- 				progress = 0
-	-- 				DATA.warband_set_current_path(item, nil)
-	-- 			end
-	-- 		end
-	-- 		DATA.warband_set_movement_progress(item, math.max(0, progress))
-	-- 		DATA.warband_set_current_status(item, WARBAND_STATUS.TRAVELING)
+	-- 	DATA.for_each_realm(function (item)
+	-- 		military_effects.update_patrol(item)
 	-- 	end)
 
-	-- 	PROFILER:end_timer("warband movement")
+	-- 	PROFILER:end_timer("patrols")
 	-- end
+
+	--- daily
+	if WORLD.sub_daily_tick == 2 then
+		PROFILER:start_timer("estate movement")
+
+		DATA.for_each_estate(function (item)
+			-- add yesterday's stance time to monthly tracking
+			local status = DATA.estate_get_current_status(item)
+			local status_ratio = DATA.estate_status_get_time_used(status)
+			DATA.estate_inc_current_time_used_ratio(item,status_ratio/30)
+
+			-- check if traveling at all for the day
+			local current_path = DATA.estate_get_current_path(item)
+			if current_path == nil or #current_path == 0 then
+				DATA.estate_set_current_status(item, ESTATE_STATUS.IDLE)
+				return
+			end
+
+			--- counted in hours
+			local progress = DATA.estate_get_movement_progress(item)
+			--- consume day worth of supplies
+			local supplies_availability = economy_effects.consume_supplies(
+				item,
+				1
+			)
+
+			-- count needs satisfaction of warband members:
+			local count = 0
+			local total_satisfaction = 0
+			DATA.for_each_estate_unit_from_estate(item, function (unit_location)
+				local unit = DATA.estate_unit_get_pop(unit_location)
+				local satisfaction = DATA.pop_get_basic_needs_satisfaction(unit)
+
+				count = count + 1
+				total_satisfaction = total_satisfaction + satisfaction
+			end)
+
+			local base = 1
+			if (count > 0) then
+				base = total_satisfaction / count
+			end
+
+			-- refund travelling time based on lacking supplies:
+			DATA.estate_inc_current_time_used_ratio(item,-status_ratio/30 * supplies_availability)
+
+			--- depending on amount of available supplies, move the party
+			progress = progress - (base + supplies_availability) * TRAVEL_DAY_HOURS
+			while progress <= 0 and #current_path > 0 do
+				local last_tile = table.remove(current_path, #current_path)
+				travel_effects.move_party(item, last_tile)
+				if #current_path > 0 then
+					progress = progress + pathfinding.tile_distance(last_tile, current_path[#current_path], military_values.estate_speed(item))
+				else
+					progress = 0
+					DATA.estate_set_current_path(item, nil)
+				end
+			end
+			DATA.estate_set_movement_progress(item, math.max(0, progress))
+			DATA.estate_set_current_status(item, ESTATE_STATUS.TRAVELING)
+		end)
+
+		PROFILER:end_timer("estate movement")
+	end
 --[[
 	if WORLD.settled_provinces_by_identifier[WORLD.current_tick_in_month] ~= nil then
 		-- Monthly tick per realm
@@ -1027,7 +1026,7 @@ function world.World:does_player_see_province_news(province)
 		return false
 	end
 
-	return (LOCAL_PROVINCE(self.player_character) == province)
+	return (POP_PROVINCE(self.player_character) == province)
 end
 
 

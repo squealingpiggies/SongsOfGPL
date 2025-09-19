@@ -741,77 +741,6 @@ object {
     }
 }
 object {
-    name { warband }
-    storage_type { erasable }
-    size { 50000 }
-    tag {scenario}
-    property{
-        name { units_current }
-        type { array{unit_type_id}{float} }
-        tag { scenario }
-    }
-    property{
-        name { units_target }
-        type { array{unit_type_id}{float} }
-        tag { scenario }
-    }
-    property{
-        name { current_status }
-        type { uint8_t }
-        tag { scenario }
-    }
-    property{
-        name { idle_stance }
-        type { uint8_t }
-        tag { scenario }
-    }
-    property{
-        name { current_time_used_ratio }
-        type { float }
-        tag { scenario }
-    }
-    property{
-        name { inventory }
-        type { array{trade_good_id}{float} }
-        tag { scenario }
-    }
-    property{
-        name { treasury }
-        type { float }
-        tag { scenario }
-    }
-    property{
-        name { total_upkeep }
-        type { float }
-        tag { scenario }
-    }
-    property{
-        name { predicted_upkeep }
-        type { float }
-        tag { scenario }
-    }
-    property{
-        name { supplies }
-        type { float }
-        tag { scenario }
-    }
-    property{
-        name { supplies_target_days }
-        type { float }
-        tag { scenario }
-    }
-    property{
-        name { morale }
-        type { float }
-        tag { scenario }
-    }
-    property{
-        name { in_settlement }
-        type { bitfield }
-        tag { scenario }
-    }
-}
-object {
     name { realm }
     storage_type { erasable }
     size { 15000 }
@@ -1092,7 +1021,62 @@ object {
     size { 300000 }
     tag {scenario}
     property{
+        name { morale }
+        type { float }
+        tag { scenario }
+    }
+    property{
+        name { current_status }
+        type { uint8_t }
+        tag { scenario }
+    }
+    property{
+        name { idle_stance }
+        type { uint8_t }
+        tag { scenario }
+    }
+    property{
+        name { current_time_used_ratio }
+        type { float }
+        tag { scenario }
+    }
+    property{
+        name { units_current }
+        type { array{unit_type_id}{float} }
+        tag { scenario }
+    }
+    property{
+        name { units_target }
+        type { array{unit_type_id}{float} }
+        tag { scenario }
+    }
+    property{
         name { savings }
+        type { float }
+        tag { scenario }
+    }
+    property{
+        name { balance_last_tick }
+        type { float }
+        tag { scenario }
+    }
+    property{
+        name { total_upkeep }
+        type { float }
+        tag { scenario }
+    }
+    property{
+        name { predicted_upkeep }
+        type { float }
+        tag { scenario }
+    }
+    property{
+        name { supplies }
+        type { float }
+        tag { scenario }
+    }
+    property{
+        name { supplies_target_days }
         type { float }
         tag { scenario }
     }
@@ -1114,11 +1098,6 @@ object {
     property{
         name { inventory_demanded_last_tick }
         type { array{trade_good_id}{float} }
-        tag { scenario }
-    }
-    property{
-        name { balance_last_tick }
-        type { float }
         tag { scenario }
     }
     property{
@@ -1220,7 +1199,7 @@ relationship {
 relationship {
     name { building_estate }
     storage_type { erasable }
-    size { 600000 }
+    size { 6000000 }
     tag {scenario}
     link {
         object { estate }
@@ -1235,7 +1214,29 @@ relationship {
     }
 }
 relationship {
-    name { warband_leader }
+    name { estate_unit }
+    storage_type { erasable }
+    size { 300000 }
+    tag {scenario}
+    link {
+        object { pop }
+        name { pop }
+        type { unique }
+    }
+    link {
+        object { estate }
+        name { estate }
+        type { many }
+        index_storage{array}
+    }
+    property{
+        name { type }
+        type { unit_type_id }
+        tag { scenario }
+    }
+}
+relationship {
+    name { estate_leader }
     storage_type { erasable }
     size { 50000 }
     tag {scenario}
@@ -1245,13 +1246,13 @@ relationship {
         type { unique }
     }
     link {
-        object { warband }
-        name { warband }
+        object { estate }
+        name { estate }
         type { unique }
     }
 }
 relationship {
-    name { warband_recruiter }
+    name { estate_recruiter }
     storage_type { erasable }
     size { 50000 }
     tag {scenario}
@@ -1261,13 +1262,13 @@ relationship {
         type { unique }
     }
     link {
-        object { warband }
-        name { warband }
+        object { estate }
+        name { estate }
         type { unique }
     }
 }
 relationship {
-    name { warband_commander }
+    name { estate_commander }
     storage_type { erasable }
     size { 50000 }
     tag {scenario}
@@ -1277,48 +1278,9 @@ relationship {
         type { unique }
     }
     link {
-        object { warband }
-        name { warband }
+        object { estate }
+        name { estate }
         type { unique }
-    }
-}
-relationship {
-    name { warband_location }
-    storage_type { erasable }
-    size { 50000 }
-    tag {scenario}
-    link {
-        object { tile }
-        name { location }
-        type { many }
-        index_storage{array}
-    }
-    link {
-        object { warband }
-        name { warband }
-        type { unique }
-    }
-}
-relationship {
-    name { warband_unit }
-    storage_type { erasable }
-    size { 50000 }
-    tag {scenario}
-    link {
-        object { pop }
-        name { unit }
-        type { unique }
-    }
-    link {
-        object { warband }
-        name { warband }
-        type { many }
-        index_storage{array}
-    }
-    property{
-        name { type }
-        type { unit_type_id }
-        tag { scenario }
     }
 }
 relationship {
@@ -1340,23 +1302,6 @@ relationship {
 }
 relationship {
     name { home }
-    storage_type { erasable }
-    size { 300000 }
-    tag {scenario}
-    link {
-        object { estate }
-        name { estate }
-        type { many }
-        index_storage{array}
-    }
-    link {
-        object { pop }
-        name { pop }
-        type { unique }
-    }
-}
-relationship {
-    name { pop_location }
     storage_type { erasable }
     size { 300000 }
     tag {scenario}
@@ -1481,7 +1426,7 @@ relationship {
     size { 15000 }
     tag {scenario}
     link {
-        object { warband }
+        object { estate }
         name { guard }
         type { unique }
     }
@@ -1755,9 +1700,9 @@ object {
     tag {scenario}
 }
 object {
-    name { warband_status }
+    name { estate_status }
     storage_type { contiguous }
-    size { 10 }
+    size { 14 }
     tag {scenario}
     property{
         name { time_used }
@@ -1766,9 +1711,9 @@ object {
     }
 }
 object {
-    name { warband_stance }
+    name { estate_stance }
     storage_type { contiguous }
-    size { 4 }
+    size { 6 }
     tag {scenario}
 }
 object {

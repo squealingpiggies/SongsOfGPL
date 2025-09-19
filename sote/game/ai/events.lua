@@ -6,7 +6,7 @@ function ev.run(realm)
 		local province = DATA.realm_provinces_get_province(item)
 		DATA.for_each_character_location(function (location)
 			local character = DATA.character_location_get_character(location)
-			if PROVINCE(character) ~= province then return end
+			if POP_PROVINCE(character) ~= province then return end
 			for _, ev in pairs(RAWS_MANAGER.events_by_name) do
 				if ev.automatic then
 					if love.math.random() < ev.base_probability then

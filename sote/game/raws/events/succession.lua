@@ -86,7 +86,7 @@ local function load()
 				ee.add_pop_savings(successor, inheritance, ECONOMY_REASON.INHERITANCE)
 				ee.add_pop_savings(character, -inheritance, ECONOMY_REASON.INHERITANCE)
 			else
-				ee.change_local_wealth(PROVINCE(character), inheritance, ECONOMY_REASON.INHERITANCE)
+				ee.change_local_wealth(POP_PROVINCE(character), inheritance, ECONOMY_REASON.INHERITANCE)
 				ee.add_pop_savings(character, -inheritance, ECONOMY_REASON.INHERITANCE)
 			end
 
@@ -112,7 +112,7 @@ local function load()
 				if successor == INVALID_ID then
 					DATA.for_each_character_location(function (character_location)
 						local noble = DATA.character_location_get_character(character_location)
-						if PROVINCE(noble) ~= capitol then return end
+						if POP_PROVINCE(noble) ~= capitol then return end
 						if noble == character then
 							return
 						end

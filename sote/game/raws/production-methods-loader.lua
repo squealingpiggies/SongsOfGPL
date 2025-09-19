@@ -148,7 +148,7 @@ function d.load()
 		g = 0.1,
 		b = 1,
 		inputs = { [retrieve_use_case("tools-like")] = 0.5 },
-		outputs = { [retrieve_good("shellfish")] = 1, [retrieve_good("seashells")] = 1 },
+		outputs = { [retrieve_good("shellfish")] = 1, [retrieve_good("shells")] = 1 },
 		job = job("fishers"),
 		job_type = JOBTYPE.LABOURER,
 		self_sourcing_fraction = 0.5,

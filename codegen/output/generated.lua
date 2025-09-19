@@ -24,7 +24,6 @@ require "codegen.output.religion"
 require "codegen.output.subreligion"
 require "codegen.output.pop"
 require "codegen.output.province"
-require "codegen.output.warband"
 require "codegen.output.realm"
 require "codegen.output.negotiation"
 require "codegen.output.building"
@@ -33,14 +32,12 @@ require "codegen.output.ownership"
 require "codegen.output.employment"
 require "codegen.output.estate_location"
 require "codegen.output.building_estate"
-require "codegen.output.warband_leader"
-require "codegen.output.warband_recruiter"
-require "codegen.output.warband_commander"
-require "codegen.output.warband_location"
-require "codegen.output.warband_unit"
+require "codegen.output.estate_unit"
+require "codegen.output.estate_leader"
+require "codegen.output.estate_recruiter"
+require "codegen.output.estate_commander"
 require "codegen.output.character_location"
 require "codegen.output.home"
-require "codegen.output.pop_location"
 require "codegen.output.outlaw_location"
 require "codegen.output.tile_province_membership"
 require "codegen.output.province_neighborhood"
@@ -61,8 +58,8 @@ require "codegen.output.need"
 require "codegen.output.character_rank"
 require "codegen.output.trait"
 require "codegen.output.trade_good_category"
-require "codegen.output.warband_status"
-require "codegen.output.warband_stance"
+require "codegen.output.estate_status"
+require "codegen.output.estate_stance"
 require "codegen.output.building_archetype"
 require "codegen.output.forage_resource"
 require "codegen.output.budget_category"
@@ -115,10 +112,6 @@ require "codegen.output.race"
 ---@field pop_name (string)[]
 ---@field pop_ai_data (AI_DATA)[]
 ---@field province_name (string)[]
----@field warband_name (string)[]
----@field warband_guard_of (Realm?)[]
----@field warband_current_path (table<tile_id>)[]
----@field warband_movement_progress (number)[]
 ---@field realm_exists (boolean)[]
 ---@field realm_name (string)[]
 ---@field realm_quests_raid (table<province_id,nil|number>)[]
@@ -126,6 +119,9 @@ require "codegen.output.race"
 ---@field realm_quests_patrol (table<province_id,nil|number>)[]
 ---@field realm_patrols (table<province_id,table<warband_id,warband_id>>)[]
 ---@field realm_known_provinces (table<province_id,province_id>)[]
+---@field estate_name (string)[]
+---@field estate_movement_progress (number)[]
+---@field estate_current_path (table<tile_id>)[]
 
 function DATA.save_state()
     local current_lua_state = {}
@@ -158,10 +154,6 @@ function DATA.save_state()
     current_lua_state.pop_name = DATA.pop_name
     current_lua_state.pop_ai_data = DATA.pop_ai_data
     current_lua_state.province_name = DATA.province_name
-    current_lua_state.warband_name = DATA.warband_name
-    current_lua_state.warband_guard_of = DATA.warband_guard_of
-    current_lua_state.warband_current_path = DATA.warband_current_path
-    current_lua_state.warband_movement_progress = DATA.warband_movement_progress
     current_lua_state.realm_exists = DATA.realm_exists
     current_lua_state.realm_name = DATA.realm_name
     current_lua_state.realm_quests_raid = DATA.realm_quests_raid
@@ -169,6 +161,9 @@ function DATA.save_state()
     current_lua_state.realm_quests_patrol = DATA.realm_quests_patrol
     current_lua_state.realm_patrols = DATA.realm_patrols
     current_lua_state.realm_known_provinces = DATA.realm_known_provinces
+    current_lua_state.estate_name = DATA.estate_name
+    current_lua_state.estate_movement_progress = DATA.estate_movement_progress
+    current_lua_state.estate_current_path = DATA.estate_current_path
     current_lua_state.jobtype_name = DATA.jobtype_name
     current_lua_state.jobtype_action_word = DATA.jobtype_action_word
     current_lua_state.jobtype_icon = DATA.jobtype_icon
@@ -180,10 +175,10 @@ function DATA.save_state()
     current_lua_state.trait_full_description = DATA.trait_full_description
     current_lua_state.trait_icon = DATA.trait_icon
     current_lua_state.trade_good_category_name = DATA.trade_good_category_name
-    current_lua_state.warband_status_name = DATA.warband_status_name
-    current_lua_state.warband_status_action_string = DATA.warband_status_action_string
-    current_lua_state.warband_status_icon = DATA.warband_status_icon
-    current_lua_state.warband_stance_name = DATA.warband_stance_name
+    current_lua_state.estate_status_name = DATA.estate_status_name
+    current_lua_state.estate_status_action_string = DATA.estate_status_action_string
+    current_lua_state.estate_status_icon = DATA.estate_status_icon
+    current_lua_state.estate_stance_name = DATA.estate_stance_name
     current_lua_state.building_archetype_name = DATA.building_archetype_name
     current_lua_state.forage_resource_name = DATA.forage_resource_name
     current_lua_state.forage_resource_description = DATA.forage_resource_description
@@ -244,7 +239,6 @@ function DATA.check_state()
     print(string.format("%.2f %%", DCON.dcon_subreligion_size() / 10000 * 100), "subreligion", 10000)
     print(string.format("%.2f %%", DCON.dcon_pop_size() / 300000 * 100), "pop", 300000)
     print(string.format("%.2f %%", DCON.dcon_province_size() / 20000 * 100), "province", 20000)
-    print(string.format("%.2f %%", DCON.dcon_warband_size() / 50000 * 100), "warband", 50000)
     print(string.format("%.2f %%", DCON.dcon_realm_size() / 15000 * 100), "realm", 15000)
     print(string.format("%.2f %%", DCON.dcon_negotiation_size() / 45000 * 100), "negotiation", 45000)
     print(string.format("%.2f %%", DCON.dcon_building_size() / 6000000 * 100), "building", 6000000)
@@ -252,15 +246,13 @@ function DATA.check_state()
     print(string.format("%.2f %%", DCON.dcon_ownership_size() / 300000 * 100), "ownership", 300000)
     print(string.format("%.2f %%", DCON.dcon_employment_size() / 600000 * 100), "employment", 600000)
     print(string.format("%.2f %%", DCON.dcon_estate_location_size() / 300000 * 100), "estate_location", 300000)
-    print(string.format("%.2f %%", DCON.dcon_building_estate_size() / 600000 * 100), "building_estate", 600000)
-    print(string.format("%.2f %%", DCON.dcon_warband_leader_size() / 50000 * 100), "warband_leader", 50000)
-    print(string.format("%.2f %%", DCON.dcon_warband_recruiter_size() / 50000 * 100), "warband_recruiter", 50000)
-    print(string.format("%.2f %%", DCON.dcon_warband_commander_size() / 50000 * 100), "warband_commander", 50000)
-    print(string.format("%.2f %%", DCON.dcon_warband_location_size() / 50000 * 100), "warband_location", 50000)
-    print(string.format("%.2f %%", DCON.dcon_warband_unit_size() / 50000 * 100), "warband_unit", 50000)
+    print(string.format("%.2f %%", DCON.dcon_building_estate_size() / 6000000 * 100), "building_estate", 6000000)
+    print(string.format("%.2f %%", DCON.dcon_estate_unit_size() / 300000 * 100), "estate_unit", 300000)
+    print(string.format("%.2f %%", DCON.dcon_estate_leader_size() / 50000 * 100), "estate_leader", 50000)
+    print(string.format("%.2f %%", DCON.dcon_estate_recruiter_size() / 50000 * 100), "estate_recruiter", 50000)
+    print(string.format("%.2f %%", DCON.dcon_estate_commander_size() / 50000 * 100), "estate_commander", 50000)
     print(string.format("%.2f %%", DCON.dcon_character_location_size() / 100000 * 100), "character_location", 100000)
     print(string.format("%.2f %%", DCON.dcon_home_size() / 300000 * 100), "home", 300000)
-    print(string.format("%.2f %%", DCON.dcon_pop_location_size() / 300000 * 100), "pop_location", 300000)
     print(string.format("%.2f %%", DCON.dcon_outlaw_location_size() / 300000 * 100), "outlaw_location", 300000)
     print(string.format("%.2f %%", DCON.dcon_tile_province_membership_size() / 1500000 * 100), "tile_province_membership", 1500000)
     print(string.format("%.2f %%", DCON.dcon_province_neighborhood_size() / 250000 * 100), "province_neighborhood", 250000)
@@ -313,10 +305,6 @@ function DATA.load_state()
     DATA.pop_name = loaded_lua_state.pop_name
     DATA.pop_ai_data = loaded_lua_state.pop_ai_data
     DATA.province_name = loaded_lua_state.province_name
-    DATA.warband_name = loaded_lua_state.warband_name
-    DATA.warband_guard_of = loaded_lua_state.warband_guard_of
-    DATA.warband_current_path = loaded_lua_state.warband_current_path
-    DATA.warband_movement_progress = loaded_lua_state.warband_movement_progress
     DATA.realm_exists = loaded_lua_state.realm_exists
     DATA.realm_name = loaded_lua_state.realm_name
     DATA.realm_quests_raid = loaded_lua_state.realm_quests_raid
@@ -324,6 +312,9 @@ function DATA.load_state()
     DATA.realm_quests_patrol = loaded_lua_state.realm_quests_patrol
     DATA.realm_patrols = loaded_lua_state.realm_patrols
     DATA.realm_known_provinces = loaded_lua_state.realm_known_provinces
+    DATA.estate_name = loaded_lua_state.estate_name
+    DATA.estate_movement_progress = loaded_lua_state.estate_movement_progress
+    DATA.estate_current_path = loaded_lua_state.estate_current_path
     DATA.jobtype_name = loaded_lua_state.jobtype_name
     DATA.jobtype_action_word = loaded_lua_state.jobtype_action_word
     DATA.jobtype_icon = loaded_lua_state.jobtype_icon
@@ -335,10 +326,10 @@ function DATA.load_state()
     DATA.trait_full_description = loaded_lua_state.trait_full_description
     DATA.trait_icon = loaded_lua_state.trait_icon
     DATA.trade_good_category_name = loaded_lua_state.trade_good_category_name
-    DATA.warband_status_name = loaded_lua_state.warband_status_name
-    DATA.warband_status_action_string = loaded_lua_state.warband_status_action_string
-    DATA.warband_status_icon = loaded_lua_state.warband_status_icon
-    DATA.warband_stance_name = loaded_lua_state.warband_stance_name
+    DATA.estate_status_name = loaded_lua_state.estate_status_name
+    DATA.estate_status_action_string = loaded_lua_state.estate_status_action_string
+    DATA.estate_status_icon = loaded_lua_state.estate_status_icon
+    DATA.estate_stance_name = loaded_lua_state.estate_stance_name
     DATA.building_archetype_name = loaded_lua_state.building_archetype_name
     DATA.forage_resource_name = loaded_lua_state.forage_resource_name
     DATA.forage_resource_description = loaded_lua_state.forage_resource_description
@@ -943,59 +934,6 @@ function DATA.test_set_get_0()
     if not test_passed then print("on_a_forest", false, fat_id.on_a_forest) end
     print("SET_GET_TEST_0_province:")
     if test_passed then print("PASSED") else print("ERROR") end
-    local id = DATA.create_warband()
-    local fat_id = DATA.fatten_warband(id)
-    for j = 1, 5 do
-        DATA.warband_set_units_current(id, j --[[@as unit_type_id]],  4)    end
-    for j = 1, 5 do
-        DATA.warband_set_units_target(id, j --[[@as unit_type_id]],  6)    end
-    fat_id.current_status = 0
-    fat_id.idle_stance = 1
-    fat_id.current_time_used_ratio = 12
-    for j = 1, 100 do
-        DATA.warband_set_inventory(id, j --[[@as trade_good_id]],  11)    end
-    fat_id.treasury = 5
-    fat_id.total_upkeep = -1
-    fat_id.predicted_upkeep = 10
-    fat_id.supplies = 2
-    fat_id.supplies_target_days = 17
-    fat_id.morale = -7
-    fat_id.in_settlement = true
-    local test_passed = true
-    for j = 1, 5 do
-        test_passed = test_passed and DATA.warband_get_units_current(id, j --[[@as unit_type_id]]) == 4
-    end
-    if not test_passed then print("units_current", 4, DATA.warband[id].units_current[0]) end
-    for j = 1, 5 do
-        test_passed = test_passed and DATA.warband_get_units_target(id, j --[[@as unit_type_id]]) == 6
-    end
-    if not test_passed then print("units_target", 6, DATA.warband[id].units_target[0]) end
-    test_passed = test_passed and fat_id.current_status == 0
-    if not test_passed then print("current_status", 0, fat_id.current_status) end
-    test_passed = test_passed and fat_id.idle_stance == 1
-    if not test_passed then print("idle_stance", 1, fat_id.idle_stance) end
-    test_passed = test_passed and fat_id.current_time_used_ratio == 12
-    if not test_passed then print("current_time_used_ratio", 12, fat_id.current_time_used_ratio) end
-    for j = 1, 100 do
-        test_passed = test_passed and DATA.warband_get_inventory(id, j --[[@as trade_good_id]]) == 11
-    end
-    if not test_passed then print("inventory", 11, DATA.warband[id].inventory[0]) end
-    test_passed = test_passed and fat_id.treasury == 5
-    if not test_passed then print("treasury", 5, fat_id.treasury) end
-    test_passed = test_passed and fat_id.total_upkeep == -1
-    if not test_passed then print("total_upkeep", -1, fat_id.total_upkeep) end
-    test_passed = test_passed and fat_id.predicted_upkeep == 10
-    if not test_passed then print("predicted_upkeep", 10, fat_id.predicted_upkeep) end
-    test_passed = test_passed and fat_id.supplies == 2
-    if not test_passed then print("supplies", 2, fat_id.supplies) end
-    test_passed = test_passed and fat_id.supplies_target_days == 17
-    if not test_passed then print("supplies_target_days", 17, fat_id.supplies_target_days) end
-    test_passed = test_passed and fat_id.morale == -7
-    if not test_passed then print("morale", -7, fat_id.morale) end
-    test_passed = test_passed and fat_id.in_settlement == true
-    if not test_passed then print("in_settlement", true, fat_id.in_settlement) end
-    print("SET_GET_TEST_0_warband:")
-    if test_passed then print("PASSED") else print("ERROR") end
     local id = DATA.create_realm()
     local fat_id = DATA.fatten_realm(id)
     fat_id.budget_change = 4
@@ -1223,73 +1161,109 @@ function DATA.test_set_get_0()
     if test_passed then print("PASSED") else print("ERROR") end
     local id = DATA.create_estate()
     local fat_id = DATA.fatten_estate(id)
-    fat_id.savings = 4
+    fat_id.morale = 4
+    fat_id.current_status = 12
+    fat_id.idle_stance = 3
+    fat_id.current_time_used_ratio = -18
+    for j = 1, 5 do
+        DATA.estate_set_units_current(id, j --[[@as unit_type_id]],  -4)    end
+    for j = 1, 5 do
+        DATA.estate_set_units_target(id, j --[[@as unit_type_id]],  12)    end
+    fat_id.savings = 11
+    fat_id.balance_last_tick = 5
+    fat_id.total_upkeep = -1
+    fat_id.predicted_upkeep = 10
+    fat_id.supplies = 2
+    fat_id.supplies_target_days = 17
     for j = 1, 100 do
-        DATA.estate_set_inventory(id, j --[[@as trade_good_id]],  6)    end
+        DATA.estate_set_inventory(id, j --[[@as trade_good_id]],  -7)    end
     for j = 1, 100 do
-        DATA.estate_set_inventory_sold_last_tick(id, j --[[@as trade_good_id]],  -18)    end
+        DATA.estate_set_inventory_sold_last_tick(id, j --[[@as trade_good_id]],  12)    end
     for j = 1, 100 do
-        DATA.estate_set_inventory_bought_last_tick(id, j --[[@as trade_good_id]],  -4)    end
+        DATA.estate_set_inventory_bought_last_tick(id, j --[[@as trade_good_id]],  -12)    end
     for j = 1, 100 do
-        DATA.estate_set_inventory_demanded_last_tick(id, j --[[@as trade_good_id]],  12)    end
-    fat_id.balance_last_tick = 11
+        DATA.estate_set_inventory_demanded_last_tick(id, j --[[@as trade_good_id]],  -2)    end
     for j = 1, 400 do
-        DATA.estate_set_technologies_present(id, j --[[@as technology_id]],  12)    end
+        DATA.estate_set_technologies_present(id, j --[[@as technology_id]],  4)    end
     for j = 1, 400 do
-        DATA.estate_set_technologies_researchable(id, j --[[@as technology_id]],  9)    end
+        DATA.estate_set_technologies_researchable(id, j --[[@as technology_id]],  3)    end
     for j = 1, 250 do
-        DATA.estate_set_technologies_throughput_boosts(id, j --[[@as production_method_id]],  10)    end
+        DATA.estate_set_technologies_throughput_boosts(id, j --[[@as production_method_id]],  19)    end
     for j = 1, 250 do
-        DATA.estate_set_technologies_output_boosts(id, j --[[@as production_method_id]],  2)    end
+        DATA.estate_set_technologies_output_boosts(id, j --[[@as production_method_id]],  -4)    end
     for j = 1, 250 do
-        DATA.estate_set_technologies_input_boosts(id, j --[[@as production_method_id]],  17)    end
+        DATA.estate_set_technologies_input_boosts(id, j --[[@as production_method_id]],  14)    end
     for j = 1, 250 do
-        DATA.estate_set_buildable_buildings(id, j --[[@as building_type_id]],  6)    end
+        DATA.estate_set_buildable_buildings(id, j --[[@as building_type_id]],  19)    end
     local test_passed = true
-    test_passed = test_passed and fat_id.savings == 4
-    if not test_passed then print("savings", 4, fat_id.savings) end
-    for j = 1, 100 do
-        test_passed = test_passed and DATA.estate_get_inventory(id, j --[[@as trade_good_id]]) == 6
+    test_passed = test_passed and fat_id.morale == 4
+    if not test_passed then print("morale", 4, fat_id.morale) end
+    test_passed = test_passed and fat_id.current_status == 12
+    if not test_passed then print("current_status", 12, fat_id.current_status) end
+    test_passed = test_passed and fat_id.idle_stance == 3
+    if not test_passed then print("idle_stance", 3, fat_id.idle_stance) end
+    test_passed = test_passed and fat_id.current_time_used_ratio == -18
+    if not test_passed then print("current_time_used_ratio", -18, fat_id.current_time_used_ratio) end
+    for j = 1, 5 do
+        test_passed = test_passed and DATA.estate_get_units_current(id, j --[[@as unit_type_id]]) == -4
     end
-    if not test_passed then print("inventory", 6, DATA.estate[id].inventory[0]) end
-    for j = 1, 100 do
-        test_passed = test_passed and DATA.estate_get_inventory_sold_last_tick(id, j --[[@as trade_good_id]]) == -18
+    if not test_passed then print("units_current", -4, DATA.estate[id].units_current[0]) end
+    for j = 1, 5 do
+        test_passed = test_passed and DATA.estate_get_units_target(id, j --[[@as unit_type_id]]) == 12
     end
-    if not test_passed then print("inventory_sold_last_tick", -18, DATA.estate[id].inventory_sold_last_tick[0]) end
+    if not test_passed then print("units_target", 12, DATA.estate[id].units_target[0]) end
+    test_passed = test_passed and fat_id.savings == 11
+    if not test_passed then print("savings", 11, fat_id.savings) end
+    test_passed = test_passed and fat_id.balance_last_tick == 5
+    if not test_passed then print("balance_last_tick", 5, fat_id.balance_last_tick) end
+    test_passed = test_passed and fat_id.total_upkeep == -1
+    if not test_passed then print("total_upkeep", -1, fat_id.total_upkeep) end
+    test_passed = test_passed and fat_id.predicted_upkeep == 10
+    if not test_passed then print("predicted_upkeep", 10, fat_id.predicted_upkeep) end
+    test_passed = test_passed and fat_id.supplies == 2
+    if not test_passed then print("supplies", 2, fat_id.supplies) end
+    test_passed = test_passed and fat_id.supplies_target_days == 17
+    if not test_passed then print("supplies_target_days", 17, fat_id.supplies_target_days) end
     for j = 1, 100 do
-        test_passed = test_passed and DATA.estate_get_inventory_bought_last_tick(id, j --[[@as trade_good_id]]) == -4
+        test_passed = test_passed and DATA.estate_get_inventory(id, j --[[@as trade_good_id]]) == -7
     end
-    if not test_passed then print("inventory_bought_last_tick", -4, DATA.estate[id].inventory_bought_last_tick[0]) end
+    if not test_passed then print("inventory", -7, DATA.estate[id].inventory[0]) end
     for j = 1, 100 do
-        test_passed = test_passed and DATA.estate_get_inventory_demanded_last_tick(id, j --[[@as trade_good_id]]) == 12
+        test_passed = test_passed and DATA.estate_get_inventory_sold_last_tick(id, j --[[@as trade_good_id]]) == 12
     end
-    if not test_passed then print("inventory_demanded_last_tick", 12, DATA.estate[id].inventory_demanded_last_tick[0]) end
-    test_passed = test_passed and fat_id.balance_last_tick == 11
-    if not test_passed then print("balance_last_tick", 11, fat_id.balance_last_tick) end
+    if not test_passed then print("inventory_sold_last_tick", 12, DATA.estate[id].inventory_sold_last_tick[0]) end
+    for j = 1, 100 do
+        test_passed = test_passed and DATA.estate_get_inventory_bought_last_tick(id, j --[[@as trade_good_id]]) == -12
+    end
+    if not test_passed then print("inventory_bought_last_tick", -12, DATA.estate[id].inventory_bought_last_tick[0]) end
+    for j = 1, 100 do
+        test_passed = test_passed and DATA.estate_get_inventory_demanded_last_tick(id, j --[[@as trade_good_id]]) == -2
+    end
+    if not test_passed then print("inventory_demanded_last_tick", -2, DATA.estate[id].inventory_demanded_last_tick[0]) end
     for j = 1, 400 do
-        test_passed = test_passed and DATA.estate_get_technologies_present(id, j --[[@as technology_id]]) == 12
+        test_passed = test_passed and DATA.estate_get_technologies_present(id, j --[[@as technology_id]]) == 4
     end
-    if not test_passed then print("technologies_present", 12, DATA.estate[id].technologies_present[0]) end
+    if not test_passed then print("technologies_present", 4, DATA.estate[id].technologies_present[0]) end
     for j = 1, 400 do
-        test_passed = test_passed and DATA.estate_get_technologies_researchable(id, j --[[@as technology_id]]) == 9
+        test_passed = test_passed and DATA.estate_get_technologies_researchable(id, j --[[@as technology_id]]) == 3
     end
-    if not test_passed then print("technologies_researchable", 9, DATA.estate[id].technologies_researchable[0]) end
+    if not test_passed then print("technologies_researchable", 3, DATA.estate[id].technologies_researchable[0]) end
     for j = 1, 250 do
-        test_passed = test_passed and DATA.estate_get_technologies_throughput_boosts(id, j --[[@as production_method_id]]) == 10
+        test_passed = test_passed and DATA.estate_get_technologies_throughput_boosts(id, j --[[@as production_method_id]]) == 19
     end
-    if not test_passed then print("technologies_throughput_boosts", 10, DATA.estate[id].technologies_throughput_boosts[0]) end
+    if not test_passed then print("technologies_throughput_boosts", 19, DATA.estate[id].technologies_throughput_boosts[0]) end
     for j = 1, 250 do
-        test_passed = test_passed and DATA.estate_get_technologies_output_boosts(id, j --[[@as production_method_id]]) == 2
+        test_passed = test_passed and DATA.estate_get_technologies_output_boosts(id, j --[[@as production_method_id]]) == -4
     end
-    if not test_passed then print("technologies_output_boosts", 2, DATA.estate[id].technologies_output_boosts[0]) end
+    if not test_passed then print("technologies_output_boosts", -4, DATA.estate[id].technologies_output_boosts[0]) end
     for j = 1, 250 do
-        test_passed = test_passed and DATA.estate_get_technologies_input_boosts(id, j --[[@as production_method_id]]) == 17
+        test_passed = test_passed and DATA.estate_get_technologies_input_boosts(id, j --[[@as production_method_id]]) == 14
     end
-    if not test_passed then print("technologies_input_boosts", 17, DATA.estate[id].technologies_input_boosts[0]) end
+    if not test_passed then print("technologies_input_boosts", 14, DATA.estate[id].technologies_input_boosts[0]) end
     for j = 1, 250 do
-        test_passed = test_passed and DATA.estate_get_buildable_buildings(id, j --[[@as building_type_id]]) == 6
+        test_passed = test_passed and DATA.estate_get_buildable_buildings(id, j --[[@as building_type_id]]) == 19
     end
-    if not test_passed then print("buildable_buildings", 6, DATA.estate[id].buildable_buildings[0]) end
+    if not test_passed then print("buildable_buildings", 19, DATA.estate[id].buildable_buildings[0]) end
     print("SET_GET_TEST_0_estate:")
     if test_passed then print("PASSED") else print("ERROR") end
 end

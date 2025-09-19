@@ -42,7 +42,7 @@ return function (rect, building)
 		return
 	end
 
-	if PROVINCE(owner) ~= province then
+	if POP_PROVINCE(owner) ~= province then
 		ui.text("Enter the settlement to manage estate", rect, "center", "center")
 		return
 	end
@@ -52,7 +52,7 @@ return function (rect, building)
 	local building_type = DATA.building_get_current_type(building)
 	local method = DATA.building_type_get_production_method(building_type)
 
-	local unemployed_pops = demography_values.unemployed_pops(province)
+	local unemployed_pops = demography_values.unemployed_pops(tile)
 
 	if (#unemployed_pops == 0) then
 		ui.text("No available workers here", rect, "center", "center")
