@@ -35,7 +35,7 @@ DATA.estate_stance_name= {}
 
 ---estate_stance: LUA bindings---
 
-DATA.estate_stance_size = 6
+DATA.estate_stance_size = 4
 ---@return estate_stance_id
 function DATA.create_estate_stance()
     ---@type estate_stance_id
@@ -99,15 +99,9 @@ ESTATE_STANCE = {
     INVALID = 0,
     WORK = 1,
     FORAGE = 2,
-    HIDE = 3,
-    TRAIN = 4,
 }
 local index_estate_stance
 index_estate_stance = DATA.create_estate_stance()
 DATA.estate_stance_set_name(index_estate_stance, "work")
 index_estate_stance = DATA.create_estate_stance()
 DATA.estate_stance_set_name(index_estate_stance, "forage")
-index_estate_stance = DATA.create_estate_stance()
-DATA.estate_stance_set_name(index_estate_stance, "hide")
-index_estate_stance = DATA.create_estate_stance()
-DATA.estate_stance_set_name(index_estate_stance, "train")

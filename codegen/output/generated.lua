@@ -1162,108 +1162,108 @@ function DATA.test_set_get_0()
     local id = DATA.create_estate()
     local fat_id = DATA.fatten_estate(id)
     fat_id.morale = 4
-    fat_id.current_status = 12
-    fat_id.idle_stance = 3
-    fat_id.current_time_used_ratio = -18
+    fat_id.current_status = 6
+    fat_id.idle_stance = 0
+    fat_id.current_time_used_ratio = -4
     for j = 1, 5 do
-        DATA.estate_set_units_current(id, j --[[@as unit_type_id]],  -4)    end
+        DATA.estate_set_units_current(id, j --[[@as unit_type_id]],  12)    end
     for j = 1, 5 do
-        DATA.estate_set_units_target(id, j --[[@as unit_type_id]],  12)    end
-    fat_id.savings = 11
-    fat_id.balance_last_tick = 5
-    fat_id.total_upkeep = -1
-    fat_id.predicted_upkeep = 10
-    fat_id.supplies = 2
-    fat_id.supplies_target_days = 17
+        DATA.estate_set_units_target(id, j --[[@as unit_type_id]],  11)    end
+    fat_id.savings = 5
+    fat_id.balance_last_tick = -1
+    fat_id.total_upkeep = 10
+    fat_id.predicted_upkeep = 2
+    fat_id.supplies = 17
+    fat_id.supplies_target_days = -7
     for j = 1, 100 do
-        DATA.estate_set_inventory(id, j --[[@as trade_good_id]],  -7)    end
+        DATA.estate_set_inventory(id, j --[[@as trade_good_id]],  12)    end
     for j = 1, 100 do
-        DATA.estate_set_inventory_sold_last_tick(id, j --[[@as trade_good_id]],  12)    end
+        DATA.estate_set_inventory_sold_last_tick(id, j --[[@as trade_good_id]],  -12)    end
     for j = 1, 100 do
-        DATA.estate_set_inventory_bought_last_tick(id, j --[[@as trade_good_id]],  -12)    end
+        DATA.estate_set_inventory_bought_last_tick(id, j --[[@as trade_good_id]],  -2)    end
     for j = 1, 100 do
-        DATA.estate_set_inventory_demanded_last_tick(id, j --[[@as trade_good_id]],  -2)    end
+        DATA.estate_set_inventory_demanded_last_tick(id, j --[[@as trade_good_id]],  -12)    end
     for j = 1, 400 do
-        DATA.estate_set_technologies_present(id, j --[[@as technology_id]],  4)    end
+        DATA.estate_set_technologies_present(id, j --[[@as technology_id]],  3)    end
     for j = 1, 400 do
-        DATA.estate_set_technologies_researchable(id, j --[[@as technology_id]],  3)    end
+        DATA.estate_set_technologies_researchable(id, j --[[@as technology_id]],  19)    end
     for j = 1, 250 do
-        DATA.estate_set_technologies_throughput_boosts(id, j --[[@as production_method_id]],  19)    end
+        DATA.estate_set_technologies_throughput_boosts(id, j --[[@as production_method_id]],  -4)    end
     for j = 1, 250 do
-        DATA.estate_set_technologies_output_boosts(id, j --[[@as production_method_id]],  -4)    end
+        DATA.estate_set_technologies_output_boosts(id, j --[[@as production_method_id]],  14)    end
     for j = 1, 250 do
-        DATA.estate_set_technologies_input_boosts(id, j --[[@as production_method_id]],  14)    end
+        DATA.estate_set_technologies_input_boosts(id, j --[[@as production_method_id]],  18)    end
     for j = 1, 250 do
-        DATA.estate_set_buildable_buildings(id, j --[[@as building_type_id]],  19)    end
+        DATA.estate_set_buildable_buildings(id, j --[[@as building_type_id]],  4)    end
     local test_passed = true
     test_passed = test_passed and fat_id.morale == 4
     if not test_passed then print("morale", 4, fat_id.morale) end
-    test_passed = test_passed and fat_id.current_status == 12
-    if not test_passed then print("current_status", 12, fat_id.current_status) end
-    test_passed = test_passed and fat_id.idle_stance == 3
-    if not test_passed then print("idle_stance", 3, fat_id.idle_stance) end
-    test_passed = test_passed and fat_id.current_time_used_ratio == -18
-    if not test_passed then print("current_time_used_ratio", -18, fat_id.current_time_used_ratio) end
+    test_passed = test_passed and fat_id.current_status == 6
+    if not test_passed then print("current_status", 6, fat_id.current_status) end
+    test_passed = test_passed and fat_id.idle_stance == 0
+    if not test_passed then print("idle_stance", 0, fat_id.idle_stance) end
+    test_passed = test_passed and fat_id.current_time_used_ratio == -4
+    if not test_passed then print("current_time_used_ratio", -4, fat_id.current_time_used_ratio) end
     for j = 1, 5 do
-        test_passed = test_passed and DATA.estate_get_units_current(id, j --[[@as unit_type_id]]) == -4
+        test_passed = test_passed and DATA.estate_get_units_current(id, j --[[@as unit_type_id]]) == 12
     end
-    if not test_passed then print("units_current", -4, DATA.estate[id].units_current[0]) end
+    if not test_passed then print("units_current", 12, DATA.estate[id].units_current[0]) end
     for j = 1, 5 do
-        test_passed = test_passed and DATA.estate_get_units_target(id, j --[[@as unit_type_id]]) == 12
+        test_passed = test_passed and DATA.estate_get_units_target(id, j --[[@as unit_type_id]]) == 11
     end
-    if not test_passed then print("units_target", 12, DATA.estate[id].units_target[0]) end
-    test_passed = test_passed and fat_id.savings == 11
-    if not test_passed then print("savings", 11, fat_id.savings) end
-    test_passed = test_passed and fat_id.balance_last_tick == 5
-    if not test_passed then print("balance_last_tick", 5, fat_id.balance_last_tick) end
-    test_passed = test_passed and fat_id.total_upkeep == -1
-    if not test_passed then print("total_upkeep", -1, fat_id.total_upkeep) end
-    test_passed = test_passed and fat_id.predicted_upkeep == 10
-    if not test_passed then print("predicted_upkeep", 10, fat_id.predicted_upkeep) end
-    test_passed = test_passed and fat_id.supplies == 2
-    if not test_passed then print("supplies", 2, fat_id.supplies) end
-    test_passed = test_passed and fat_id.supplies_target_days == 17
-    if not test_passed then print("supplies_target_days", 17, fat_id.supplies_target_days) end
+    if not test_passed then print("units_target", 11, DATA.estate[id].units_target[0]) end
+    test_passed = test_passed and fat_id.savings == 5
+    if not test_passed then print("savings", 5, fat_id.savings) end
+    test_passed = test_passed and fat_id.balance_last_tick == -1
+    if not test_passed then print("balance_last_tick", -1, fat_id.balance_last_tick) end
+    test_passed = test_passed and fat_id.total_upkeep == 10
+    if not test_passed then print("total_upkeep", 10, fat_id.total_upkeep) end
+    test_passed = test_passed and fat_id.predicted_upkeep == 2
+    if not test_passed then print("predicted_upkeep", 2, fat_id.predicted_upkeep) end
+    test_passed = test_passed and fat_id.supplies == 17
+    if not test_passed then print("supplies", 17, fat_id.supplies) end
+    test_passed = test_passed and fat_id.supplies_target_days == -7
+    if not test_passed then print("supplies_target_days", -7, fat_id.supplies_target_days) end
     for j = 1, 100 do
-        test_passed = test_passed and DATA.estate_get_inventory(id, j --[[@as trade_good_id]]) == -7
+        test_passed = test_passed and DATA.estate_get_inventory(id, j --[[@as trade_good_id]]) == 12
     end
-    if not test_passed then print("inventory", -7, DATA.estate[id].inventory[0]) end
+    if not test_passed then print("inventory", 12, DATA.estate[id].inventory[0]) end
     for j = 1, 100 do
-        test_passed = test_passed and DATA.estate_get_inventory_sold_last_tick(id, j --[[@as trade_good_id]]) == 12
+        test_passed = test_passed and DATA.estate_get_inventory_sold_last_tick(id, j --[[@as trade_good_id]]) == -12
     end
-    if not test_passed then print("inventory_sold_last_tick", 12, DATA.estate[id].inventory_sold_last_tick[0]) end
+    if not test_passed then print("inventory_sold_last_tick", -12, DATA.estate[id].inventory_sold_last_tick[0]) end
     for j = 1, 100 do
-        test_passed = test_passed and DATA.estate_get_inventory_bought_last_tick(id, j --[[@as trade_good_id]]) == -12
+        test_passed = test_passed and DATA.estate_get_inventory_bought_last_tick(id, j --[[@as trade_good_id]]) == -2
     end
-    if not test_passed then print("inventory_bought_last_tick", -12, DATA.estate[id].inventory_bought_last_tick[0]) end
+    if not test_passed then print("inventory_bought_last_tick", -2, DATA.estate[id].inventory_bought_last_tick[0]) end
     for j = 1, 100 do
-        test_passed = test_passed and DATA.estate_get_inventory_demanded_last_tick(id, j --[[@as trade_good_id]]) == -2
+        test_passed = test_passed and DATA.estate_get_inventory_demanded_last_tick(id, j --[[@as trade_good_id]]) == -12
     end
-    if not test_passed then print("inventory_demanded_last_tick", -2, DATA.estate[id].inventory_demanded_last_tick[0]) end
+    if not test_passed then print("inventory_demanded_last_tick", -12, DATA.estate[id].inventory_demanded_last_tick[0]) end
     for j = 1, 400 do
-        test_passed = test_passed and DATA.estate_get_technologies_present(id, j --[[@as technology_id]]) == 4
+        test_passed = test_passed and DATA.estate_get_technologies_present(id, j --[[@as technology_id]]) == 3
     end
-    if not test_passed then print("technologies_present", 4, DATA.estate[id].technologies_present[0]) end
+    if not test_passed then print("technologies_present", 3, DATA.estate[id].technologies_present[0]) end
     for j = 1, 400 do
-        test_passed = test_passed and DATA.estate_get_technologies_researchable(id, j --[[@as technology_id]]) == 3
+        test_passed = test_passed and DATA.estate_get_technologies_researchable(id, j --[[@as technology_id]]) == 19
     end
-    if not test_passed then print("technologies_researchable", 3, DATA.estate[id].technologies_researchable[0]) end
+    if not test_passed then print("technologies_researchable", 19, DATA.estate[id].technologies_researchable[0]) end
     for j = 1, 250 do
-        test_passed = test_passed and DATA.estate_get_technologies_throughput_boosts(id, j --[[@as production_method_id]]) == 19
+        test_passed = test_passed and DATA.estate_get_technologies_throughput_boosts(id, j --[[@as production_method_id]]) == -4
     end
-    if not test_passed then print("technologies_throughput_boosts", 19, DATA.estate[id].technologies_throughput_boosts[0]) end
+    if not test_passed then print("technologies_throughput_boosts", -4, DATA.estate[id].technologies_throughput_boosts[0]) end
     for j = 1, 250 do
-        test_passed = test_passed and DATA.estate_get_technologies_output_boosts(id, j --[[@as production_method_id]]) == -4
+        test_passed = test_passed and DATA.estate_get_technologies_output_boosts(id, j --[[@as production_method_id]]) == 14
     end
-    if not test_passed then print("technologies_output_boosts", -4, DATA.estate[id].technologies_output_boosts[0]) end
+    if not test_passed then print("technologies_output_boosts", 14, DATA.estate[id].technologies_output_boosts[0]) end
     for j = 1, 250 do
-        test_passed = test_passed and DATA.estate_get_technologies_input_boosts(id, j --[[@as production_method_id]]) == 14
+        test_passed = test_passed and DATA.estate_get_technologies_input_boosts(id, j --[[@as production_method_id]]) == 18
     end
-    if not test_passed then print("technologies_input_boosts", 14, DATA.estate[id].technologies_input_boosts[0]) end
+    if not test_passed then print("technologies_input_boosts", 18, DATA.estate[id].technologies_input_boosts[0]) end
     for j = 1, 250 do
-        test_passed = test_passed and DATA.estate_get_buildable_buildings(id, j --[[@as building_type_id]]) == 19
+        test_passed = test_passed and DATA.estate_get_buildable_buildings(id, j --[[@as building_type_id]]) == 4
     end
-    if not test_passed then print("buildable_buildings", 19, DATA.estate[id].buildable_buildings[0]) end
+    if not test_passed then print("buildable_buildings", 4, DATA.estate[id].buildable_buildings[0]) end
     print("SET_GET_TEST_0_estate:")
     if test_passed then print("PASSED") else print("ERROR") end
 end

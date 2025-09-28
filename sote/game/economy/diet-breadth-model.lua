@@ -256,7 +256,7 @@ local function use_case_data_to_weights(forage_targets_data)
 end
 
 ---@param use_cases_data TargetNeedsTable[]
----@return number[] weights
+---@return number[][] weights
 local function calculate_weights(use_cases_data)
 	---@type number[][]
 	local weights = {}
@@ -332,14 +332,14 @@ local function calculate_weights(use_cases_data)
 				for j, target_data in pairs(targets_table.data_per_forage_target) do
 					weights[i][j] =
 						weights[i][j]
-						+ math.min(0.01,
+						+ math.min(0.01, -- doesn't cut nans in min but would if max
 							(required - provided)
 							* step
 							/ (target_data.handle_time + target_data.search_time + 1)
 							/ (target_data.energy_return_per_unit_of_time + 1)
-							* target_data.output_energy
+							* target_data.output_energy,
+							0.01 -- cuts nans for min but not if max
 						)
-
 					-- assert(weights[i][j] == weights[i][j])
 				end
 			else
@@ -347,15 +347,15 @@ local function calculate_weights(use_cases_data)
 					weights[i][j] = math.max(
 						0,
 						weights[i][j]
-						- math.min(0.01,
+						- math.min(0.01, -- doesn't cut nans in min but would if max
 							(provided - required)
 							* step
 							/ (target_data.handle_time + target_data.search_time + 1)
 							/ (target_data.energy_return_per_unit_of_time + 1)
-							* math.exp(-target_data.output_energy / 1000)
+							* math.exp(-target_data.output_energy / 1000),
+							0.01 -- cuts nans for min but not if max
 						)
 					)
-
 					-- assert(weights[i][j] == weights[i][j],
 					-- 	"(provided - required) " .. tostring(provided - required) ..
 					-- 	"\n* step " .. tostring(step) ..

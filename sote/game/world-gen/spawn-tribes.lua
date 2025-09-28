@@ -233,7 +233,7 @@ function st.run()
 
 	---@type Race[]
 	local order = {}
---[[
+
 	for _, r in pairs(RAWS_MANAGER.races_by_name) do
 		if DATA.race_get_requires_large_river(r) then
 			table.insert(order, r)
@@ -253,11 +253,11 @@ function st.run()
 			spawns_by_race[r] = {}
 		end
 	end
---]]
-	local r = RAWS_MANAGER.races_by_name['high beaver']
-	table.insert(order, r)
-	spawns_by_race[r] = {}
-	local civs = 1 / tabb.size(order) -- one per race...
+
+	-- local r = RAWS_MANAGER.races_by_name['high beaver']
+	-- table.insert(order, r)
+	-- spawns_by_race[r] = {}
+	local civs = 500 / tabb.size(order) -- one per race...
 
 	-- go through tiles and find possible tile spawns by race
 	-- local total_tiles, land_tiles, forageable_tiles, forest_tiles, river_tiles, river_forest, tiles_alt, tiles_alto = 0, 0, 0, 0, 0, 0, 0, 0
@@ -387,32 +387,31 @@ function st.run()
 					}))
 					make_new_realm(prov, r, best_tile(prov, r), culture, faith)
 					-- give first spawn dibs an all favorable neighbors to soften possible clustering
-					-- DATA.for_each_province_neighborhood_from_origin(prov, function (item)
-					-- 	local neighbor_id = DATA.province_neighborhood_get_target(item)
-					-- 	if DATA.tile_get_is_land(DATA.province_get_center(neighbor_id)) then 
-					-- 		local neighbor_center = best_tile(neighbor_id,r)
-					-- 		if neighbor_center ~= INVALID_ID then
-					-- 			make_new_realm(neighbor_id, r, neighbor_center, culture, faith)
-					--			table.insert(provinces_per_cultures[culture], neighbor_id)
-					-- 			-- remove province tiles from all race tile lists to prevent looping
-					-- 			DATA.for_each_tile_province_membership_from_province(neighbor_id, function (membership)
-					-- 				local tile_id = DATA.tile_province_membership_get_tile(membership)
-					-- 				for race, list in pairs(spawns_by_race) do
-					-- 					if list[tile_id] then
-					-- 						list[tile_id] = nil
-					-- 					end
-					-- 				end
-					-- 			end)
-					-- 			queue:enqueue(neighbor_id)
-					-- 		end
-					-- 	end
-					-- end)
+					DATA.for_each_province_neighborhood_from_origin(prov, function (item)
+						local neighbor_id = DATA.province_neighborhood_get_target(item)
+						if DATA.tile_get_is_land(DATA.province_get_center(neighbor_id)) then 
+							local neighbor_center = best_tile(neighbor_id,r)
+							if neighbor_center ~= INVALID_ID then
+								make_new_realm(neighbor_id, r, neighbor_center, culture, faith)
+								table.insert(provinces_per_cultures[culture], neighbor_id)
+								-- remove province tiles from all race tile lists to prevent looping
+								DATA.for_each_tile_province_membership_from_province(neighbor_id, function (membership)
+									local tile_id = DATA.tile_province_membership_get_tile(membership)
+									for race, list in pairs(spawns_by_race) do
+										if list[tile_id] then
+											list[tile_id] = nil
+										end
+									end
+								end)
+								queue:enqueue(neighbor_id)
+							end
+						end
+					end)
 				end
 			end
 		end
 	end
 
---[[
 	print("Flood fill the rest of the world")
 	-- Loop through all entries in the queue and flood fill out
 	while queue:length() > 0 do
@@ -471,7 +470,7 @@ function st.run()
 			-- queue:enqueue(prov)
 		end
 	end
---]]
+
 
 	--- recalculate dbm weights
 	for culture, provs in pairs(provinces_per_cultures) do

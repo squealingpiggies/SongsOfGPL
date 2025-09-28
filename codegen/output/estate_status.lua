@@ -51,7 +51,7 @@ DATA.estate_status_icon= {}
 
 ---estate_status: LUA bindings---
 
-DATA.estate_status_size = 14
+DATA.estate_status_size = 11
 ---@return estate_status_id
 function DATA.create_estate_status()
     ---@type estate_status_id
@@ -173,10 +173,7 @@ ESTATE_STATUS = {
     ATTACKING = 6,
     TRAVELING = 7,
     OFF_DUTY = 8,
-    HIDE = 9,
-    SNEAK = 10,
-    TRAIN = 11,
-    FORAGE = 12,
+    FORAGE = 9,
 }
 local index_estate_status
 index_estate_status = DATA.create_estate_status()
@@ -219,21 +216,6 @@ DATA.estate_status_set_name(index_estate_status, "off_duty")
 DATA.estate_status_set_action_string(index_estate_status, "off duty")
 DATA.estate_status_set_time_used(index_estate_status, 0.0)
 DATA.estate_status_set_icon(index_estate_status, "shrug.png")
-index_estate_status = DATA.create_estate_status()
-DATA.estate_status_set_name(index_estate_status, "hide")
-DATA.estate_status_set_action_string(index_estate_status, "hiding")
-DATA.estate_status_set_time_used(index_estate_status, 0.0)
-DATA.estate_status_set_icon(index_estate_status, "high-grass.png")
-index_estate_status = DATA.create_estate_status()
-DATA.estate_status_set_name(index_estate_status, "sneak")
-DATA.estate_status_set_action_string(index_estate_status, "sneaking")
-DATA.estate_status_set_time_used(index_estate_status, 0.5)
-DATA.estate_status_set_icon(index_estate_status, "high-grass.png")
-index_estate_status = DATA.create_estate_status()
-DATA.estate_status_set_name(index_estate_status, "train")
-DATA.estate_status_set_action_string(index_estate_status, "training")
-DATA.estate_status_set_time_used(index_estate_status, 0.25)
-DATA.estate_status_set_icon(index_estate_status, "guards.png")
 index_estate_status = DATA.create_estate_status()
 DATA.estate_status_set_name(index_estate_status, "forage")
 DATA.estate_status_set_action_string(index_estate_status, "foraging")

@@ -1702,7 +1702,7 @@ object {
 object {
     name { estate_status }
     storage_type { contiguous }
-    size { 14 }
+    size { 11 }
     tag {scenario}
     property{
         name { time_used }
@@ -1713,7 +1713,7 @@ object {
 object {
     name { estate_stance }
     storage_type { contiguous }
-    size { 6 }
+    size { 4 }
     tag {scenario}
 }
 object {
