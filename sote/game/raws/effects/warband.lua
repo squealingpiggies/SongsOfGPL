@@ -118,19 +118,18 @@ end
 ---@param pop pop_id
 function WarbandEffects.fire_unit(estate, pop)
 	-- print(pop.name, "leaves warband")
-	local membership = DATA.get_warband_unit_from_unit(pop)
+	local membership = DATA.get_estate_unit_from_pop(pop)
 	local fat_membership = DATA.fatten_estate_unit(membership)
 
-	assert(estate == fat_membership.estate, "INVALID OPERATION: POP WAS IN A WRONG WARBAND")
+	assert(estate == fat_membership.estate, "INVALID OPERATION: POP WAS IN A WRONG ESTATE")
 
-	-- downgrade warrior to civilian or civilian to follower
+	-- downgrade warrior to civilian
 	if fat_membership.type == UNIT_TYPE.WARRIOR then
 		WarbandEffects.set_as_unit(estate,pop,UNIT_TYPE.CIVILIAN)
-	else
-		-- remove from office if only following
+	else -- remove from office
 		local lead = DATA.get_estate_leader_from_estate(estate)
 		if lead ~= INVALID_ID then
-			local leader = DATA.estate_leader_get_recruiter(lead)
+			local leader = DATA.estate_leader_get_leader(lead)
 			if pop == leader then
 				WarbandEffects.unset_leader(estate)
 			end
@@ -149,7 +148,12 @@ function WarbandEffects.fire_unit(estate, pop)
 				WarbandEffects.unset_commander(estate)
 			end
 		end
-		WarbandEffects.set_as_unit(estate,pop,UNIT_TYPE.FOLLOWER)
+		-- remove if dead
+		if DATA.pop_get_dead(pop) then
+			DATA.delete_estate_unit(membership)
+		else -- set to follower
+			WarbandEffects.set_as_unit(estate,pop,UNIT_TYPE.FOLLOWER)
+		end
 	end
 end
 

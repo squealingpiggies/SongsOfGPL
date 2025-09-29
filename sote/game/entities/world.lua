@@ -493,16 +493,21 @@ function world.World:tick()
 
 	if WORLD.current_tick_in_month == 1 then
 		PROFILER:start_timer("vegetation")
-
 		DCON.update_vegetation(VEGETATION_GROWTH)
-
 		PROFILER:end_timer("vegetation")
 
 		PROFILER:start_timer("production")
-
+		infrastructure.run()
 		production.run_fast()
-
 		PROFILER:end_timer("production")
+
+		PROFILER:start_timer("growth")
+		require "game.society.pop-growth".run()
+		PROFILER:end_timer("growth")
+
+		PROFILER:start_timer("employ")
+		employ.run()
+		PROFILER:end_timer("employ")
 	end
 
 	if WORLD.current_tick_in_month == 2 then
@@ -524,8 +529,6 @@ function world.World:tick()
 	-- 	DATA.for_each_warband(function (warband_id)
 	-- 		--reset monthly trackers
 	-- 		DATA.warband_set_current_time_used_ratio(warband_id,0)
-	-- 		--run warband growth
-	-- 		require "game.society.pop-growth".warband(warband_id)
 	-- 		--pay wages
 	-- 		local treasury = DATA.warband_get_treasury(warband_id)
 	-- 		local total_upkeep = DATA.warband_get_total_upkeep(warband_id)
@@ -670,31 +673,24 @@ function world.World:tick()
 
 		PROFILER:end_timer("estate movement")
 	end
---[[
+
 	if WORLD.settled_provinces_by_identifier[WORLD.current_tick_in_month] ~= nil then
 		-- Monthly tick per realm
 		local ta = WORLD.settled_provinces_by_identifier[WORLD.current_tick_in_month]
 
 		local t = love.timer.getTime()
 
-		-- print("vegetation")
-
-		PROFILER:start_timer("dbm")
+		-- PROFILER:start_timer("dbm")
 
 		-- tiles update in settled_province:
-		for _, settled_province in pairs(ta) do
-			-- update targets from accumulated foraging data
-			dbm.update_foraging_targets(settled_province)
-			-- local amounts = dbm.total_foraging_amounts(settled_province)
-			-- dbm.set_foraging_targets(settled_province, amounts)
+		-- for _, settled_province in pairs(ta) do
+		-- 	local weight = WORLD.current_tick_in_month % 10
+		-- 	if (weight == WORLD.month and weight == (WORLD.year % 12)) then
+		-- 		dbm.cultural_foragable_targets(settled_province)
+		-- 	end
+		-- end
 
-			-- local weight = WORLD.current_tick_in_month % 10
-			-- if (weight == WORLD.month and weight == (WORLD.year % 12)) then
-				-- 	dbm.cultural_foragable_targets(settled_province)
-			-- end
-		end
-
-		PROFILER:end_timer("dbm")
+		-- PROFILER:end_timer("dbm")
 
 		-- print("realm pre update")
 
@@ -720,35 +716,20 @@ function world.World:tick()
 
 		-- "Province" update
 
+		-- TODO change from provinces to tiles
 		for _, settled_province in pairs(ta) do
-			--print("employ")
-			PROFILER:start_timer("employ")
-			employ.run(settled_province)
-			PROFILER:end_timer("employ")
-			PROFILER:start_timer("buildings")
-			building_update.run(settled_province)
-			PROFILER:end_timer("buildings")
-
-			-- PROFILER:start_timer("production")
-			-- production.run(settled_province)
-			-- PROFILER:end_timer("production")
 
 			PROFILER:start_timer("province")
-			upkeep.run(settled_province)
+			-- upkeep.run(settled_province)
 			wealth_decay.run(settled_province)
-			infrastructure.run(settled_province)
-			research.run(settled_province)
-			recruit.run(settled_province)
+			-- research.run(settled_province)
+			-- recruit.run(settled_province)
 			PROFILER:end_timer("province")
-
-			PROFILER:start_timer("growth-province")
-			require "game.society.pop-growth".province(settled_province)
-			PROFILER:end_timer("growth-province")
 
 			--print("done")
 		end
 
-
+--[[
 		-- "Realm" update
 		-- local decide = require "game.ai.decide"
 		local events = require "game.ai.events"
@@ -776,9 +757,9 @@ function world.World:tick()
 					self:emit_treasury_change_effect(0, ECONOMY_REASON.NEW_MONTH, true)
 				end
 				--print("Construct")
-				PROFILER:start_timer("realm-construct-update")
-				construct.run(realm) -- This does an internal check for "AI" control to construct buildings for the realm but we keep it here so that we can have prettier code for POPs constructing buildings instead!
-				PROFILER:end_timer("realm-construct-update")
+				-- PROFILER:start_timer("realm-construct-update")
+				-- construct.run(realm) -- This does an internal check for "AI" control to construct buildings for the realm but we keep it here so that we can have prettier code for POPs constructing buildings instead!
+				-- PROFILER:end_timer("realm-construct-update")
 
 				--print("Court")
 				court.run(realm)
@@ -796,8 +777,10 @@ function world.World:tick()
 				PROFILER:end_timer("realm")
 			end
 		end
+	--]]
+	
 	end
---]]
+
 
 	-- print('simulation update')
 

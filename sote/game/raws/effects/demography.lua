@@ -7,6 +7,7 @@ local demo = {}
 ---@param pop pop_id
 function demo.kill_pop(pop)
 	-- print("kill " .. pop.name)
+	DATA.pop_set_dead(pop,true)
 	demo.fire_pop(pop)
 	demo.unrecruit(pop)
 	DATA.delete_pop(pop)
@@ -43,19 +44,22 @@ end
 ---@param pop pop_id
 function demo.unrecruit(pop)
 	local warband = UNIT_OF(pop)
+	local unit = UNIT_TYPE_OF(pop)
 	if warband ~= INVALID_ID then
 		-- demote to follower if not in settlement
-		if POP_PROVINCE(pop) == INVALID_ID then
-			warband_effects.set_as_unit(warband,pop,UNIT_TYPE.FOLLOWER)
+		if unit == UNIT_TYPE.WARRIOR then
+			warband_effects.set_as_unit(warband,pop,UNIT_TYPE.CIVILIAN)
 		else
 			warband_effects.fire_unit(warband, pop)
-			-- unrecruit all dependent followers
-			DATA.for_each_parent_child_relation_from_parent(pop, function (item)
-				local child = DATA.parent_child_relation_get_child(item)
-				if IS_DEPENDENT_OF(child,pop) then
-					demo.unrecruit(child)
-				end
-			end)
+			if not DATA.pop_get_dead(pop) then
+				-- unrecruit all dependent followers
+				DATA.for_each_parent_child_relation_from_parent(pop, function (item)
+					local child = DATA.parent_child_relation_get_child(item)
+					if IS_DEPENDENT_OF(child,pop) then
+						demo.unrecruit(child)
+					end
+				end)
+			end
 		end
 	end
 end

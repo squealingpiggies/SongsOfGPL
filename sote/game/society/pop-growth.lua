@@ -13,8 +13,7 @@ local death_rate = 0.04/12 -- 4% per year
 local birth_rate = 0.07/12 -- 7% per year
 
 ---Runs natural growth and decay on all pops.
----@param province_id Province
-function pg.run(province_id)
+function pg.run()
 	---#logging LOGS:write("province growth " .. tostring(province_id).."\n")
 	---#logging LOGS:flush()
 
@@ -42,7 +41,7 @@ function pg.add_remove(to_add,to_remove)
 		-- do not delete pop twice
 		if DCON.dcon_pop_is_valid(pp - 1) then
 			if IS_CHARACTER(pp) then
-				WORLD:emit_immediate_event("death", pp, province_id)
+				WORLD:emit_immediate_event("death", pp, POP_PROVINCE(pp))
 			else
 				demography_effects.kill_pop(pp)
 			end
@@ -99,7 +98,7 @@ function pg.add_remove(to_add,to_remove)
 		local child_unit_type = parent_home == parent_location and UNIT_TYPE.CIVILIAN or UNIT_TYPE.FOLLOWER
 		if parent_location ~= INVALID_ID then
 			if character then
-				province_utils.add_character(parent_location, newborn)
+				province_utils.add_character(parent_location, newborn, child_unit_type)
 			else
 				require "game.raws.effects.warband".set_as_unit(parent_location, newborn, child_unit_type)
 			end
@@ -128,6 +127,7 @@ function pg.add_remove(to_add,to_remove)
 		end
 	end
 end
+
 ---TODO add pregnancy flag and gestation length
 ---check pop for birth or death
 function pg.check(pop,to_add,to_remove)

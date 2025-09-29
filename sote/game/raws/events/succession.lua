@@ -42,15 +42,9 @@ local function load()
 				end
 			end
 
-			-- warbands without leader dissolve
-			local leads_warband = DATA.warband_leader_get_warband(DATA.get_warband_leader_from_leader(character))
-			if leads_warband ~= INVALID_ID then
-				me.dissolve_warband(character)
-			end
-
-			local commander = DATA.get_warband_commander_from_commander(character)
+			local commander = DATA.get_estate_commander_from_commander(character)
 			if commander ~= INVALID_ID then
-				local warband = DATA.warband_commander_get_warband(commander)
+				local warband = DATA.estate_commander_get_estate(commander)
 				-- check if it was a guard:
 				local guarded_realm = DATA.realm_guard_get_realm(DATA.get_realm_guard_from_guard(warband))
 
